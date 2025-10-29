@@ -9,16 +9,18 @@ const Home = () => {
       {/* Hero Section with Image Grid */}
       <section className="relative min-h-screen flex items-end pb-20 overflow-hidden">
         {/* Background Image Grid */}
-        <div className="absolute inset-0 grid grid-cols-3 gap-0">
+        <div className="absolute inset-0  gap-0">
+          
           <div className="relative overflow-hidden">
             <img
               src={heroImage}
               alt="Bridal makeup artistry"
-              className="w-full h-full object-cover"
+              className="w-[300vh] h-[100vh] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/5 to-transparent" />
+            {/* <div className="absolute inset-0 bg-gradient-to-b from-background/40 to-transparent" /> */}
           </div>
-          <div className="relative overflow-hidden">
+          {/* <div className="relative overflow-hidden">
             <img
               src={heroImage}
               alt="Wedding day makeup"
@@ -33,14 +35,14 @@ const Home = () => {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-background/40 to-transparent" />
-          </div>
+          </div> */}
         </div>
 
         {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" /> */}
 
         {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-6 lg:px-12 text-center">
+        {/* <div className="relative z-10 container mx-auto px-6 lg:px-12 text-center">
           <div className="max-w-4xl mx-auto animate-fade-up bg-background/95 backdrop-blur-sm py-12 px-8 rounded-lg shadow-elegant">
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-primary mb-4 leading-tight tracking-wider">
               LUXURY MAKEUP ARTIST
@@ -62,33 +64,35 @@ const Home = () => {
               </Button>
             </Link>
           </div>
-        </div>
+        </div> */}
       </section>
 
       {/* Introduction Section */}
       <section className="py-24 bg-peach/10">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
-            <div className="space-y-6 animate-fade-in">
-              <p className="font-body text-xs uppercase tracking-widest text-muted-foreground">
-                Every Beautiful Soul Deserves To
-              </p>
+            <div className="space-y animate-fade-in">
+              {/* <p className="font-body text-xs uppercase tracking-widest text-muted-foreground">
+                Where beauty meets artistry
+              </p> */}
+              <div className="font-script text-4xl text-primary/70">
+                Where beauty meets artistry
+              </div>
               <h2 className="font-display text-5xl md:text-6xl text-primary leading-tight">
-                FEEL & LOOK<br />BEAUTIFUL
+                and every detail <br />tells your story
               </h2>
-              <div className="font-script text-5xl text-primary/70">
-                LM
+              <div className="font-script text-4xl text-primary/60">
+                ~MS
               </div>
             </div>
             <div className="space-y-6 animate-fade-in">
               <p className="font-body text-sm md:text-base text-foreground/70 leading-relaxed">
-                From full makeup applications to eyelash application, I'm here to help you tailor 
-                your look and appearance for each and every event and outfit.
+                Elevating beauty into an experience — each brushstroke thoughtfully designed to enhance your natural glow.
+
+                From intimate weddings to high-end events, I specialize in creating refined, luminous looks that photograph flawlessly and last all day.
               </p>
               <p className="font-body text-sm md:text-base text-foreground/70 leading-relaxed">
-                Bringing calm energy and a trusted airbrush makeup application service that 
-                ensures you will feel gorgeous & special for your next occasion. From modern trends 
-                to classic or vintage looks, I'll whip up the perfect color palette combination.
+                My artistry is built on precision, calm energy, and a passion for helping every woman feel effortlessly radiant.
               </p>
             </div>
           </div>

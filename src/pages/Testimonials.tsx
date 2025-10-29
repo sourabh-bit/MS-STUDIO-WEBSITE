@@ -3,45 +3,45 @@ import { Star } from "lucide-react";
 const Testimonials = () => {
   const testimonials = [
     {
-      name: "Sarah Mitchell",
+      name: "Aanya Sharma",
       role: "Bride",
       image: "1",
-      text: "Elena made me feel like a princess on my wedding day. Her attention to detail and ability to enhance my natural features was absolutely stunning. I've never felt more beautiful, and the makeup lasted all day and night!",
+      text: "Meera was an absolute dream to work with! She made me feel like the best version of myself on my wedding day. The makeup was flawless, natural, and stayed perfect through all the ceremonies. Every time I look at the photos, I’m reminded of how confident and beautiful I felt.",
       rating: 5
     },
     {
-      name: "Victoria Chen",
+      name: "Diya Kapoor",
       role: "Fashion Model",
       image: "2",
-      text: "Working with Elena on editorial shoots is always a dream. She understands lighting, camera angles, and how to create looks that photograph beautifully. Her creativity and professionalism are unmatched.",
+      text: "I’ve worked with Meera on several editorial shoots, and her creativity is simply unmatched. She understands how makeup translates on camera and always brings a fresh, modern perspective to every look.",
       rating: 5
     },
     {
-      name: "Jennifer Lawson",
-      role: "Magazine Editor",
+      name: "Neha Malhotra",
+      role: "Style & Essence Magazine",
       image: "3",
-      text: "We've collaborated with Elena on multiple fashion editorials, and she consistently delivers breathtaking results. Her artistic vision and technical expertise make her one of the best in the industry.",
+      text: "Our magazine has collaborated with Meera for multiple cover stories, and she never fails to impress. Her attention to lighting, tones, and textures is remarkable. She’s a true artist who blends professionalism with passion",
       rating: 5
     },
     {
-      name: "Amanda Rodriguez",
-      role: "Mother of the Bride",
+      name: "Sunita Mehta",
+      role: "Bride",
       image: "4",
-      text: "Elena did makeup for my daughter's wedding party, and we all looked incredible! She took the time to understand each person's style and comfort level. Professional, talented, and an absolute joy to work with.",
+      text: "Meera did the makeup for my daughter’s wedding, and we couldn’t have asked for a better experience. She made everyone—from the bride to the bridesmaids—look radiant yet natural. Her calm energy made the entire morning stress-free.",
       rating: 5
     },
     {
-      name: "Olivia Thompson",
+      name: "Riya",
       role: "Corporate Executive",
       image: "5",
-      text: "For a major company event, Elena created a sophisticated and polished look that gave me so much confidence. She's my go-to artist for all important occasions.",
+      text: "“For a major brand launch event, Meera created a polished and elegant look that perfectly matched our theme. Her sense of style, professionalism, and warmth make her my go-to artist for every important occasion.",
       rating: 5
     },
     {
-      name: "Rachel Green",
+      name: "Kritika Joshi",
       role: "Bride",
       image: "6",
-      text: "From the trial to the wedding day, Elena was patient, professional, and incredibly talented. She listened to my vision and exceeded all my expectations. My bridal makeup was absolutely flawless!",
+      text: "From my first trial to the final wedding look, Meera was so patient and detail-oriented. She understood exactly what I wanted and made me feel truly special. I’ve recommended her to all my friends since",
       rating: 5
     }
   ];

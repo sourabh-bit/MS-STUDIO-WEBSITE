@@ -5,7 +5,7 @@ const About = () => {
         {/* Header */}
         <div className="text-center mb-20 animate-fade-in">
           <h1 className="font-display text-5xl md:text-7xl text-primary mb-6">
-            About Elena
+            About Meera
           </h1>
           <div className="w-24 h-1 bg-secondary mx-auto" />
         </div>
@@ -19,22 +19,13 @@ const About = () => {
             </h2>
             <div className="space-y-6 font-body text-base md:text-lg text-foreground/80 leading-relaxed">
               <p>
-                My journey into the world of makeup artistry began over fifteen years ago, 
-                inspired by the transformative power of beauty and the art of self-expression. 
-                What started as a fascination with color theory and human features evolved into 
-                a lifelong dedication to mastering the craft.
+                For Meera, beauty is not just seen—it’s felt. Her journey into the world of makeup artistry began over a decade ago, driven by a deep appreciation for elegance, detail, and the power of transformation. What started as a creative curiosity has evolved into a signature style defined by sophistication, precision, and grace.
               </p>
               <p>
-                I believe that makeup is more than just cosmetics—it's an art form that celebrates 
-                individuality, enhances natural beauty, and empowers confidence. Whether working 
-                on a intimate bridal session or a high-fashion editorial shoot, my approach remains 
-                the same: to create looks that are timeless, elegant, and authentically you.
+                Every face tells a story, and Meera believes makeup should enhance that story—not overshadow it. From radiant bridal looks to refined editorial creations, her approach blends artistry with intuition to reveal each client’s most confident, authentic self.
               </p>
               <p>
-                Based in [City], I've had the privilege of working with incredible clients ranging 
-                from brides on their special day to models gracing magazine covers. Each collaboration 
-                is a unique opportunity to blend technique with artistry, creating moments of beauty 
-                that last forever.
+                Based in Delhi, Meera has had the privilege of working with brides, models, and creative professionals who trust her to craft looks that are both timeless and unforgettable. Each brushstroke reflects her belief that true beauty lies in individuality—and that elegance never goes out of style.
               </p>
             </div>
           </div>
@@ -45,13 +36,11 @@ const About = () => {
               My Philosophy
             </h2>
             <p className="font-body text-base md:text-lg text-foreground/80 leading-relaxed text-center">
-              "True beauty lies in authenticity. My goal is not to mask, but to magnify—
-              to enhance what makes you uniquely beautiful and help you feel like the most 
-              radiant version of yourself."
+             “Beauty begins with authenticity. My artistry is about revealing, not concealing—enhancing your natural features so you shine with effortless confidence and timeless grace.”
             </p>
             <div className="mt-8 text-center">
               <p className="font-display text-2xl text-primary italic">
-                — Elena Rose
+                — Meera Sakhrani
               </p>
             </div>
           </div>
@@ -84,7 +73,7 @@ const About = () => {
           </div>
 
           {/* Featured In */}
-          <div className="text-center animate-fade-in">
+          {/* <div className="text-center animate-fade-in">
             <h3 className="font-display text-2xl text-primary mb-8">
               As Featured In
             </h3>
@@ -94,7 +83,7 @@ const About = () => {
               <span className="font-display text-xl">Elle</span>
               <span className="font-display text-xl">Brides Magazine</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

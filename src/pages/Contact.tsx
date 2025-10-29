@@ -62,7 +62,9 @@ const Contact = () => {
             Let's Connect
           </h1>
           <p className="font-body text-lg text-muted-foreground max-w-2xl mx-auto">
-            Ready to begin your beauty journey? Reach out to book a consultation or ask any questions.
+            Your dream look begins with a conversation.
+            Whether it’s a bridal celebration, a creative concept, or a personal makeover, 
+            Meera would love to hear your ideas and bring your vision to life.
           </p>
         </div>
 
@@ -70,7 +72,7 @@ const Contact = () => {
           {/* Contact Form */}
           <div className="animate-fade-up">
             <h2 className="font-display text-3xl text-primary mb-8">
-              Send a Message
+              Send an Enquiry
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -191,7 +193,7 @@ const Contact = () => {
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">Email</p>
                     <a href="mailto:hello@elenarose.com" className="font-body text-foreground hover:text-primary transition-elegant">
-                      hello@elenarose.com
+                      hello@meeramakeupstudio.com
                     </a>
                   </div>
                 </div>
@@ -214,8 +216,8 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">Instagram</p>
-                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="font-body text-foreground hover:text-primary transition-elegant">
-                      @elenarosemakeup
+                    <a href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="font-body text-foreground hover:text-primary transition-elegant">
+                      @meerasakhrani
                     </a>
                   </div>
                 </div>
@@ -227,8 +229,8 @@ const Contact = () => {
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">Location</p>
                     <p className="font-body text-foreground">
-                      Los Angeles, CA<br />
-                      Available for travel
+                      New Delhi<br />
+                      Available for destination weddings and on-location projects.
                     </p>
                   </div>
                 </div>
@@ -260,8 +262,8 @@ const Contact = () => {
                 Quick Response
               </h3>
               <p className="font-body text-sm text-foreground/70 leading-relaxed">
-                I typically respond to all inquiries within 24 hours. For urgent bookings 
-                or same-week appointments, please call directly.
+                My manager reviews each enquiry and typically responds within 24 hours.
+                For same-week or urgent bookings, please reach out directly via WhatsApp or call.
               </p>
             </div>
           </div>

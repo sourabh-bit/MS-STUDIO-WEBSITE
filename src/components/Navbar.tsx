@@ -9,8 +9,8 @@ const Navbar = () => {
 
   const leftNavLinks = [
     { name: "HOMEPAGE", path: "/" },
-    { name: "MEET LAURYN", path: "/about" },
-    { name: "MAKEUP SERVICES", path: "/services" },
+    { name: "MEET MEERA", path: "/about" },
+    // { name: "MAKEUP SERVICES", path: "/services" },
   ];
 
   const rightNavLinks = [
@@ -41,10 +41,10 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`font-body text-xs uppercase tracking-widest transition-elegant ${
+                className={`font-body text-s uppercase tracking-widest transition-elegant ${
                   isActive(link.path)
                     ? "text-primary font-semibold"
-                    : "text-foreground/60 hover:text-primary"
+                    : "text-foreground/90 hover:text-primary"
                 }`}
               >
                 {link.name}
@@ -54,13 +54,14 @@ const Navbar = () => {
 
           {/* Center: Logo/Brand */}
           <Link to="/" className="flex flex-col items-center transition-elegant hover:opacity-80">
-            <span className="font-script text-3xl lg:text-4xl text-primary/70">miss</span>
+            <span className="font-script text-3xl lg:text-4xl text-primary/70">Meera</span>
+            {/* <span className="font-script text-3xl lg:text-4xl text-primary/70">Sakhrani</span> */}
             <div className="font-display text-xl lg:text-2xl tracking-[0.3em] text-primary -mt-2">
-              LAURYN
+              SAKHRANI
             </div>
-            <div className="font-display text-xl lg:text-2xl tracking-[0.3em] text-primary -mt-1">
-              MARIE
-            </div>
+            {/* <div className="font-display text-xl lg:text-2xl tracking-[0.3em] text-primary -mt-1">
+              SAKHRANI
+            </div> */}
           </Link>
 
           {/* Right Navigation (Desktop) */}
@@ -69,10 +70,10 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`font-body text-xs uppercase tracking-widest transition-elegant ${
+                className={`font-body text-s uppercase tracking-widest transition-elegant ${
                   isActive(link.path)
                     ? "text-primary font-semibold"
-                    : "text-foreground/60 hover:text-primary"
+                    : "text-foreground/90 hover:text-primary"
                 }`}
               >
                 {link.name}
@@ -85,7 +86,7 @@ const Navbar = () => {
             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
               <Facebook className="w-4 h-4" />
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
+            <a href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
               <Instagram className="w-4 h-4" />
             </a>
             <a href="mailto:contact@example.com" className="text-foreground/50 hover:text-primary transition-elegant">

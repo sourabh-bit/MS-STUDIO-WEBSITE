@@ -8,9 +8,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="font-display text-2xl text-primary">Elena Rose</h3>
+            <h3 className="font-display text-2xl text-primary">Meera Sakhrani</h3>
             <p className="font-body text-sm text-muted-foreground leading-relaxed">
-              Luxury makeup artistry for timeless beauty. Creating editorial looks and bespoke experiences.
+              Where artistry meets elegance.
+              Meera transforms every moment into a statement of beauty—crafted with care, shaped by experience, and inspired by you.
             </p>
           </div>
 
@@ -39,15 +40,15 @@ const Footer = () => {
             <div className="flex flex-col space-y-3">
               <a href="mailto:hello@elenarose.com" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant">
                 <Mail size={16} />
-                <span>hello@elenarose.com</span>
+                <span>hello@meeramakeupstudio.com</span>
               </a>
               <a href="tel:+1234567890" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant">
                 <Phone size={16} />
                 <span>+1 (234) 567-890</span>
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant">
+              <a href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant">
                 <Instagram size={16} />
-                <span>@elenarosemakeup</span>
+                <span>@meerasakhrani</span>
               </a>
             </div>
           </div>
@@ -55,7 +56,7 @@ const Footer = () => {
 
         <div className="mt-12 pt-8 border-t border-border text-center">
           <p className="font-body text-xs text-muted-foreground">
-            © 2025 Elena Rose. All rights reserved. Crafted with elegance.
+            ©2025 Meera Sakhrani. All rights reserved .  A reflection of beauty and artistry.
           </p>
         </div>
       </div>
