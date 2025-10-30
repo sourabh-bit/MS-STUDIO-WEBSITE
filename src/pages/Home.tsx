@@ -133,7 +133,7 @@ const Home = () => {
             <h2 className="font-display text-4xl md:text-6xl text-primary tracking-wider">
               TRUSTED MAKEUP ARTIST
             </h2>
-            <Link to="/contact">
+            {/* <Link to="/contact">
               <Button 
                 size="lg" 
                 variant="outline"
@@ -142,7 +142,14 @@ const Home = () => {
                 Book Your Occasion
                 <ArrowRight className="ml-2" size={16} />
               </Button>
+            </Link> */}
+            <div className="hidden lg:flex justify-center items-center mt-8">
+            <Link to="/contact">
+              <Button variant="outline" size="sm" className="gap-2">
+                <span className="text-xs uppercase tracking-wider">Book Your Ocassion</span>
+              </Button>
             </Link>
+          </div>
           </div>
         </div>
       </section>
@@ -162,7 +169,7 @@ const Home = () => {
                 <span className="text-xs uppercase tracking-wider">Get in Touch</span>
               </Button>
             </Link>
-</div>
+          </div>
 
         </div>
       </section>
