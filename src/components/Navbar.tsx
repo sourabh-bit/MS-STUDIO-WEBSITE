@@ -22,7 +22,7 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-border/50">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-24 lg:h-28">
           {/* Left: Book Button (Desktop) */}
@@ -89,10 +89,10 @@ const Navbar = () => {
             <a href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="mailto:contact@example.com" className="text-foreground/50 hover:text-primary transition-elegant">
+            <a href="mailto:Meerasakhranibeauty@gmail.com" className="text-foreground/50 hover:text-primary transition-elegant">
               <Mail className="w-4 h-4" />
             </a>
-            <a href="tel:+1234567890" className="text-foreground/50 hover:text-primary transition-elegant">
+            <a href="tel:+91 84482 29694" className="text-foreground/50 hover:text-primary transition-elegant">
               <Phone className="w-4 h-4" />
             </a>
           </div>

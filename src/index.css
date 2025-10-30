@@ -9,7 +9,7 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Luxury Makeup Artist Palette */
-    --background: 23 100% 98%;
+    --background: 23 100% 98%;             
     --foreground: 332 14% 35%;
 
     --card: 0 0% 100%;
@@ -19,8 +19,8 @@ All colors MUST be HSL.
     --popover-foreground: 332 14% 35%;
 
     /* Primary: Dusty Mauve */
-    --primary: 332 14% 54%;
-    --primary-foreground: 0 0% 100%;
+    /* --primary: 332 14% 54%;
+    --primary-foreground: 0 0% 100%; */
 
     /* Secondary: Muted Pink */
     --secondary: 350 66% 81%;
