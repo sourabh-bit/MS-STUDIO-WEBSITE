@@ -1,1 +1,1 @@
-this is the website for the cliend
+this is the website for the client
