@@ -67,12 +67,21 @@ const Footer = () => {
                 <Mail size={16} />
                 <span>hello@meeramakeupstudio.com</span>
               </a>
+              {/* for booking */}
               <a
                 href="tel:+91 84482 29694"
                 className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant"
               >
                 <Phone size={16} />
-                <span>+91 84482 29694</span>
+                <span>+91 84482 29694 ~(For Booking)</span>
+              </a>
+              {/* for ms art school */}
+              <a
+                href="tel:+91 98187 93850"
+                className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-primary transition-elegant"
+              >
+                <Phone size={16} />
+                <span>+91 98187 93850 ~(For MS Art School)</span>
               </a>
               <a
                 href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="

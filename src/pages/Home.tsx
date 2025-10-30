@@ -17,7 +17,7 @@ const Home = () => {
               alt="Bridal makeup artistry"
               className="w-[300vh] h-[100vh] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/5 to-transparent" />
+            {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-background/5 to-transparent" /> */}
             {/* <div className="absolute inset-0 bg-gradient-to-b from-background/40 to-transparent" /> */}
           </div>
           {/* <div className="relative overflow-hidden">
@@ -156,14 +156,14 @@ const Home = () => {
           <p className="font-body text-lg text-foreground/80 mb-8 max-w-2xl mx-auto">
             Let's create something beautiful together. Book your consultation today.
           </p>
-          <Link to="/contact">
-            <Button 
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-elegant transition-elegant"
-            >
-              Get in Touch
-            </Button>
-          </Link>
+          <div className="hidden lg:flex justify-center items-center mt-8">
+            <Link to="/contact">
+              <Button variant="outline" size="sm" className="gap-2">
+                <span className="text-xs uppercase tracking-wider">Get in Touch</span>
+              </Button>
+            </Link>
+</div>
+
         </div>
       </section>
     </div>

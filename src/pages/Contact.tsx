@@ -170,12 +170,13 @@ const Contact = () => {
               </div>
 
               <Button
-                type="submit"
-                size="lg"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-elegant transition-elegant"
-              >
-                Send Message
+                  type="submit"
+                  size="lg"
+                  className="w-full bg-primary text-primary-foreground border border-primary rounded-full shadow-elegant transition-colors duration-300 hover:bg-transparent hover:text-primary"
+                >
+                  Send Message
               </Button>
+
             </form>
           </div>
 
@@ -197,15 +198,27 @@ const Contact = () => {
                     </a>
                   </div>
                 </div>
-
+                     {/* for booking */}
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Phone className="text-primary" size={20} />
                   </div>
                   <div>
-                    <p className="font-body text-sm text-muted-foreground mb-1">Phone</p>
+                    <p className="font-body text-sm text-muted-foreground mb-1">For Booking</p>
                     <a href="tel:+91 84482 29694" className="font-body text-foreground hover:text-primary transition-elegant">
                       +91 84482 29694
+                    </a>
+                  </div>
+                </div>
+                        {/* for ms art school */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Phone className="text-primary" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-body text-sm text-muted-foreground mb-1">For MS Art School</p>
+                    <a href="tel:+91 98187 93850" className="font-body text-foreground hover:text-primary transition-elegant">
+                      +91 98187 93850
                     </a>
                   </div>
                 </div>
