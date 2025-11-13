@@ -1,18 +1,40 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ✅ Import your portfolio images
-import bridal1 from "../assets/portfolio/bridal1.jpg";
-import bridal2 from "../assets/portfolio/bridal2.jpg";
-import editorial1 from "../assets/portfolio/editorial1.jpg";
-import editorial2 from "../assets/portfolio/editorial2.jpg";
-import events1 from "../assets/portfolio/events1.jpg";
-import events2 from "../assets/portfolio/events2.jpg";
+/* ORIGINAL IMAGE URLs — no cropping issues now */
+const allImages: string[] = [
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port2_qelcif.heic",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/bridal1_1_bhlexk.webp",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port1_gmr9jg.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port13_uvlo5k.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port7_fu9wly.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port6_r2a2uf.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port12_qxuq0z.heic",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port9_rlg7oa.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port5_cfp8sg.heic",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port8_jiplrn.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port3_mmktwm.jpg",
+  "https://res.cloudinary.com/dqdx30pbj/image/upload/v1763027380/065A9442_50_tfdjg6.jpg",
+];
+
+/* Categories */
+const bridalImages = [allImages[0], allImages[1], allImages[2], allImages[3], allImages[4],allImages[11]];
+const editorialImages = [allImages[5], allImages[6], allImages[10]];
+const eventImages = [allImages[7], allImages[8], allImages[9]];
+
+/* Pattern stays same */
+const pattern = [
+  "big", "small", "small",
+  "small", "small", "small",
+  "small", "big",
+  "small", "small", "small",
+  "small", "small", "small"
+];
 
 const Portfolio = () => {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [loadedImages, setLoadedImages] = useState<{ [key: number]: boolean }>(
-    {}
-  );
+  const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({});
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const categories = [
     { id: "all", name: "All Work" },
@@ -21,90 +43,107 @@ const Portfolio = () => {
     { id: "events", name: "Events" },
   ];
 
-  const portfolioItems = [
-    { id: 1, category: "bridal", image: bridal1 },
-    { id: 2, category: "bridal", image: bridal2 },
-    { id: 3, category: "editorial", image: editorial1 },
-    { id: 4, category: "editorial", image: editorial2 },
-    { id: 5, category: "events", image: events1 },
-    { id: 6, category: "events", image: events2 },
-  ];
-
-  const filteredItems =
+  const filtered =
     activeCategory === "all"
-      ? portfolioItems
-      : portfolioItems.filter((item) => item.category === activeCategory);
+      ? allImages
+      : activeCategory === "bridal"
+      ? bridalImages
+      : activeCategory === "editorial"
+      ? editorialImages
+      : eventImages;
 
   return (
-    <section className="min-h-screen py-24 bg-background text-foreground">
-      <div className="container mx-auto px-6 lg:px-12">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="font-display text-5xl md:text-6xl font-semibold mb-4">
-            Portfolio
-          </h2>
-          <p className="text-lg opacity-80">
-            Explore our luxury makeup artistry across styles.
-          </p>
-        </div>
+    <>
+      <section className="min-h-screen py-24 bg-background text-foreground">
+        <div className="container mx-auto px-6 lg:px-12">
 
-        {/* Category Tabs */}
-        <div className="flex justify-center gap-6 mb-12 flex-wrap">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-6 py-2 rounded-full border transition-all duration-300 ${
-                activeCategory === cat.id
-                  ? "bg-primary text-white border-primary"
-                  : "border-foreground/20 hover:border-primary"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h2 className="font-display text-5xl md:text-6xl font-semibold mb-4">
+              Portfolio
+            </h2>
+            <p className="text-lg opacity-80">
+              Explore our luxury makeup artistry curated beautifully.
+            </p>
+          </div>
 
-        {/* Gallery */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <a
-              key={item.id}
-              href={item.image}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all"
-            >
-              {/* Image with blur placeholder */}
-              <div
-                className={`w-full h-full bg-gray-200 animate-pulse absolute inset-0 rounded-2xl ${
-                  loadedImages[item.id] ? "hidden" : "block"
+          {/* Categories */}
+          <div className="flex justify-center gap-6 mb-12">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`px-6 py-2 rounded-full border ${
+                  activeCategory === cat.id ? "bg-primary text-white" : "border-gray-300"
                 }`}
-              ></div>
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
 
-              <img
-                src={item.image}
-                alt="Portfolio Work"
-                loading="lazy"
-                onLoad={() =>
-                  setLoadedImages((prev) => ({ ...prev, [item.id]: true }))
-                }
-                className={`w-full h-full object-cover transition-all duration-700 ease-out transform ${
-                  loadedImages[item.id]
-                    ? "opacity-100 scale-100"
-                    : "opacity-0 scale-105"
-                } group-hover:scale-110`}
-              />
+          {/* ⭐ NARROW GRID FIX (max width + centered grid) */}
+          <motion.div
+            key={activeCategory}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-7xl mx-auto grid grid-cols-3 gap-6 auto-rows-[360px]"
+          >
+            {filtered.slice(0, 15).map((url, i) => {
+              const type = pattern[i] || "small";
 
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white text-lg font-medium">
-                View Work
-              </div>
-            </a>
-          ))}
+              const sizeClass =
+                type === "big"
+                  ? "col-span-2 row-span-2 h-[720px]"
+                  : "h-[360px]";
+
+              return (
+                <div
+                  key={url}
+                  className={`relative overflow-hidden rounded-2xl cursor-pointer ${sizeClass}`}
+                  onClick={() => setSelectedImage(url)}
+                >
+                  {!loadedImages[url] && (
+                    <div className="absolute inset-0 bg-gray-300 animate-pulse" />
+                  )}
+
+                  <img
+                    src={url}
+                    onLoad={() => setLoadedImages((p) => ({ ...p, [url]: true }))}
+                    className="w-full h-full object-cover transition duration-300 hover:scale-105"
+                  />
+
+                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center text-white">
+                    View Work
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Fullscreen Viewer */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.img
+              src={selectedImage}
+              className="max-w-full max-h-[90vh] rounded-xl"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
