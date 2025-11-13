@@ -94,7 +94,7 @@ const Portfolio = () => {
             className="
               max-w-7xl mx-auto
               grid
-              grid-cols-2              /* mobile */
+              grid-cols-1              /* mobile */
               md:grid-cols-3           /* desktop original */
               gap-4 md:gap-6
               auto-rows-[180px]        /* mobile height */
