@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-/* ORIGINAL IMAGE URLs — no cropping issues now */
+/* ORIGINAL IMAGE URLs */
 const allImages: string[] = [
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port2_qelcif.heic",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/bridal1_1_bhlexk.webp",
@@ -13,17 +13,18 @@ const allImages: string[] = [
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port9_rlg7oa.jpg",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port5_cfp8sg.heic",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port8_jiplrn.jpg",
-  
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/v1763013327/port4_cdcolz.jpg",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/v1763027380/065A9442_50_tfdjg6.jpg",
 ];
 
 /* Categories */
-const bridalImages = [allImages[0], allImages[1], allImages[2], allImages[3], allImages[4],allImages[11]];
+const bridalImages = [
+  allImages[0], allImages[1], allImages[2], allImages[3], allImages[4], allImages[11]
+];
 const editorialImages = [allImages[5], allImages[6], allImages[10]];
 const eventImages = [allImages[7], allImages[8], allImages[9]];
 
-/* Pattern stays same */
+/* Pattern */
 const pattern = [
   "big", "small", "small",
   "small", "small", "small",
@@ -69,13 +70,15 @@ const Portfolio = () => {
           </div>
 
           {/* Categories */}
-          <div className="flex justify-center gap-6 mb-12">
+          <div className="flex justify-center gap-6 mb-12 flex-wrap">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-6 py-2 rounded-full border ${
-                  activeCategory === cat.id ? "bg-primary text-white" : "border-gray-300"
+                className={`px-6 py-2 rounded-full border transition ${
+                  activeCategory === cat.id
+                    ? "bg-primary text-white"
+                    : "border-gray-300 hover:bg-gray-100"
                 }`}
               >
                 {cat.name}
@@ -83,20 +86,28 @@ const Portfolio = () => {
             ))}
           </div>
 
-          {/* ⭐ NARROW GRID FIX (max width + centered grid) */}
+          {/* ⭐ RESPONSIVE GRID — DESKTOP ORIGINAL, MOBILE FIXED */}
           <motion.div
             key={activeCategory}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="max-w-7xl mx-auto grid grid-cols-3 gap-6 auto-rows-[360px]"
+            className="
+              max-w-7xl mx-auto
+              grid
+              grid-cols-2              /* mobile */
+              md:grid-cols-3           /* desktop original */
+              gap-4 md:gap-6
+              auto-rows-[180px]        /* mobile height */
+              md:auto-rows-[360px]     /* original browser height */
+            "
           >
             {filtered.slice(0, 15).map((url, i) => {
               const type = pattern[i] || "small";
 
               const sizeClass =
                 type === "big"
-                  ? "col-span-2 row-span-2 h-[720px]"
-                  : "h-[360px]";
+                  ? "col-span-2 md:col-span-2 row-span-2 h-[360px] md:h-[720px]"
+                  : "h-[180px] md:h-[360px]";
 
               return (
                 <div
