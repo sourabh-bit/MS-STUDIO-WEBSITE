@@ -13,6 +13,7 @@ const allImages: string[] = [
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port9_rlg7oa.jpg",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port5_cfp8sg.heic",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/port8_jiplrn.jpg",
+  
   "https://res.cloudinary.com/dqdx30pbj/image/upload/f_auto,q_auto,w_1200/v1763013327/port4_cdcolz.jpg",
   "https://res.cloudinary.com/dqdx30pbj/image/upload/v1763027380/065A9442_50_tfdjg6.jpg",
 ];
