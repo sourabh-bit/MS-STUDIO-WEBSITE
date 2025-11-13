@@ -108,32 +108,37 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="lg:hidden py-6 animate-fade-in border-t border-border">
-            <div className="flex flex-col space-y-4">
-              {[...leftNavLinks, ...rightNavLinks].map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`font-body text-sm uppercase tracking-widest transition-elegant ${
+      {isOpen && (
+        <div className="lg:hidden py-6 animate-fade-in border-t border-border">
+          <div className="flex flex-col space-y-4">
+            {[...leftNavLinks, ...rightNavLinks].map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setIsOpen(false)}
+                className={`
+                  font-body text-sm uppercase tracking-widest transition-elegant
+                  ${
                     isActive(link.path)
                       ? "text-primary font-semibold"
-                      : "text-foreground/60 hover:text-primary"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <Link to="/contact" onClick={() => setIsOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full mt-4 gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-xs uppercase">Book Appointment</span>
-                </Button>
+                      : "text-foreground/100 md:text-foreground/60 hover:text-primary"
+                  }
+                `}
+              >
+                {link.name}
               </Link>
-            </div>
+            ))}
+
+            <Link to="/contact" onClick={() => setIsOpen(false)}>
+              <Button variant="outline" size="sm" className="w-full mt-4 gap-2">
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs uppercase">Book Appointment</span>
+              </Button>
+            </Link>
           </div>
-        )}
+        </div>
+      )}
+
       </div>
     </nav>
   );
