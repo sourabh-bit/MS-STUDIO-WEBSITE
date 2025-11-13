@@ -70,21 +70,41 @@ const Portfolio = () => {
           </div>
 
           {/* Categories */}
-          <div className="flex justify-center gap-6 mb-12 flex-wrap">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-6 py-2 rounded-full border transition ${
+        <div className="flex justify-center gap-6 mb-12 flex-wrap">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`
+                px-6 py-2 rounded-full font-medium border transition-all duration-300
+
+                ${
                   activeCategory === cat.id
-                    ? "bg-primary text-white"
-                    : "border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+                    ? `
+                      bg-[#f8e8e8] 
+                      text-primary 
+                      border-primary 
+                      shadow-md 
+                      scale-[1.05]
+                    `
+                    : `
+                      border-[#e4c4c4] 
+                      text-foreground 
+                      hover:bg-[#f8e8e8] 
+                      hover:border-primary 
+                      hover:text-primary 
+                      hover:shadow-[0_0_15px_rgba(255,192,203,0.4)] 
+                      hover:scale-[1.04]
+                    `
+                }
+              `}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+
 
           {/* ⭐ RESPONSIVE GRID — DESKTOP ORIGINAL, MOBILE FIXED */}
           <motion.div
