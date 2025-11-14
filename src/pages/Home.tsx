@@ -104,21 +104,21 @@ const Home = () => {
           <div className="grid md:grid-cols-3 gap-4 mb-16">
             <div className="aspect-[3/4] overflow-hidden rounded-lg">
               <img
-                src={heroImage}
+                src="https://res.cloudinary.com/dqdx30pbj/image/upload/v1763013328/port9_rlg7oa.jpg"
                 alt="Makeup application"
                 className="w-full h-full object-cover hover:scale-105 transition-elegant"
               />
             </div>
             <div className="aspect-[3/4] overflow-hidden rounded-lg">
               <img
-                src={heroImage}
+                src="https://res.cloudinary.com/dqdx30pbj/image/upload/v1763013327/port4_cdcolz.jpg"
                 alt="Bridal beauty"
                 className="w-full h-full object-cover hover:scale-105 transition-elegant"
               />
             </div>
             <div className="aspect-[3/4] overflow-hidden rounded-lg">
               <img
-                src={heroImage}
+                src="https://res.cloudinary.com/dqdx30pbj/image/upload/v1763013398/port1_gmr9jg.jpg"
                 alt="Bridesmaids"
                 className="w-full h-full object-cover hover:scale-105 transition-elegant"
               />
