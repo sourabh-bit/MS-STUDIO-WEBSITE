@@ -153,25 +153,46 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-accent/20 via-peach/20 to-secondary/20">
-        <div className="container mx-auto px-6 lg:px-12 text-center">
-          <h2 className="font-display text-4xl md:text-5xl text-primary mb-6">
-            Ready to Transform?
-          </h2>
-          <p className="font-body text-lg text-foreground/80 mb-8 max-w-2xl mx-auto">
-            Let's create something beautiful together. Book your consultation today.
-          </p>
-          <div className="hidden lg:flex justify-center items-center mt-8">
-            <Link to="/contact">
-              <Button variant="outline" size="sm" className="gap-2">
-                <span className="text-xs uppercase tracking-wider">Get in Touch</span>
-              </Button>
-            </Link>
-          </div>
+<section className="relative py-24 overflow-hidden 
+  bg-gradient-to-br from-accent/20 via-peach/20 to-secondary/20">
 
-        </div>
-      </section>
+  {/* TEXT */}
+  <div className="relative z-20 container mx-auto px-6 lg:px-12 text-center">
+    <h2 className="font-display text-4xl md:text-5xl text-primary mb-6">
+      Ready to Transform?
+    </h2>
+
+    <p className="font-body text-lg text-foreground/80 max-w-2xl mx-auto">
+      Let's create something beautiful together. Book your consultation today.
+    </p>
+
+    {/* CTA — moved down so it doesn’t block the face */}
+    <div className="hidden lg:flex justify-center items-center mt-16">
+      <Link to="/contact">
+        <Button variant="outline" size="sm" className="gap-2">
+          <span className="text-xs uppercase tracking-wider">Get in Touch</span>
+        </Button>
+      </Link>
+    </div>
+  </div>
+
+  {/* BACKGROUND IMAGE */}
+  <div className="absolute inset-0">
+    <img
+      src="https://res.cloudinary.com/dqdx30pbj/image/upload/v1763103629/meera_2_m5ld89.png"
+      alt="Background"
+      className="w-full h-full object-cover opacity-95"
+      style={{ objectPosition: "20% 40%" }} // RIGHT + DOWN
+    />
+
+    {/* SOFT PINK FADE MATCHING THE WEBSITE */}
+    <div className="absolute inset-0 pointer-events-none bg-gradient-to-r 
+      from-[#fdf1ef] via-[#f7e3e1aa] to-transparent"></div>
+  </div>
+
+</section>
+
+
     </div>
   );
 };
