@@ -67,7 +67,7 @@ const Home = () => {
       </section>
 
       {/* Introduction Section */}
-      <section className="py-24 bg-peach/10">
+      <section className="py-12 bg-peach/10">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
             <div className="space-y animate-fade-in">
@@ -99,7 +99,7 @@ const Home = () => {
       </section>
 
       {/* Portfolio Preview Section */}
-      <section className="py-24">
+      <section className="py-6">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-3 gap-4 mb-16">
             <div className="aspect-[3/4] overflow-hidden rounded-lg">
