@@ -242,8 +242,8 @@ const Contact = () => {
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">Location</p>
                     <p className="font-body text-foreground">
-                      503, Chiranjiv Tower, 43, Nehru Place, New Delhi, New Delhi,
-                      Delhi, 110019<br /> 
+                      503, Chiranjiv Tower, 43, Nehru Place, New Delhi <br />
+                      Delhi - 110019<br /> 
                       <br />
                       Available for destination weddings and on-location projects.
                     </p>
