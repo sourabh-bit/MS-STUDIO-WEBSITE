@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}"
+  ],
   prefix: "",
   theme: {
     container: {
@@ -15,9 +20,13 @@ export default {
     extend: {
       fontFamily: {
         display: ['Playfair Display', 'serif'],
-        body: ['Lato', 'sans-serif'],
+        title: ['Playfair Display', 'serif'],
+        serif: ['Cormorant Garamond', 'serif'],
+        sans: ['Montserrat', 'sans-serif'],
+        body: ['Montserrat', 'sans-serif'],
         script: ['Allura', 'cursive'],
       },
+
       colors: {
         peach: 'hsl(var(--peach))',
         border: "hsl(var(--border))",
@@ -63,12 +72,20 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+
+        // 👉 ADDED ONLINE CLASS BRAND COLORS
+        champagne: "#F7EFE7",
+        "soft-pink": "#F3D7DE",
+        "dusty-rose": "#D9A7B0",
+        "rose-line": "#C9A4AB",
       },
+
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -91,6 +108,7 @@ export default {
           "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
+
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",

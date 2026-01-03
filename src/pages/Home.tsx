@@ -4,7 +4,7 @@ import heroImage from "@/assets/hero-image.jpg";
 
 const Home = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-[20px]">
       {/* Hero Section with Image Grid */}
       <section className="relative min-h-screen flex items-end pb-20 overflow-hidden">
         {/* Background Image Grid */}

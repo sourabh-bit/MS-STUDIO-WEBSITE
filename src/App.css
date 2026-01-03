@@ -1,42 +1,129 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+/* --------------------------------------------------------
+   BASE — Your Website Branding (colors, fonts, palette)
+-------------------------------------------------------- */
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+@layer base {
+  :root {
+    /* Your original Meera Sakhrani brand palette */
+    --background: 23 100% 98%;
+    --foreground: 332 14% 35%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 332 14% 35%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 332 14% 35%;
+
+    --secondary: 350 66% 81%;
+    --secondary-foreground: 332 14% 35%;
+
+    --muted: 150 21% 87%;
+    --muted-foreground: 332 14% 45%;
+
+    --accent: 348 100% 90%;
+    --accent-foreground: 332 14% 35%;
+
+    /* Button, borders, radius */
+    --border: 150 21% 87%;
+    --input: 150 21% 87%;
+    --ring: 350 66% 81%;
+    --radius: 1rem;
+
+    /* Gradients used across Meera website */
+    --gradient-soft: linear-gradient(135deg, hsl(23, 100%, 92%), hsl(348, 100%, 90%));
+    --gradient-elegant: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(150, 21%, 87%));
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -2px hsl(332 14% 54% / 0.08);
+    --shadow-elegant: 0 10px 40px -5px hsl(350 66% 81% / 0.15);
   }
-  to {
-    transform: rotate(360deg);
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    @apply font-display;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* --------------------------------------------------------
+   ADD — Lovable Backgrounds for Makeup School & Classes
+   (ONLY backgrounds & patterns — NOT colors)
+-------------------------------------------------------- */
+
+.section-cream {
+  @apply bg-[#fef8f5];
+}
+
+.section-blush {
+  @apply bg-[#fff4f6];
+}
+
+.divider-elegant {
+  @apply h-px bg-gradient-to-r from-transparent via-[#c8a5a9] to-transparent opacity-40;
+}
+
+/* Base pattern from Lovable hero */
+.bg-pattern-soft {
+  background-image: radial-gradient(circle at 2px 2px, rgba(0,0,0,0.05) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+/* --------------------------------------------------------
+   UTILITIES — Shared Animations (Lovable style)
+-------------------------------------------------------- */
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fadeUp 0.8s ease-out forwards;
   }
-}
 
-.card {
-  padding: 2em;
-}
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
 
-.read-the-docs {
-  color: #888;
+  .animate-slide-in {
+    animation: slideIn 0.6s ease-out forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Staggered delay utilities */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+  .delay-700 { animation-delay: 700ms; }
+
+  /* Lovable image hover effect */
+  .image-elegant {
+    @apply transition-transform duration-700 ease-out;
+  }
+  .image-elegant:hover {
+    transform: scale(1.02);
+  }
 }

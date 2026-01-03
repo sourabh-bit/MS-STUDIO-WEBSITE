@@ -3,47 +3,68 @@ import { Star } from "lucide-react";
 const Testimonials = () => {
   const testimonials = [
     {
-      name: "Aanya Sharma",
+      name: "Shafali goutam",
       role: "Bride",
       image: "1",
-      text: "Meera was an absolute dream to work with! She made me feel like the best version of myself on my wedding day. The makeup was flawless, natural, and stayed perfect through all the ceremonies. Every time I look at the photos, I’m reminded of how confident and beautiful I felt.",
+      text: "Meera Sakhrani did my sangeet makeup and was really good. Meera is great for glam evening looks",
       rating: 5
     },
     {
-      name: "Diya Kapoor",
-      role: "Fashion Model",
+      name: "Heena Sharma",
+      role: "Bride",
       image: "2",
-      text: "I’ve worked with Meera on several editorial shoots, and her creativity is simply unmatched. She understands how makeup translates on camera and always brings a fresh, modern perspective to every look.",
+      text: "She did my sister in law's makeup for her wedding. The makeup was absolutely gorgeous and flawless. Meera is the best in this business and it really is true.The makeup was fantastic and there is no doub't about it. Recommended",
       rating: 5
     },
     {
-      name: "Neha Malhotra",
-      role: "Style & Essence Magazine",
+      name: "Rupal",
+      role: "Wedding & Event",
       image: "3",
-      text: "Our magazine has collaborated with Meera for multiple cover stories, and she never fails to impress. Her attention to lighting, tones, and textures is remarkable. She’s a true artist who blends professionalism with passion",
+      text: "Meera sakhrani, created stunning looks for me on both wedding day and the farmers market event,Her flawless work was a radiant touch to each occasion, making me feel truly special",
       rating: 5
     },
     {
       name: "Sunita Mehta",
       role: "Bride",
       image: "4",
-      text: "Meera did the makeup for my daughter’s wedding, and we couldn’t have asked for a better experience. She made everyone—from the bride to the bridesmaids—look radiant yet natural. Her calm energy made the entire morning stress-free.",
+      text: "No words to describe her. Meera sakhrani and her entire team truly are magicians. Not a single moment where i felt like there was toomuch happening. She is a queen",
       rating: 5
     },
     {
       name: "Riya",
-      role: "Corporate Executive",
+      role: "Bride",
       image: "5",
-      text: "“For a major brand launch event, Meera created a polished and elegant look that perfectly matched our theme. Her sense of style, professionalism, and warmth make her my go-to artist for every important occasion.",
+      text: "Her unparalleled talent who exceeded all expectations With a skilled an understanding of my vision, she turned canvas of my face into a masterpiece",
       rating: 5
     },
     {
-      name: "Kritika Joshi",
+      name: "Rania",
       role: "Bride",
       image: "6",
-      text: "From my first trial to the final wedding look, Meera was so patient and detail-oriented. She understood exactly what I wanted and made me feel truly special. I’ve recommended her to all my friends since",
+      text: "Meera sakhrani for all the 3 main events . Super happy with her work, I looked like myself and she put the entire look together so well on each day. Blush lounge Sneha for the haldi and her owork was amazing too. plus one of the kindest and easiest to work  with",
       rating: 5
-    }
+    },
+    {
+      name: "Adya",
+      role: "Bride",
+      image: "7",
+      text: "Meera sakhrani and her team (Hair by Dablu) were with me, My mom and my sister for all of our events and working with them was like working with family, We had so much fun gossiping and getting ready. It was the perfect way to start every day",
+      rating: 5
+    },
+    {
+      name: "Aishwarya",
+      role: "Bride",
+      image: "8",
+      text: "The makeup was done for my wedding functions and I'm very happy with how the makeup turned out to be. The makeup was very subtle and antural ,just how i wanted to be. Loved the wayy my makeup complimentard my outfits. Very happy with the end results. Highly recommended",
+      rating: 5
+    },
+    {
+      name: "Sargun",
+      role: "Bride",
+      image: "8",
+      text: "Meera Sakhrani. She's out of the world. She created every look so different from the the other and made me look my best. She's patient and huble and knows what she's doing. Loved her work!",
+      rating: 5
+    },
   ];
 
   return (
@@ -102,10 +123,10 @@ const Testimonials = () => {
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto animate-fade-in">
           {[
-            { number: "500+", label: "Happy Clients" },
+            { number: "5000+", label: "Happy Clients" },
             { number: "15+", label: "Years Experience" },
-            { number: "200+", label: "Bridal Looks" },
-            { number: "5.0", label: "Average Rating" }
+            { number: "2000+", label: "Bridal Looks" },
+            { number: "4.8", label: "Average Rating" }
           ].map((stat, index) => (
             <div key={index} className="text-center p-6 bg-card rounded-2xl shadow-soft">
               <p className="font-display text-4xl text-primary mb-2">

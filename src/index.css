@@ -1,135 +1,150 @@
+/* ----------------------------------------------------
+   IMPORT FONTS (Same as Lovable)
+---------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
+/* ----------------------------------------------------
+   BASE COLOR SYSTEM (Your website colors)
+---------------------------------------------------- */
 @layer base {
   :root {
-    /* Luxury Makeup Artist Palette */
-    --background: 23 100% 98%;             
+    --background: 23 100% 98%;
     --foreground: 332 14% 35%;
 
     --card: 0 0% 100%;
     --card-foreground: 332 14% 35%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 332 14% 35%;
+    --primary: 332 14% 54%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Primary: Dusty Mauve */
-    /* --primary: 332 14% 54%;
-    --primary-foreground: 0 0% 100%; */
-
-    /* Secondary: Muted Pink */
     --secondary: 350 66% 81%;
     --secondary-foreground: 332 14% 35%;
 
-    /* Muted: Soft Mint Gray */
     --muted: 150 21% 87%;
     --muted-foreground: 332 14% 45%;
 
-    /* Accent: Light Rose */
     --accent: 348 100% 90%;
     --accent-foreground: 332 14% 35%;
-
-    /* Peach Blush */
-    --peach: 23 100% 92%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
 
     --border: 150 21% 87%;
     --input: 150 21% 87%;
     --ring: 350 66% 81%;
 
+    /* Lovable tones */
+    --warm-cream: 35 45% 95%;
+    --dusty-rose: 350 35% 70%;
+    --soft-pink: 350 60% 92%;
+
     --radius: 1rem;
-    
-    /* Custom gradients */
-    --gradient-soft: linear-gradient(135deg, hsl(23, 100%, 92%), hsl(348, 100%, 90%));
-    --gradient-elegant: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(150, 21%, 87%));
-    
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -2px hsl(332 14% 54% / 0.08);
-    --shadow-elegant: 0 10px 40px -5px hsl(350 66% 81% / 0.15);
-    
-    /* Transitions */
-    --transition-elegant: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 332 14% 15%;
-    --foreground: 150 21% 87%;
-
-    --card: 332 14% 20%;
-    --card-foreground: 150 21% 87%;
-
-    --popover: 332 14% 20%;
-    --popover-foreground: 150 21% 87%;
-
-    --primary: 350 66% 81%;
-    --primary-foreground: 332 14% 15%;
-
-    --secondary: 332 14% 25%;
-    --secondary-foreground: 150 21% 87%;
-
-    --muted: 332 14% 25%;
-    --muted-foreground: 150 21% 70%;
-
-    --accent: 348 100% 80%;
-    --accent-foreground: 332 14% 15%;
-
-    --border: 332 14% 25%;
-    --input: 332 14% 25%;
-    --ring: 350 66% 81%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground font-body antialiased;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }
 }
 
+/* ----------------------------------------------------
+   LOVABLE TEXT & TYPOGRAPHY UTILITIES
+---------------------------------------------------- */
+@layer components {
+  /* Section Top Label */
+  .text-small-label {
+    @apply font-sans text-xs tracking-[0.4em] uppercase;
+    color: hsl(var(--dusty-rose));
+  }
+
+  /* Main Section Heading (Matches Lovable EXACTLY) */
+  .heading-section {
+    @apply font-serif text-3xl md:text-4xl lg:text-5xl 
+           font-light tracking-[0.25em] uppercase;
+  }
+
+  /* Hero Display Title */
+  .heading-display {
+    @apply font-display text-4xl md:text-6xl lg:text-7xl 
+           font-light tracking-wide leading-tight;
+  }
+
+  /* Elegant Paragraph */
+  .text-elegant {
+    @apply font-sans text-base md:text-lg 
+           font-light leading-relaxed tracking-wide;
+    color: hsl(var(--foreground) / 0.7);
+  }
+
+  /* Divider */
+  .divider-elegant {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      hsl(var(--dusty-rose) / 0.4),
+      transparent
+    );
+  }
+
+  /* Background Pattern for Hero */
+  .bg-pattern-soft {
+    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+    background-size: 32px 32px;
+  }
+
+  /* Cream Background Section */
+  .section-cream {
+    background-color: hsl(var(--warm-cream));
+  }
+
+  /* Image Hover Effect */
+  .image-elegant {
+    @apply object-cover transition-transform duration-700 ease-out;
+  }
+  .image-elegant:hover {
+    transform: scale(1.03);
+  }
+}
+
+/* ----------------------------------------------------
+   LOVABLE ANIMATIONS
+---------------------------------------------------- */
 @layer utilities {
-  .text-gradient {
-    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  @keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
-  
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
+  .animate-fade-up {
+    animation: fadeUp 0.8s ease-out forwards;
   }
-  
-  .shadow-elegant {
-    box-shadow: var(--shadow-elegant);
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }
-  
-  .transition-elegant {
-    transition: var(--transition-elegant);
+  .animate-fade-in {
+    animation: fadeIn 0.7s ease-out forwards;
   }
+
+  @keyframes softFade {
+    0% { opacity:0; transform: scale(1.03); }
+    100% { opacity:1; transform: scale(1); }
+  }
+  .animate-soft-fade {
+    animation: softFade 1.2s ease-out forwards;
+  }
+
+  /* Delays */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+  .delay-700 { animation-delay: 700ms; }
 }

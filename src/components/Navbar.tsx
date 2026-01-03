@@ -1,19 +1,18 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Calendar, Instagram, Facebook, Mail, Phone } from "lucide-react";
+import { Menu, X, Calendar, Instagram, Mail, Phone, GraduationCap } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  const leftNavLinks = [
+  const leftMenu = [
     { name: "HOMEPAGE", path: "/" },
     { name: "MEET MEERA", path: "/about" },
-    // { name: "MAKEUP SERVICES", path: "/services" },
+    { name: "MAKEUP SERVICES", path: "/services" },
   ];
 
-  const rightNavLinks = [
+  const rightMenu = [
     { name: "PORTFOLIO", path: "/portfolio" },
     { name: "THE JOURNAL", path: "/testimonials" },
     { name: "CONTACT", path: "/contact" },
@@ -21,125 +20,170 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const underlineClass = `
+    relative inline-block pb-1
+    before:absolute before:left-1/2 before:-bottom-[2px]
+    before:w-0 before:h-[1px] before:bg-[#B89A94] before:opacity-80
+    before:-translate-x-1/2
+    before:transition-all before:duration-300
+    hover:before:w-[50%]
+  `;
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-border/50">
-      <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between h-24 lg:h-28">
-          {/* Left: Book Button (Desktop) */}
-          <div className="hidden lg:flex items-center gap-2">
-            <Link to="/contact">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Book Your Appointment</span>
-              </Button>
-            </Link>
-          </div>
+    <nav
+      className="
+        fixed top-0 left-0 right-0 z-[999]
+        backdrop-blur-md bg-white/15 
+        border-b border-white/20
+        shadow-[inset_0_0_0.5px_rgba(255,255,255,0.4)]
+      "
+    >
 
-          {/* Left Navigation (Desktop) */}
-          <div className="hidden lg:flex items-center space-x-8">
-            {leftNavLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`font-body text-s uppercase tracking-widest transition-elegant ${
-                  isActive(link.path)
-                    ? "text-primary font-semibold"
-                    : "text-foreground/90 hover:text-primary"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+      {/* ---------------- DESKTOP NAVBAR ---------------- */}
+      <div className="hidden lg:flex relative w-full items-center justify-between px-10">
 
-          {/* Center: Logo/Brand */}
-          <Link to="/" className="flex flex-col items-center transition-elegant hover:opacity-80">
-            <span className="font-script text-3xl lg:text-4xl text-primary/70">Meera</span>
-            {/* <span className="font-script text-3xl lg:text-4xl text-primary/70">Sakhrani</span> */}
-            <div className="font-display text-xl lg:text-2xl tracking-[0.3em] text-primary -mt-2">
-              SAKHRANI
-            </div>
-            {/* <div className="font-display text-xl lg:text-2xl tracking-[0.3em] text-primary -mt-1">
-              SAKHRANI
-            </div> */}
+        {/* LEFT — MAKEUP SCHOOL */}
+        <div className="flex flex-col items-center justify-center w-[220px] pt-6 pb-4">
+          <GraduationCap className="w-6 h-6 mb-1 text-[#b59565]" />
+          <Link to="/classes" className="block text-[13px] tracking-[0.25em] uppercase text-[#735b50] hover:text-[#7A5E5F] transition">
+            <span className={underlineClass}>Makeup School</span>
           </Link>
-
-          {/* Right Navigation (Desktop) */}
-          <div className="hidden lg:flex items-center space-x-8">
-            {rightNavLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`font-body text-s uppercase tracking-widest transition-elegant ${
-                  isActive(link.path)
-                    ? "text-primary font-semibold"
-                    : "text-foreground/90 hover:text-primary"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
-
-          {/* Right: Social Icons (Desktop) */}
-          <div className="hidden lg:flex items-center gap-3">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a href="https://www.instagram.com/meerasakhrani?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-primary transition-elegant">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="mailto:Meerasakhranibeauty@gmail.com" className="text-foreground/50 hover:text-primary transition-elegant">
-              <Mail className="w-4 h-4" />
-            </a>
-            <a href="tel:+91 84482 29694" className="text-foreground/50 hover:text-primary transition-elegant">
-              <Phone className="w-4 h-4" />
-            </a>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden text-foreground"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* CENTER — MENUS + LOGO */}
+        <div className="flex flex-col items-center justify-center w-full pt-6 pb-4">
+          <div className="flex items-start justify-center gap-20">
+
+            {/* LEFT MENU */}
+            <div className="text-center space-y-2 tracking-[0.26em] text-[13px] uppercase text-[#4F3F40]">
+              {leftMenu.map((link) => (
+                <Link key={link.path} to={link.path} className="block hover:text-[#7A5E5F] transition">
+                  <span className={`${underlineClass} ${isActive(link.path) ? "text-[#7A5E5F]" : "text-[#4F3F40]"}`}>
+                    {link.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            {/* LEFT LINE */}
+            <div className="h-24 w-[1px] bg-[#796866] bg-opacity-20"></div>
+
+            {/* LOGO */}
+            <Link to="/" className="flex flex-col items-center -mt-1">
+              <span
+                className="
+                  font-script text-6xl mb-1
+                  bg-gradient-to-b from-[#8A6A67] to-[#5A3F3F]
+                  text-transparent bg-clip-text
+                "
+              >
+                Meera
+              </span>
+              <span
+                className="
+                  font-display text-2xl tracking-[0.4em]
+                  bg-gradient-to-b from-[#9A7A76] to-[#604848]
+                  text-transparent bg-clip-text
+                "
+              >
+                SAKHRANI
+              </span>
+            </Link>
+
+            {/* RIGHT LINE */}
+            <div className="h-24 w-[1px] bg-[#796866] bg-opacity-20"></div>
+
+            {/* RIGHT MENU */}
+            <div className="text-center space-y-2 tracking-[0.26em] text-[13px] uppercase text-[#4F3F40]">
+              {rightMenu.map((link) => (
+                <Link key={link.path} to={link.path} className="block hover:text-[#7A5E5F] transition">
+                  <span className={`${underlineClass} ${isActive(link.path) ? "text-[#7A5E5F]" : "text-[#4F3F40]"}`}>
+                    {link.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+          </div>
+        </div>
+
+        {/* RIGHT — BOOK APPOINTMENT */}
+        <div className="flex flex-col items-center justify-center w-[220px] pt-6 pb-4 pr-10">
+          <Calendar className="w-6 h-6 mb-1 text-[#b59565]" />
+          <Link to="/contact" className="block hover:text-[#735b50] transition text-center">
+            <span className={underlineClass}>Book Appointment</span>
+          </Link>
+        </div>
+
+        {/* SOCIAL ICONS */}
+        <div className="flex flex-col gap-3 absolute right-5 top-1/2 -translate-y-1/2">
+          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="https://instagram.com/meerasakhrani">
+            <Instagram className="w-4 h-4" />
+          </a>
+          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="mailto:meerasakhranibeauty@gmail.com">
+            <Mail className="w-4 h-4" />
+          </a>
+          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="tel:+918448229694">
+            <Phone className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      {/* ---------------- MOBILE NAVBAR ---------------- */}
+      <div className="flex lg:hidden w-full items-center justify-between px-6 h-20">
+
+        {/* MOBILE LOGO */}
+        <Link to="/" className="flex flex-col items-center">
+          <span className="font-script text-4xl bg-gradient-to-b from-[#8A6A67] to-[#5A3F3F] text-transparent bg-clip-text">
+            Meera
+          </span>
+        </Link>
+
+        {/* HAMBURGER BUTTON */}
+        <button className="text-[#4F3F40]" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
+      </div>
+
+      {/* MOBILE DROPDOWN */}
       {isOpen && (
-        <div className="lg:hidden py-6 animate-fade-in border-t border-border">
-          <div className="flex flex-col space-y-4">
-            {[...leftNavLinks, ...rightNavLinks].map((link) => (
+        <div className="lg:hidden bg-white/20 backdrop-blur-xl border-t border-white/20 shadow-lg py-6 px-8">
+
+          <div className="flex flex-col gap-6 text-[#4F3F40] text-[14px] uppercase tracking-[0.22em]">
+            {[...leftMenu, ...rightMenu].map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={`
-                  font-body text-sm uppercase tracking-widest transition-elegant
-                  ${
-                    isActive(link.path)
-                      ? "text-primary font-semibold"
-                      : "text-foreground/100 md:text-foreground/60 hover:text-primary"
-                  }
-                `}
               >
-                {link.name}
+                <span className={`${underlineClass} block`}>
+                  {link.name}
+                </span>
               </Link>
             ))}
+          </div>
+
+          <div className="my-6 h-[1px] w-full bg-white/30"></div>
+
+          {/* CTA */}
+          <div className="flex flex-col gap-6 text-[#4F3F40]">
+            <Link to="/classes" onClick={() => setIsOpen(false)}>
+              <span className={underlineClass}>Makeup School</span>
+            </Link>
 
             <Link to="/contact" onClick={() => setIsOpen(false)}>
-              <Button variant="outline" size="sm" className="w-full mt-4 gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="text-xs uppercase">Book Appointment</span>
-              </Button>
+              <span className={underlineClass}>Book Appointment</span>
             </Link>
+          </div>
+
+          <div className="flex justify-center gap-6 mt-8 text-[#4F3F40]">
+            <Instagram className="w-6 h-6" />
+            <Mail className="w-6 h-6" />
+            <Phone className="w-6 h-6" />
           </div>
         </div>
       )}
 
-      </div>
     </nav>
   );
 };
