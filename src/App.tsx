@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Classes from "./pages/Classes";   // ⭐ ADDED IMPORT
+import RefundAndCancellationPolicy from "./pages/RefundAndCancellationPolicy";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/refund-and-cancellation-policy" element={<RefundAndCancellationPolicy />} />
 
             {/* ⭐ FINAL: Classes page inside layout */}
             <Route path="/classes" element={<Classes />} />

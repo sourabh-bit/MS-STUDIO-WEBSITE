@@ -46,6 +46,9 @@ const Footer = () => {
               <Link to="/privacy-policy" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
                 <Lock size={16} /> Privacy Policy
               </Link>
+              <Link to="/refund-and-cancellation-policy" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
+                <Lock size={16} /> Refund & Cancellation Policy
+              </Link>
             </div>
           </div>
 
