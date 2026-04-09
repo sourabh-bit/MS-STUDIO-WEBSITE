@@ -50,7 +50,7 @@ const OnlinePaymentSection = () => {
               Course Fee
             </p>
             <p className="font-display text-5xl md:text-6xl lg:text-7xl text-foreground mb-2">
-              ₹12,000
+              ₹15,000
             </p>
             <p className="font-sans text-lg text-muted-foreground mb-4">
               + GST
@@ -59,9 +59,9 @@ const OnlinePaymentSection = () => {
               4-Hour Live Online Masterclass
             </p>
             <div className="mt-6 pt-6 border-t border-dusty-rose/20">
-              <p className="font-display text-sm text-muted-foreground">
+              {/* <p className="font-display text-sm text-muted-foreground">
                 Bonus Takeaways Worth ₹1,00,000+ Included!
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
