@@ -1,6 +1,11 @@
 import heroImage from "@/assets/classes/hero-masterclass.jpg";
+import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
-const HeroBanner = () => {
+type HeroBannerProps = {
+  onOpenCheckout: () => void;
+};
+
+const HeroBanner = ({ onOpenCheckout }: HeroBannerProps) => {
   return (
     <section
       className="
@@ -98,21 +103,27 @@ const HeroBanner = () => {
               "
               style={{ animationDelay: "750ms" }}
             >
-              <a
-                href="#enroll"
+              <button
+                type="button"
+                onClick={onOpenCheckout}
+                data-course={OFFLINE_MASTERCLASS_DETAILS.courseName}
+                data-price={String(OFFLINE_MASTERCLASS_DETAILS.fee)}
+                data-payment-trigger="hero"
                 className="
                   px-8 py-4 
                   bg-primary text-primary-foreground
-                  font-sans text-sm tracking-[0.2em] uppercase
+                  font-sans 
+                  text-sm tracking-[0.2em] uppercase
                   hover:bg-dusty-rose 
                   transition-all duration-300
+                  rounded-full
                 "
               >
-                Enroll Now
-              </a>
+                Pay Now
+              </button>
 
               <a
-                href="tel:+919818793850"
+                href="#enroll"
                 className="
                   px-8 py-4 
                   border border-foreground/20 
@@ -120,9 +131,10 @@ const HeroBanner = () => {
                   text-sm tracking-[0.2em] uppercase
                   hover:bg-foreground/5 
                   transition-all duration-300
+                  rounded-full
                 "
               >
-                Contact Us
+                View Details
               </a>
             </div>
           </div>

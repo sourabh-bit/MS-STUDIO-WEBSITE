@@ -17,6 +17,9 @@ import Classes from "./pages/Classes";   // ⭐ ADDED IMPORT
 import RefundAndCancellationPolicy from "./pages/RefundAndCancellationPolicy";
 import ScrollToTop from "./components/ScrollToTop";
 import Checkout from "./pages/Checkout";
+import MasterclassCheckout from "./pages/MasterclassCheckout";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +45,9 @@ const App = () => (
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/refund-and-cancellation-policy" element={<RefundAndCancellationPolicy />} />
       <Route path="/classes" element={<Classes />} />
+      <Route path="/classes/checkout" element={<MasterclassCheckout />} />
+      <Route path="/success" element={<PaymentSuccess />} />
+      <Route path="/failure" element={<PaymentFailure />} />
       <Route path="/checkout" element={<Checkout />} />
     </Route>
 

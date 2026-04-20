@@ -1,5 +1,9 @@
 import { Gem } from "lucide-react";
 
+import { MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
+
+const BONUS_VALUE = 100000;
+
 const BonusTakeaways = () => {
   const bonuses = [
     {
@@ -44,10 +48,10 @@ const BonusTakeaways = () => {
             </span>
           </div>
           <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-4">
-            Worth ₹1,00,000+
+            Worth {formatInr(BONUS_VALUE)}+
           </h2>
           <p className="font-display text-sm md:text-base italic text-white/70">
-            (Included in your ₹12,000 Masterclass)
+            (Included in your {formatInr(MASTERCLASS_DETAILS.fee)} Masterclass)
           </p>
         </div>
 
