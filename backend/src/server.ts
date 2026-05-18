@@ -17,9 +17,12 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173",
   "http://127.0.0.1:8080",
   "http://127.0.0.1:8082",
+  "https://meerasakhrani.com",
+  "https://www.meerasakhrani.com",
   "https://meerasakhrani.in",
   "https://www.meerasakhrani.in",
 ]);
+const paymentCallbackPath = "/api/payments/callback";
 
 const isTrustedBrowserOrigin = (origin?: string | null) => {
   if (!origin || origin === "null") {
@@ -53,7 +56,12 @@ const saveRawBody = (
 
 app.use(helmet());
 
-app.use(
+app.use((request, response, next) => {
+  if (request.path === paymentCallbackPath) {
+    next();
+    return;
+  }
+
   cors({
     origin: (origin, callback) => {
       if (isTrustedBrowserOrigin(origin)) {
@@ -63,8 +71,8 @@ app.use(
 
       callback(new Error("CORS origin not allowed."));
     },
-  }),
-);
+  })(request, response, next);
+});
 
 app.use(express.json({ verify: saveRawBody }));
 app.use(express.urlencoded({ extended: true, verify: saveRawBody }));
