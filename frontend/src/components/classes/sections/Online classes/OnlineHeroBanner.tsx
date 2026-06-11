@@ -38,10 +38,6 @@ const OnlineHeroBanner = ({ onOpenCheckout }: OnlineHeroBannerProps) => {
               An Online Masterclass
             </h2>
 
-            <p className="mb-6 font-display text-2xl text-dusty-rose italic md:mb-8 md:text-3xl lg:text-4xl">
-              14<sup>th</sup> December 2025
-            </p>
-
             <p className="text-elegant mx-auto mb-8 max-w-md text-muted-foreground lg:mx-0 md:mb-10">
               A 4-hour intensive live masterclass by Meera Sakhrani. Transform
               your artistry and elevate your career from anywhere in the world.

@@ -1,4 +1,4 @@
-﻿import { Building2, Calendar, Clock, CreditCard, Monitor, Phone } from "lucide-react";
+import { Building2, Clock, CreditCard, Monitor, Phone } from "lucide-react";
 import { MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
 
 type OnlinePaymentSectionProps = {
@@ -7,8 +7,7 @@ type OnlinePaymentSectionProps = {
 
 const OnlinePaymentSection = ({ onOpenCheckout }: OnlinePaymentSectionProps) => {
   const classDetails = [
-    { icon: Calendar, label: "Date", value: "14th December 2025" },
-    { icon: Clock, label: "Time", value: "12:00 PM - 4:00 PM IST" },
+    { icon: Clock, label: "Time", value: "TBD" },
     { icon: Monitor, label: "Mode", value: "Online (LIVE)" },
   ];
 
