@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
 import type { ParsedCallbackRequest } from "../types/payment.js";
+import { isHttpError } from "../lib/http-error.js";
 import {
   checkPaymentStatus,
   initiatePayment,
@@ -57,25 +58,27 @@ const extractAxiosErrorMessage = (data: unknown) => {
   }
 };
 
-const respondWithGatewayError = (
+const respondWithPaymentError = (
   error: unknown,
   response: Response,
 ): boolean => {
+  if (isHttpError(error)) {
+    response.status(error.statusCode).json({
+      message: error.message,
+    });
+    return true;
+  }
+
   if (!axios.isAxiosError(error)) {
     return false;
   }
-
-  const statusCode =
-    error.response?.status && error.response.status >= 400
-      ? error.response.status
-      : 502;
 
   const message =
     extractAxiosErrorMessage(error.response?.data) ||
     error.message ||
     "Upstream payment gateway request failed.";
 
-  response.status(statusCode).json({
+  response.status(502).json({
     message,
   });
 
@@ -191,6 +194,15 @@ export const initiatePaymentHandler = async (
       return;
     }
 
+    const parsedAmount = Number(amount);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      response.status(400).json({
+        message: "Amount must be a valid positive number.",
+      });
+      return;
+    }
+
     const normalizedMobile = normalizeMobileNumber(mobile);
 
     if (normalizedMobile.length !== 10) {
@@ -204,7 +216,7 @@ export const initiatePaymentHandler = async (
       customerName: String(customerName).trim(),
       email: String(email).trim(),
       mobile: normalizedMobile,
-      amount: Number(amount),
+      amount: parsedAmount,
       courseName: String(courseName).trim(),
       variant:
         String(variant).trim().toLowerCase() === "offline"
@@ -216,7 +228,7 @@ export const initiatePaymentHandler = async (
 
     response.status(200).json(result);
   } catch (error) {
-    if (respondWithGatewayError(error, response)) {
+    if (respondWithPaymentError(error, response)) {
       return;
     }
 
@@ -264,13 +276,17 @@ export const paymentStatusHandler = async (
     const result = await checkPaymentStatus(merchantTxnNo);
     response.status(200).json(result);
   } catch (error) {
-    if (respondWithGatewayError(error, response)) {
+    if (respondWithPaymentError(error, response)) {
       return;
     }
 
     next(error);
   }
 };
+
+
+
+
 
 
 

@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { env } from "../config/env.js";
 import { connectToDatabase } from "../db/connect.js";
 import { logger } from "../lib/logger.js";
+import { HttpError } from "../lib/http-error.js";
 import { Payment, type PaymentDocument } from "../models/Payment.js";
 import type {
   GatewayPayload,
@@ -386,7 +387,10 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
         },
       );
 
-      throw new Error("ICICI initiateSale response hash verification failed.");
+      throw new HttpError(
+        502,
+        "ICICI initiateSale response hash verification failed.",
+      );
     }
 
     if (response.data.responseCode !== "R1000") {
@@ -398,8 +402,24 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
         },
       );
 
-      throw new Error(
+      throw new HttpError(
+        502,
         `ICICI initiateSale failed with responseCode ${response.data.responseCode}.`,
+      );
+    }
+
+    if (!response.data.redirectURI || !response.data.tranCtx) {
+      await Payment.updateOne(
+        { merchantTxnNo: payment.merchantTxnNo },
+        {
+          paymentStatus: "FAILED",
+          gatewayResponse: response.data,
+        },
+      );
+
+      throw new HttpError(
+        502,
+        "ICICI initiateSale response did not include a valid redirect payload.",
       );
     }
 
@@ -601,4 +621,6 @@ export const checkPaymentStatus = async (merchantTxnNo: string) => {
     gatewayResponse: verifiedStatus.payload,
   };
 };
+
+
 

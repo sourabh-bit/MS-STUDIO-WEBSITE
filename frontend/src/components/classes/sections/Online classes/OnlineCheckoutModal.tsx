@@ -1,8 +1,10 @@
-﻿import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
+import { initiatePayment } from "@/lib/payment";
 import {
   Dialog,
   DialogContent,
@@ -22,17 +24,75 @@ const initialFormState = {
   phone: "",
 };
 
+const normalizeMobileNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return digits;
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+
+  return digits;
+};
+
 const OnlineCheckoutModal = ({ open, onOpenChange }: OnlineCheckoutModalProps) => {
   const [form, setForm] = useState(initialFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     if (!open) {
       setForm(initialFormState);
+      setIsSubmitting(false);
+      setSubmitError("");
     }
   }, [open]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const response = await initiatePayment({
+        customerName: form.fullName.trim(),
+        email: form.email.trim(),
+        mobile: normalizeMobileNumber(form.phone.trim()),
+        amount: MASTERCLASS_DETAILS.fee,
+        courseName: MASTERCLASS_DETAILS.courseName,
+        variant: "online",
+        feeLabel: MASTERCLASS_DETAILS.feeLabel,
+        summaryLabel: MASTERCLASS_DETAILS.summaryLabel,
+      });
+
+      const redirectUrl = response.redirectUrl?.trim();
+
+      if (!redirectUrl) {
+        throw new Error("Payment gateway redirect URL was not returned.");
+      }
+
+      window.location.href = redirectUrl;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to initiate payment right now. Please try again.";
+
+      setSubmitError(message);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -72,7 +132,9 @@ const OnlineCheckoutModal = ({ open, onOpenChange }: OnlineCheckoutModalProps) =
                 <p className="font-sans text-xs tracking-[0.25em] text-muted-foreground uppercase">
                   Price
                 </p>
-                <p className="mt-2 font-display text-4xl text-foreground">{formatInr(MASTERCLASS_DETAILS.fee)}</p>
+                <p className="mt-2 font-display text-4xl text-foreground">
+                  {formatInr(MASTERCLASS_DETAILS.fee)}
+                </p>
               </div>
             </div>
           </div>
@@ -138,17 +200,25 @@ const OnlineCheckoutModal = ({ open, onOpenChange }: OnlineCheckoutModalProps) =
               </p>
             </div>
 
+            {submitError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
+
             <button
               id="icici-final-pay-btn"
               type="submit"
+              disabled={isSubmitting}
               data-course={MASTERCLASS_DETAILS.courseName}
               data-price={String(MASTERCLASS_DETAILS.fee)}
               data-full-name={form.fullName}
               data-email={form.email}
               data-phone={form.phone}
-              className="w-full rounded-full bg-primary px-6 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Proceed to Payment
+              {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+              {isSubmitting ? "Redirecting..." : "Proceed to Payment"}
             </button>
 
             <p className="text-center font-sans text-sm text-muted-foreground">

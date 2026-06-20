@@ -17,7 +17,7 @@ export const OFFLINE_MASTERCLASS_DETAILS = {
 } as const;
 
 export const formatInr = (amount: number) =>
-  `₹${new Intl.NumberFormat("en-IN").format(amount)}`;
+  `INR ${new Intl.NumberFormat("en-IN").format(amount)}`;
 
 const getPositiveAmount = (value: string | null) => {
   if (!value) {
