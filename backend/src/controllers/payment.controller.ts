@@ -1,3 +1,4 @@
+import axios from "axios";
 import type { NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
@@ -38,6 +39,47 @@ const normalizeMobileNumber = (value: unknown) => {
   }
 
   return digits;
+};
+
+const extractAxiosErrorMessage = (data: unknown) => {
+  if (typeof data === "string") {
+    return data.trim();
+  }
+
+  if (data && typeof data === "object" && "message" in data) {
+    return String((data as { message?: unknown }).message || "").trim();
+  }
+
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return "";
+  }
+};
+
+const respondWithGatewayError = (
+  error: unknown,
+  response: Response,
+): boolean => {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const statusCode =
+    error.response?.status && error.response.status >= 400
+      ? error.response.status
+      : 502;
+
+  const message =
+    extractAxiosErrorMessage(error.response?.data) ||
+    error.message ||
+    "Upstream payment gateway request failed.";
+
+  response.status(statusCode).json({
+    message,
+  });
+
+  return true;
 };
 
 const extractCallbackPayload = (request: ParsedCallbackRequest) => {
@@ -174,6 +216,10 @@ export const initiatePaymentHandler = async (
 
     response.status(200).json(result);
   } catch (error) {
+    if (respondWithGatewayError(error, response)) {
+      return;
+    }
+
     next(error);
   }
 };
@@ -218,8 +264,15 @@ export const paymentStatusHandler = async (
     const result = await checkPaymentStatus(merchantTxnNo);
     response.status(200).json(result);
   } catch (error) {
+    if (respondWithGatewayError(error, response)) {
+      return;
+    }
+
     next(error);
   }
 };
+
+
+
 
 
