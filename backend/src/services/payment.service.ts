@@ -63,6 +63,41 @@ const createMerchantTxnNo = () =>
 const buildTransactionExpiry = () =>
   new Date(Date.now() + INITIATED_REUSE_WINDOW_MS);
 
+const toFormUrlEncodedBody = (payload: Record<string, unknown>) =>
+  new URLSearchParams(
+    Object.entries(payload).map(([key, value]) => [key, String(value ?? "")]),
+  ).toString();
+
+const isHtml502Response = (value: unknown) =>
+  typeof value === "string" && /502 Bad Gateway/i.test(value);
+
+const postIciciInitiateSale = async <TResponse>(
+  url: string,
+  payload: Record<string, unknown>,
+) => {
+  try {
+    return await iciciClient.post<TResponse>(url, toFormUrlEncodedBody(payload), {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+    });
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    const responseData = axios.isAxiosError(error) ? error.response?.data : undefined;
+
+    if (status !== 502 && !isHtml502Response(responseData)) {
+      throw error;
+    }
+
+    return iciciClient.post<TResponse>(url, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+  }
+};
 const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus => {
   if (isSuccessfulPayment(payload)) {
     return "SUCCESS";
@@ -330,7 +365,7 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
   });
 
   try {
-    const response = await iciciClient.post<InitiateSaleResponse>(
+    const response = await postIciciInitiateSale<InitiateSaleResponse>(
       env.iciciInitiateSaleUrl,
       signedRequest,
     );
