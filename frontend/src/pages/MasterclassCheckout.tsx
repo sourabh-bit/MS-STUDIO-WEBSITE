@@ -42,6 +42,29 @@ const normalizeMobileNumber = (value: string) => {
   return digits;
 };
 
+const submitGatewayForm = (
+  gatewayUrl: string,
+  gatewayFields: Record<string, string>,
+) => {
+  const form = document.createElement("form");
+
+  form.method = "POST";
+  form.action = gatewayUrl;
+  form.style.display = "none";
+
+  Object.entries(gatewayFields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+
+    input.type = "hidden";
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+};
+
 const onlineIncludedItems = [
   "Premium hands-on training",
   "Live demonstration",
@@ -94,7 +117,17 @@ const MasterclassCheckout = () => {
         summaryLabel: paymentDetails.summaryLabel,
       });
 
-      window.location.href = response.redirectUrl;
+      if (response.gatewayUrl && response.gatewayFields) {
+        submitGatewayForm(response.gatewayUrl, response.gatewayFields);
+        return;
+      }
+
+      if (response.redirectUrl) {
+        window.location.href = response.redirectUrl;
+        return;
+      }
+
+      throw new Error("Payment gateway response was incomplete.");
     } catch (error) {
       const message =
         error instanceof Error
@@ -339,4 +372,5 @@ const MasterclassCheckout = () => {
 };
 
 export default MasterclassCheckout;
+
 

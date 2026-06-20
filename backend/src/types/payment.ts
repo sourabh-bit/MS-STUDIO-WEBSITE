@@ -71,6 +71,11 @@ export type InitiateSaleResponse = {
   [key: string]: unknown;
 };
 
+export type BrowserGatewayRequest = {
+  gatewayUrl: string;
+  gatewayFields: Record<string, string>;
+};
+
 export type StatusCheckRequest = {
   merchantId: string;
   aggregatorID?: string;
@@ -85,3 +90,4 @@ export type GatewayPayload = Record<string, string>;
 export type ParsedCallbackRequest = Request & {
   rawBody?: string;
 };
+
