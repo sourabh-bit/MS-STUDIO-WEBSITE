@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -45,6 +45,7 @@ const App = () => (
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/refund-and-cancellation-policy" element={<RefundAndCancellationPolicy />} />
       <Route path="/classes" element={<Classes />} />
+      <Route path="/classes/undefined" element={<Navigate to="/classes" replace />} />
       <Route path="/classes/checkout" element={<MasterclassCheckout />} />
       <Route path="/success" element={<PaymentSuccess />} />
       <Route path="/failure" element={<PaymentFailure />} />
@@ -60,3 +61,4 @@ const App = () => (
 );
 
 export default App;
+

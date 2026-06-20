@@ -301,21 +301,26 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
 
   const existingPayment = await findReusableTransaction(input);
 
-  if (existingPayment && existingPayment.gatewayRequest) {
+  if (existingPayment && existingPayment.redirectURI && existingPayment.tranCtx) {
+    const redirectUrl = buildRedirectUrl(
+      existingPayment.redirectURI,
+      existingPayment.tranCtx,
+    );
+
     await appendLog(
       existingPayment.merchantTxnNo,
       "REUSED_TRANSACTION",
-      "Reused a recently created browser-post gateway request.",
+      "Reused a still-valid initiated transaction within the short timeout window.",
       {
-        gatewayUrl: env.iciciInitiateSaleUrl,
-        expiresAt: existingPayment.createdAt?.toISOString() || null,
+        redirectUrl,
+        expiresAt: existingPayment.transactionExpiresAt?.toISOString() || null,
       },
     );
 
     return {
       merchantTxnNo: existingPayment.merchantTxnNo,
-      gatewayUrl: env.iciciInitiateSaleUrl,
-      gatewayFields: existingPayment.gatewayRequest as Record<string, string>,
+      redirectUrl,
+      reused: true,
     };
   }
 
@@ -326,7 +331,7 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
     "NEW_TRANSACTION_CREATED",
     "Created a fresh payment transaction.",
     {
-      reason: "No reusable browser-post gateway request found within the timeout window.",
+      reason: "No reusable transaction found within the timeout window.",
     },
   );
 
@@ -345,31 +350,110 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
 
   await Payment.updateOne(
     { merchantTxnNo: payment.merchantTxnNo },
-    {
-      paymentStatus: "CREATED",
-      gatewayRequest: signedRequest,
-      gatewayResponse: null,
-      transactionExpiresAt: null,
-    },
+    { gatewayRequest: signedRequest },
   );
 
   await appendLog(
     payment.merchantTxnNo,
     "INITIATE_REQUEST",
-    "Signed initiate sale request created for browser-side submission.",
+    "Initiate sale request created.",
     sanitizeForLogs(signedRequest),
   );
 
-  logger.info("Prepared initiateSale request for browser-side submission.", {
+  logger.info("Sending initiateSale request to ICICI.", {
     merchantTxnNo: payment.merchantTxnNo,
   });
 
-  return {
-    merchantTxnNo: payment.merchantTxnNo,
-    gatewayUrl: env.iciciInitiateSaleUrl,
-    gatewayFields: signedRequest,
-  };
+  try {
+    const response = await postIciciInitiateSale<InitiateSaleResponse>(
+      env.iciciInitiateSaleUrl,
+      signedRequest,
+    );
 
+    await appendLog(
+      payment.merchantTxnNo,
+      "INITIATE_RESPONSE",
+      "Initiate sale response received.",
+      sanitizeForLogs(response.data as Record<string, unknown>),
+    );
+
+    if (!verifyInitiateSaleResponse(response.data, env.iciciSecretKey)) {
+      await Payment.updateOne(
+        { merchantTxnNo: payment.merchantTxnNo },
+        {
+          paymentStatus: "HASH_MISMATCH",
+          gatewayResponse: response.data,
+        },
+      );
+
+      throw new Error("ICICI initiateSale response hash verification failed.");
+    }
+
+    if (response.data.responseCode !== "R1000") {
+      await Payment.updateOne(
+        { merchantTxnNo: payment.merchantTxnNo },
+        {
+          paymentStatus: "FAILED",
+          gatewayResponse: response.data,
+        },
+      );
+
+      throw new Error(
+        `ICICI initiateSale failed with responseCode ${response.data.responseCode}.`,
+      );
+    }
+
+    const redirectUrl = buildRedirectUrl(
+      response.data.redirectURI,
+      response.data.tranCtx,
+    );
+
+    await Payment.updateOne(
+      { merchantTxnNo: payment.merchantTxnNo },
+      {
+        paymentStatus: "INITIATED",
+        redirectURI: response.data.redirectURI,
+        tranCtx: response.data.tranCtx,
+        transactionExpiresAt: buildTransactionExpiry(),
+        gatewayResponse: response.data,
+      },
+    );
+
+    await appendLog(
+      payment.merchantTxnNo,
+      "REDIRECT",
+      "Redirect URL generated for hosted payment page.",
+      { redirectUrl },
+    );
+
+    return {
+      merchantTxnNo: payment.merchantTxnNo,
+      redirectUrl,
+      reused: false,
+    };
+  } catch (error) {
+    const message =
+      error instanceof AxiosError
+        ? serializeAxiosErrorData(error.response?.data) || error.message
+        : error instanceof Error
+          ? error.message
+          : "Unknown ICICI initiateSale error.";
+
+    await Payment.updateOne(
+      { merchantTxnNo: payment.merchantTxnNo },
+      {
+        paymentStatus: "ERROR",
+        transactionExpiresAt: null,
+      },
+    );
+
+    logger.error("Failed to initiate ICICI payment.", {
+      merchantTxnNo: payment.merchantTxnNo,
+      message,
+    });
+
+    throw error;
+  }
 };
 export const processPaymentCallback = async (
   rawPayload: Record<string, unknown>,

@@ -13,10 +13,10 @@ export type InitiatePaymentRequest = {
 
 export type InitiatePaymentResponse = {
   merchantTxnNo: string;
-  gatewayUrl?: string;
-  gatewayFields?: Record<string, string>;
   redirectUrl?: string;
   reused?: boolean;
+  gatewayUrl?: string;
+  gatewayFields?: Record<string, string>;
 };
 
 export type PaymentStatusResponse = {
@@ -25,5 +25,3 @@ export type PaymentStatusResponse = {
   paymentStatus: string;
   gatewayResponse: Record<string, string>;
 };
-
-
