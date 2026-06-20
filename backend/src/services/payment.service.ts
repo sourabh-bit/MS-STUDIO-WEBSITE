@@ -59,8 +59,7 @@ const serializeAxiosErrorData = (value: unknown) => {
 };
 
 const createMerchantTxnNo = () =>
-  `MS${Date.now()}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
-
+  `MS${Date.now().toString().slice(-10)}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 const buildTransactionExpiry = () =>
   new Date(Date.now() + INITIATED_REUSE_WINDOW_MS);
 
@@ -568,3 +567,4 @@ export const checkPaymentStatus = async (merchantTxnNo: string) => {
     gatewayResponse: verifiedStatus.payload,
   };
 };
+

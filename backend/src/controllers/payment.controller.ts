@@ -22,6 +22,24 @@ const normaliseTextPayload = (value: string) => {
   return Object.fromEntries(new URLSearchParams(trimmed).entries());
 };
 
+const normalizeMobileNumber = (value: unknown) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return digits;
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+
+  return digits;
+};
+
 const extractCallbackPayload = (request: ParsedCallbackRequest) => {
   if (typeof request.body === "string") {
     return normaliseTextPayload(request.body);
@@ -131,10 +149,19 @@ export const initiatePaymentHandler = async (
       return;
     }
 
+    const normalizedMobile = normalizeMobileNumber(mobile);
+
+    if (normalizedMobile.length !== 10) {
+      response.status(400).json({
+        message: "Phone number must be 10 digits after removing country code or leading zero.",
+      });
+      return;
+    }
+
     const result = await initiatePayment({
       customerName: String(customerName).trim(),
       email: String(email).trim(),
-      mobile: String(mobile).trim(),
+      mobile: normalizedMobile,
       amount: Number(amount),
       courseName: String(courseName).trim(),
       variant:
@@ -194,3 +221,5 @@ export const paymentStatusHandler = async (
     next(error);
   }
 };
+
+

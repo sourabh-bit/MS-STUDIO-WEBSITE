@@ -24,6 +24,24 @@ const getInitialFormState = (searchParams: URLSearchParams) => ({
     "",
 });
 
+const normalizeMobileNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return digits;
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+
+  return digits;
+};
+
 const onlineIncludedItems = [
   "Premium hands-on training",
   "Live demonstration",
@@ -68,7 +86,7 @@ const MasterclassCheckout = () => {
       const response = await initiatePayment({
         customerName: form.fullName.trim(),
         email: form.email.trim(),
-        mobile: form.phone.trim(),
+        mobile: normalizeMobileNumber(form.phone.trim()),
         amount: paymentDetails.fee,
         courseName: paymentDetails.courseName,
         variant: paymentDetails.variant,
@@ -321,3 +339,4 @@ const MasterclassCheckout = () => {
 };
 
 export default MasterclassCheckout;
+
