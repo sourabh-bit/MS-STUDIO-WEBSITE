@@ -8,10 +8,10 @@ type PaymentSectionProps = {
 
 const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
   const bankDetails = [
-    { label: "Account Name", value: "Sakhrani Styling School" },
-    { label: "Account Number", value: "922020067559807" },
+    { label: "Account Name", value: "MEERA SAKHRANI BEAUTY" },
+    { label: "Account Number", value: "071405003337" },
     { label: "Account Type", value: "Current Account (C/A)" },
-    { label: "IFSC Code", value: "UTIB0000131" },
+    { label: "IFSC Code", value: "ICIC0000714" },
     { label: "Branch", value: "DLF Gurgaon" },
   ];
 

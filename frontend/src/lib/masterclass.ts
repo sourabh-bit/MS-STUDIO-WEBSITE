@@ -10,7 +10,7 @@ export const OFFLINE_MASTERCLASS_DETAILS = {
   courseName: "Meera Sakhrani Offline Masterclass",
   fee: 100000,
   totalFeeLabel: "Total Course Fee",
-  totalFeeRange: "INR 2L to INR 3L",
+  totalFeeRange: " INR 3L + gst",
   feeLabel: "Booking Amount",
   summaryLabel: "Reserve your 7-day intensive seat",
   trustLine: "Secure payment via ICICI Bank",

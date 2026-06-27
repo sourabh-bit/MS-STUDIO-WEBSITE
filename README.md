@@ -87,3 +87,4 @@ FRONTEND_BASE_URL=https://www.meerasakhrani.in
 ICICI_INITIATE_SALE_URL=https://pgpayuat.icicibank.com/tsp/pg/api/v2/initiateSale
 ICICI_STATUS_URL=https://pgpayuat.icicibank.com/tsp/pg/api/command
 ```
+

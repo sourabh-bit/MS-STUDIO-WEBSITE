@@ -8,9 +8,9 @@ const PortfolioSection = () => {
   const portfolioImages = [portfolioImage, portfolio2, portfolio3, portfolio4];
 
   const features = [
-    { icon: Camera, label: "4 Posts", description: "Professional photos for your portfolio" },
-    { icon: Video, label: "4 Reels", description: "Video content for social media" },
-    { icon: Sparkles, label: "Designer Clothing", description: "Styled in designer outfits" },
+    { icon: Camera, label: "3 Posts", description: "Professional photos for your portfolio" },
+    { icon: Video, label: "3 Reels", description: "Video content for social media" },
+    { icon: Sparkles, label: "Designer Clothing", description: "Styled in designer outfits an jewellery" },
     { icon: Users, label: "Expert Guidance", description: "Directed by Meera herself" },
   ];
 

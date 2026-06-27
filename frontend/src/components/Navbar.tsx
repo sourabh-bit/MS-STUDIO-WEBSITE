@@ -1,10 +1,43 @@
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Calendar, Instagram, Mail, Phone, GraduationCap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const location = useLocation();
+  const lastScrollY = useRef(0);
+
+  const isClassesPage = location.pathname.startsWith("/classes");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (!isClassesPage || isOpen) {
+        setIsVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY < 80) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY.current) {
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY.current) {
+        setIsVisible(true);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isClassesPage, isOpen]);
 
   const leftMenu = [
     { name: "HOMEPAGE", path: "/" },
@@ -31,12 +64,14 @@ const Navbar = () => {
 
   return (
     <nav
-      className="
+      className={`
         fixed top-0 left-0 right-0 z-[999]
         backdrop-blur-md bg-white/15 
         border-b border-white/20
         shadow-[inset_0_0_0.5px_rgba(255,255,255,0.4)]
-      "
+        transition-transform duration-300 ease-out will-change-transform
+        ${isVisible ? "translate-y-0" : "-translate-y-full"}
+      `}
     >
 
       <div className="hidden lg:flex relative w-full items-center justify-between px-10">

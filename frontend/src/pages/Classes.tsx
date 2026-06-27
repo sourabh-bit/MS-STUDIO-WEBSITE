@@ -10,7 +10,7 @@ const Classes = () => {
   return (
     <main className="min-h-screen bg-background">
       
-      <section className="container mx-auto px-4 pt- md:pt-20 pb-20">
+      <section className="container mx-auto px-4 pt-20 md:pt-20 pb-20">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex justify-center flex-col">
           <TabsList className="w-full max-w-md mx-auto mb-12 md:mb-16 bg-secondary/50 p-1 h-auto">

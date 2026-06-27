@@ -35,7 +35,7 @@ const TimingSection = () => {
           <div className="bg-background p-6 md:p-8 text-center border border-border/30">
             <Calendar className="w-8 h-8 text-dusty-rose mx-auto mb-4" />
             <p className="font-sans text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">Date</p>
-            <p className="font-serif text-xl text-foreground">12 – 18 May 2025</p>
+            <p className="font-serif text-xl text-foreground"> 2 – 8th Aug 2026</p>
           </div>
           <div className="bg-background p-6 md:p-8 text-center border border-border/30">
             <Clock className="w-8 h-8 text-dusty-rose mx-auto mb-4" />

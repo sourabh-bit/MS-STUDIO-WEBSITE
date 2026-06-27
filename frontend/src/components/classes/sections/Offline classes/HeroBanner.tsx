@@ -13,7 +13,7 @@ const HeroBanner = ({ onOpenCheckout }: HeroBannerProps) => {
         min-h-[100vh] 
         flex items-center 
         section-cream bg-pattern-soft
-        pt-13  
+        pt-20 md:pt-24  
         overflow-visible
       "
       
