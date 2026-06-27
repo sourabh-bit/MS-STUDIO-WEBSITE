@@ -1,7 +1,7 @@
 import day1 from "@/assets/classes/day1.jpg";
 import day2 from "@/assets/classes/day2.jpg";
 import day3 from "@/assets/classes/day3.jpg";
-import day4 from "@/assets/classes/day4.jpg";
+import day4 from "@/assets/classes/online-hero.png";
 import day5 from "@/assets/classes/day5.jpg";
 import day6 from "@/assets/classes/day6.jpg";
 import day7 from "@/assets/classes/day7.jpg";
@@ -139,3 +139,7 @@ const DayStructure = () => {
 };
 
 export default DayStructure;
+
+
+
+

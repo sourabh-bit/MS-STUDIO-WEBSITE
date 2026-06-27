@@ -151,10 +151,13 @@ const Navbar = () => {
         </div>
       </div>
 
-      <div className="flex lg:hidden w-full items-center justify-between px-6 h-20">
-        <Link to="/" className="flex flex-col items-center">
+      <div className="flex lg:hidden w-full items-center justify-between px-5 h-20">
+        <Link to="/" className="flex flex-col items-center justify-center leading-none text-center">
           <span className="font-script text-4xl bg-gradient-to-b from-[#8A6A67] to-[#5A3F3F] text-transparent bg-clip-text">
-            Meera
+            Meera Sakhrani
+          </span>
+          <span className="font-display text-[10px] tracking-[0.42em] text-[#6F5654] uppercase -mt-1">
+            Makeup School
           </span>
         </Link>
 
@@ -203,3 +206,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

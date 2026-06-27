@@ -33,7 +33,7 @@ const PortfolioSection = () => {
         {/* Image Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-12 md:mb-16">
           {portfolioImages.map((image, index) => (
-            <div 
+            <div
               key={index}
               className="relative aspect-[3/4] overflow-hidden group"
             >
@@ -55,10 +55,15 @@ const PortfolioSection = () => {
         {/* Features */}
         <div className="max-w-4xl mx-auto">
           <div className="section-cream bg-pattern-soft border border-dusty-rose/20 p-8 md:p-10">
-            <h3 className="font-serif text-2xl text-foreground text-center mb-8">
+            <h3 className="font-serif text-2xl text-foreground text-center mb-3">
               What You'll Get
             </h3>
-            
+            <div className="mb-8 flex justify-center">
+              <span className="rounded-full border border-dusty-rose/30 bg-dusty-rose/10 px-5 py-2 font-sans text-xs tracking-[0.32em] text-dusty-rose uppercase shadow-[0_10px_25px_rgba(0,0,0,0.03)]">
+                3 Portfolio
+              </span>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {features.map((feature, index) => (
                 <div key={index} className="text-center">
@@ -87,7 +92,7 @@ const PortfolioSection = () => {
 
         {/* CTA */}
         <div className="text-center mt-14 md:mt-10">
-          <a 
+          <a
             href="#enroll"
             className="inline-block px-10 py-4 bg-primary text-primary-foreground font-sans text-sm tracking-[0.2em] uppercase hover:bg-dusty-rose transition-all duration-300"
           >
@@ -108,15 +113,6 @@ const PortfolioSection = () => {
           <p className="font-sans text-sm text-muted-foreground mb-6">
             The Future of Makeup Artistry
           </p>
-          {/* <a 
-            href="tel:+919818793850"
-            className="font-sans text-sm text-dusty-rose hover:text-foreground transition-colors duration-300"
-          >
-            +91 98187 93850
-          </a>
-          <p className="font-sans text-xs text-muted-foreground mt-8">
-            © 2025 Meera Sakhrani School. All rights reserved.
-          </p> */}
         </div>
       </footer>
     </section>
@@ -124,3 +120,4 @@ const PortfolioSection = () => {
 };
 
 export default PortfolioSection;
+
