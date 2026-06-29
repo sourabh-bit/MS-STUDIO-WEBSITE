@@ -12,7 +12,7 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
     { label: "Account Number", value: "071405003337" },
     { label: "Account Type", value: "Current Account (C/A)" },
     { label: "IFSC Code", value: "ICIC0000714" },
-    { label: "Branch", value: "Lajpat Nagar" },
+    { label: "Branch", value: "DLF Gurgaon" },
   ];
 
   return (

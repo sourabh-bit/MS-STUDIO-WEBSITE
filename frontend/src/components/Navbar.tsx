@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Instagram, Mail, Phone, GraduationCap } from "lucide-react";
+import { Menu, X, Calendar, Instagram, Mail, Phone, GraduationCap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const Navbar = () => {
@@ -52,10 +52,6 @@ const Navbar = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
-
-  if (isClassesPage) {
-    return null;
-  }
 
   const underlineClass = `
     relative inline-block pb-1
@@ -135,6 +131,12 @@ const Navbar = () => {
           </div>
         </div>
 
+        <div className="flex flex-col items-center justify-center w-[220px] pt-6 pb-4 pr-10">
+          <Calendar className="w-6 h-6 mb-1 text-[#b59565]" />
+          <Link to="/contact" className="block hover:text-[#735b50] transition text-center">
+            <span className={underlineClass}>Book Appointment</span>
+          </Link>
+        </div>
 
         <div className="flex flex-col gap-3 absolute right-5 top-1/2 -translate-y-1/2">
           <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="https://instagram.com/meerasakhrani">
@@ -187,6 +189,9 @@ const Navbar = () => {
               <span className={underlineClass}>Makeup School</span>
             </Link>
 
+            <Link to="/contact" onClick={() => setIsOpen(false)}>
+              <span className={underlineClass}>Book Appointment</span>
+            </Link>
           </div>
 
           <div className="flex justify-center gap-6 mt-8 text-[#4F3F40]">
@@ -201,6 +206,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
 
 
