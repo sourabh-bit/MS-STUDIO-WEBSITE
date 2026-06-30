@@ -2,13 +2,13 @@ import { Clock, Calendar, Coffee } from "lucide-react";
 
 const TimingSection = () => {
   const schedule = [
-    { time: "10:00 AM – 10:30 AM", activity: "Theory", description: "Foundation concepts and techniques" },
-    { time: "10:30 AM – 1:30 PM", activity: "Demo", description: "Live demonstration by Meera" },
-    { time: "1:30 PM – 2:00 PM", activity: "Doubts Session", description: "Clear your questions" },
-    { time: "2:00 PM – 2:30 PM", activity: "Lunch", description: "Complimentary lunch on us" },
-    { time: "2:30 PM – 5:00 PM", activity: "Practice/Portfolio", description: "Hands-on practice session" },
-    { time: "5:00 PM – 6:00 PM", activity: "Shoot", description: "Professional portfolio shoot" },
-    { time: "6:00 PM", activity: "Dispersal", description: "End of day" },
+    { time: "8:30 AM - 10:30 AM", activity: "Beginner Class/Morning portfolio" },
+    { time: "10:30 AM - 11:00 AM", activity: "Tea Break" },
+    { time: "11:00 AM - 12:00 PM", activity: "Special Class" },
+    { time: "12:00 PM - 2:00 PM", activity: "Live Demo by Meera" },
+    { time: "2:00 PM - 3:30 PM", activity: "Lunch Break" },
+    { time: "3:30 PM - 6:00 PM", activity: "Evening portfolio batch" },
+    { time: "6:00 PM - 7:00 PM", activity: "Professional Portfolio Shoot" },
   ];
 
   const highlights = [
@@ -71,9 +71,6 @@ const TimingSection = () => {
                   <div className="font-serif text-foreground">
                     {item.activity}
                   </div>
-                  <div className="font-sans text-sm text-muted-foreground">
-                    {item.description}
-                  </div>
                 </div>
               ))}
             </div>
@@ -112,3 +109,7 @@ const TimingSection = () => {
 };
 
 export default TimingSection;
+
+
+
+

@@ -1,26 +1,45 @@
 import benefitsImage from "@/assets/classes/benefits.jpg";
-
 const AddedBenefits = () => {
   const benefits = [
     {
-      title: "Beginner Session",
-      description: "A dedicated class for beginners by an MS Senior Artist to ensure everyone starts on the same page."
+      title: "Beginner Foundation Session",
+      description:
+        "Start with confidence through a dedicated beginner class conducted by our senior artists, covering essential makeup techniques, tools, hygiene, and product knowledge."
     },
     {
-      title: "Skin Care Deep Dive",
-      description: "In-depth sessions on skin care ingredients & actives, various types of skin treatments and enhancements, plus recommendations on the best products and tools."
+      title: "Live Demo by Meera Sakhrani",
+      description:
+        "Watch Meera perform complete bridal and party makeup demonstrations while explaining every technique, product choice, and professional workflow."
     },
     {
-      title: "Photography Skills",
-      description: "Learn how to photograph your work well - because great makeup deserves to be captured beautifully."
+      title: "Hands-on Practice with Live Models",
+      description:
+        "Practice every look on real models under expert supervision, helping you build confidence and master professional application techniques."
     },
     {
-      title: "Marketing Excellence",
-      description: "Master the art of marketing your work and building your brand in the competitive beauty industry."
+      title: "Professional Portfolio Shoot",
+      description:
+        "Create high-quality portfolio images every day with guided photoshoots, giving you Instagram-ready content to showcase your work."
     },
     {
-      title: "Social Media Credibility",
-      description: "Strategies to maintain and grow your social media presence with authenticity and impact."
+      title: "Social Media Growth Masterclass",
+      description:
+        "Learn Instagram strategies, content creation, Reels, personal branding, and client attraction to grow your beauty business organically."
+    },
+    {
+      title: "Meta Ads Masterclass",
+      description:
+        "Understand Facebook and Instagram advertising to generate bridal bookings, increase inquiries, and scale your makeup business."
+    },
+    {
+      title: "Editing Masterclass",
+      description:
+        "Learn professional photo editing techniques using industry-standard tools to enhance your makeup portfolio while maintaining natural results."
+    },
+    {
+      title: "Bridal Styling Masterclass",
+      description:
+        "Master complete bridal styling including jewellery placement, draping coordination, hair styling concepts, and overall bridal presentation."
     }
   ];
 
@@ -90,3 +109,5 @@ const AddedBenefits = () => {
 };
 
 export default AddedBenefits;
+
+
