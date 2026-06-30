@@ -1,9 +1,9 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, Instagram, MapPin } from "lucide-react";
+import { Mail, Phone, Instagram } from "lucide-react";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -63,7 +63,7 @@ const Contact = () => {
           </h1>
           <p className="font-body text-lg text-muted-foreground max-w-2xl mx-auto">
             Your dream look begins with a conversation.
-            Whether it’s a bridal celebration, a creative concept, or a personal makeover, 
+            Whether it�s a bridal celebration, a creative concept, or a personal makeover, 
             Meera would love to hear your ideas and bring your vision to life.
           </p>
         </div>
@@ -234,21 +234,6 @@ const Contact = () => {
                     </a>
                   </div>
                 </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MapPin className="text-primary" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-body text-sm text-muted-foreground mb-1">Location</p>
-                    <p className="font-body text-foreground">
-                      503, Chiranjiv Tower, 43, Nehru Place, New Delhi <br />
-                      Delhi - 110019<br /> 
-                      <br />
-                      Available for destination weddings and on-location projects.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -289,3 +274,4 @@ const Contact = () => {
 };
 
 export default Contact;
+
