@@ -1,4 +1,4 @@
-import portfolioImage from "@/assets/classes/portfolio.jpg";
+﻿import portfolioImage from "@/assets/classes/portfolio.jpg";
 import portfolio2 from "@/assets/classes/portfolio2.jpg";
 import portfolio3 from "@/assets/classes/portfolio3.jpg";
 import portfolio4 from "@/assets/classes/portfolio4.jpg";
@@ -31,29 +31,33 @@ const PortfolioSection = () => {
         </div>
 
         {/* Image Grid */}
-<div className="flex justify-center gap-6 md:gap-8 lg:gap-10 mb-12 md:mb-16">
-  {portfolioImages.map((image, index) => (
-    <div
-      key={index}
-      className="relative w-[280px] aspect-[3/4] overflow-hidden group flex-shrink-0"
-    >
-      <img
-        src={image}
-        alt={`Student portfolio look ${index + 1}`}
-        className="w-full h-full object-cover image-elegant"
-      />
+        <div className="mb-12 md:mb-16 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-10 max-w-5xl mx-auto">
+          {portfolioImages.map((image, index) => (
+            <div
+              key={index}
+              className={[
+                "relative aspect-[3/4] overflow-hidden group",
+                index === 2
+                  ? "col-span-2 mx-auto w-[48%] min-w-[160px] md:col-span-1 md:w-full"
+                  : "w-full",
+              ].join(" ")}
+            >
+              <img
+                src={image}
+                alt={`Student portfolio look ${index + 1}`}
+                className="w-full h-full object-cover image-elegant"
+              />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <span className="font-display text-3xl text-background">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-      </div>
-    </div>
-  ))}
-</div>
-
+              <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <span className="font-display text-3xl text-background">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
         {/* Features */}
         <div className="max-w-4xl mx-auto">
           <div className="section-cream bg-pattern-soft border border-dusty-rose/20 p-8 md:p-10">
