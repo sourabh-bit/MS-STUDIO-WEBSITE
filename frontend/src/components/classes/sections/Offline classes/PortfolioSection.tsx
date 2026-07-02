@@ -5,7 +5,7 @@ import portfolio4 from "@/assets/classes/portfolio4.jpg";
 import { Camera, Video, Sparkles, Users } from "lucide-react";
 
 const PortfolioSection = () => {
-  const portfolioImages = [portfolioImage, portfolio2, portfolio3, portfolio4];
+  const portfolioImages = [portfolioImage, portfolio2, portfolio3];
 
   const features = [
     { icon: Camera, label: "3 Posts", description: "Professional photos for your portfolio" },
@@ -26,31 +26,33 @@ const PortfolioSection = () => {
             Student Portfolio
           </h2>
           <p className="text-elegant text-muted-foreground max-w-2xl mx-auto">
-            Each student gets to create 4 stunning looks for their professional portfolio
+            Each student gets to create 3 stunning looks for their professional portfolio
           </p>
         </div>
 
         {/* Image Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-12 md:mb-16">
-          {portfolioImages.map((image, index) => (
-            <div
-              key={index}
-              className="relative aspect-[3/4] overflow-hidden group"
-            >
-              <img
-                src={image}
-                alt={`Student portfolio look ${index + 1}`}
-                className="w-full h-full object-cover image-elegant"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <span className="font-display text-3xl text-background">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+<div className="flex justify-center gap-6 md:gap-8 lg:gap-10 mb-12 md:mb-16">
+  {portfolioImages.map((image, index) => (
+    <div
+      key={index}
+      className="relative w-[280px] aspect-[3/4] overflow-hidden group flex-shrink-0"
+    >
+      <img
+        src={image}
+        alt={`Student portfolio look ${index + 1}`}
+        className="w-full h-full object-cover image-elegant"
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <span className="font-display text-3xl text-background">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+    </div>
+  ))}
+</div>
 
         {/* Features */}
         <div className="max-w-4xl mx-auto">

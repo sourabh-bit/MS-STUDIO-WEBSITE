@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Landmark, Phone } from "lucide-react";
+﻿import { Building2, CreditCard, Landmark, Phone } from "lucide-react";
 
 import { OFFLINE_MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
 
@@ -35,6 +35,14 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
           <div className="bg-background p-8 md:p-10 border border-border/30 text-center">
+            <div className="mb-6 rounded-2xl border border-dusty-rose/20 bg-soft-pink/30 px-4 py-3 text-left">
+              <p className="font-sans text-xs tracking-[0.18em] uppercase text-dusty-rose mb-1">
+                Please note
+              </p>
+              <p className="font-sans text-sm leading-relaxed text-foreground">
+                The booking amount is non-refundable under any circumstances.
+              </p>
+            </div>
             <div className="w-16 h-16 bg-soft-pink/50 rounded-full flex items-center justify-center mx-auto mb-6">
               <CreditCard className="w-8 h-8 text-dusty-rose" />
             </div>
@@ -76,6 +84,7 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
               <p className="mt-4 font-sans text-sm text-muted-foreground">
                 Instant confirmation {"\u2022"} Limited seats available
               </p>
+              
               <p className="mt-2 font-sans text-sm text-muted-foreground/90">
                 Secure your seat with the booking amount
               </p>
