@@ -109,6 +109,15 @@ const MasterclassCheckout = () => {
                           {paymentDetails.feeLabel}
                         </p>
                       </div>
+
+                      <div className="rounded-2xl border border-dusty-rose/30 bg-soft-pink/30 px-4 py-3.5 text-left">
+                        <p className="font-sans text-xs tracking-[0.18em] uppercase text-dusty-rose">
+                          Please note
+                        </p>
+                        <p className="mt-1 font-sans text-sm leading-relaxed text-foreground">
+                          The advance is non-refundable and can only be claimed towards your immediate next class.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

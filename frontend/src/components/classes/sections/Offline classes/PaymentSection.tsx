@@ -84,10 +84,19 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
               <p className="mt-4 font-sans text-sm text-muted-foreground">
                 Instant confirmation {"\u2022"} Limited seats available
               </p>
-              
+
               <p className="mt-2 font-sans text-sm text-muted-foreground/90">
                 Secure your seat with the booking amount
               </p>
+
+              <div className="mt-6 rounded-2xl border border-dusty-rose/20 bg-soft-pink/30 px-4 py-3 text-left">
+                <p className="font-sans text-xs tracking-[0.18em] uppercase text-dusty-rose mb-1">
+                  Please note
+                </p>
+                <p className="font-sans text-sm leading-relaxed text-foreground">
+                  The advance is non-refundable and can only be claimed towards your immediate next class.
+                </p>
+              </div>
             </div>
           </div>
         </div>
