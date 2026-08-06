@@ -1,12 +1,11 @@
 ﻿import heroImage from "@/assets/classes/online-hero.png";
 import Logo from "@/assets/logo.png";
-import { MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
 
 type OnlineHeroBannerProps = {
-  onOpenCheckout: () => void;
+  waitlistHref: string;
 };
 
-const OnlineHeroBanner = ({ onOpenCheckout }: OnlineHeroBannerProps) => {
+const OnlineHeroBanner = ({ waitlistHref }: OnlineHeroBannerProps) => {
   return (
     <section className="relative flex min-h-[90vh] items-center overflow-hidden bg-warm-cream md:min-h-screen">
       <div className="container mx-auto px-4 py-16 md:py-24">
@@ -38,26 +37,28 @@ const OnlineHeroBanner = ({ onOpenCheckout }: OnlineHeroBannerProps) => {
               An Online Masterclass
             </h2>
 
+            <span className="mb-6 inline-block rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-xs tracking-[0.15em] text-dusty-rose uppercase md:mb-8">
+              Next Batch Announcing Soon
+            </span>
+
             <p className="text-elegant mx-auto mb-8 max-w-md text-muted-foreground lg:mx-0 md:mb-10">
               A 4-hour intensive live masterclass by Meera Sakhrani. Transform
               your artistry and elevate your career from anywhere in the world.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-              <button
-                id="icici-pay-now-btn"
-                type="button"
-                onClick={onOpenCheckout}
-                data-course={MASTERCLASS_DETAILS.courseName}
-                data-price={String(MASTERCLASS_DETAILS.fee)}
-                className="rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
+              <a
+                href={waitlistHref}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-primary/10 bg-primary px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
               >
-                Pay  Now
-              </button>
+                Join the Waitlist
+              </a>
 
               <a
                 href="#enroll-online"
-                className="rounded-full border border-foreground/20 px-8 py-4 font-sans text-sm tracking-[0.2em] text-foreground uppercase transition-all duration-300 hover:bg-foreground/5"
+                className="rounded-full border border-foreground/20 px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-foreground uppercase transition-all duration-300 hover:bg-foreground/5"
               >
                 View Details
               </a>

@@ -42,7 +42,6 @@ const Navbar = () => {
   const leftMenu = [
     { name: "HOMEPAGE", path: "/" },
     { name: "MEET MEERA", path: "/about" },
-    { name: "MAKEUP SERVICES", path: "/services" },
   ];
 
   const rightMenu = [

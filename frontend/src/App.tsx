@@ -7,7 +7,6 @@ import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Portfolio from "./pages/Portfolio";
-import Services from "./pages/Services";
 import Testimonials from "./pages/Testimonials";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
@@ -16,7 +15,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Classes from "./pages/Classes";   // ⭐ ADDED IMPORT
 import RefundAndCancellationPolicy from "./pages/RefundAndCancellationPolicy";
 import ScrollToTop from "./components/ScrollToTop";
-import Checkout from "./pages/Checkout";
 import MasterclassCheckout from "./pages/MasterclassCheckout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
@@ -38,7 +36,6 @@ const App = () => (
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/portfolio" element={<Portfolio />} />
-      <Route path="/services" element={<Services />} />
       <Route path="/testimonials" element={<Testimonials />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
@@ -49,7 +46,6 @@ const App = () => (
       <Route path="/classes/checkout" element={<MasterclassCheckout />} />
       <Route path="/success" element={<PaymentSuccess />} />
       <Route path="/failure" element={<PaymentFailure />} />
-      <Route path="/checkout" element={<Checkout />} />
     </Route>
 
     <Route path="*" element={<NotFound />} />

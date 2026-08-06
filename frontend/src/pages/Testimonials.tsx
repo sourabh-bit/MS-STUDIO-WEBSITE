@@ -111,10 +111,10 @@ const Testimonials = () => {
           </p>
 
           <a
-            href="/services"
+            href="/contact"
             className="inline-block px-10 py-4 bg-primary text-primary-foreground rounded-full font-body tracking-wide shadow-elegant border border-primary transition-colors duration-300 hover:bg-transparent hover:text-primary"
           >
-            Book Your Services
+            Get in Touch
           </a>
         </div>
 

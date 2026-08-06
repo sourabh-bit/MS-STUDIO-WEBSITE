@@ -1,7 +1,7 @@
 import { ArrowLeft, Building2, Check, Copy, MessageCircle, QrCode } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { formatInr, getMasterclassPaymentDetails } from "@/lib/masterclass";
+import { getMasterclassPaymentDetails } from "@/lib/masterclass";
 
 const UPI_ID = "meerasakhranibeauty.ibz@icici";
 const WHATSAPP_NUMBER = "919818793850";
@@ -17,6 +17,7 @@ const bankDetails = [
 const MasterclassCheckout = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const paymentDetails = getMasterclassPaymentDetails(searchParams);
 
@@ -42,6 +43,16 @@ const MasterclassCheckout = () => {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const handleCopyValue = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(label);
+      window.setTimeout(() => setCopiedField(null), 1800);
+    } catch {
+      setCopiedField(null);
     }
   };
 
@@ -97,17 +108,22 @@ const MasterclassCheckout = () => {
                         <p className="font-sans text-xs tracking-[0.25em] text-muted-foreground uppercase">
                           Payment Amount
                         </p>
-                        <div className="flex flex-nowrap items-end gap-3 whitespace-nowrap">
-                          <span className="font-display text-4xl leading-none text-foreground sm:text-5xl lg:text-6xl">
-                            INR
+                        <div className="flex flex-nowrap items-end gap-1 whitespace-nowrap">
+                          <span className="font-display text-4xl font-bold leading-none text-foreground sm:text-5xl lg:text-6xl">
+                            ₹
                           </span>
-                          <span className="font-display text-4xl leading-none text-foreground sm:text-5xl lg:text-6xl">
+                          <span className="font-display text-4xl font-bold leading-none text-foreground sm:text-5xl lg:text-6xl">
                             {new Intl.NumberFormat("en-IN").format(paymentDetails.fee)}
                           </span>
                         </div>
                         <p className="font-sans text-xs tracking-[0.18em] text-muted-foreground uppercase">
                           {paymentDetails.feeLabel}
                         </p>
+                        {paymentDetails.variant === "offline" && (
+                          <p className="whitespace-nowrap font-sans text-[10px] font-semibold tracking-[0.02em] text-[#8B6D5C] sm:text-sm">
+                            *₹{new Intl.NumberFormat("en-IN").format(Math.round(paymentDetails.fee / 1.18))} + 18% GST = ₹{new Intl.NumberFormat("en-IN").format(paymentDetails.fee)}
+                          </p>
+                        )}
                       </div>
 
                       <div className="rounded-2xl border border-dusty-rose/30 bg-soft-pink/30 px-4 py-3.5 text-left">
@@ -151,12 +167,12 @@ const MasterclassCheckout = () => {
                         />
                       </div>
 
-                      <div className="mt-5 rounded-2xl border border-border/30 bg-white/85 px-4 py-3 text-center">
+                      <div className="mt-5 rounded-2xl border border-border/30 bg-white/85 px-4 py-3.5 text-center">
                         <p className="font-sans text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
                           UPI ID
                         </p>
-                        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="font-serif text-base text-foreground break-all sm:text-lg sm:text-left">
+                        <div className="mt-2 flex flex-col items-center gap-3">
+                          <p className="font-serif text-base leading-snug break-words text-foreground text-center sm:text-lg">
                             {UPI_ID}
                           </p>
                           <button
@@ -164,7 +180,7 @@ const MasterclassCheckout = () => {
                             onClick={handleCopyUpiId}
                             aria-label={copied ? "UPI ID copied" : "Copy UPI ID"}
                             title={copied ? "Copied" : "Copy UPI ID"}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-dusty-rose/25 bg-[#FAF4EF] text-foreground transition-colors duration-300 hover:border-dusty-rose/40 hover:bg-dusty-rose/10"
+                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dusty-rose/25 bg-[#FAF4EF] text-foreground transition-colors duration-300 hover:border-dusty-rose/40 hover:bg-dusty-rose/10"
                           >
                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                           </button>
@@ -173,32 +189,59 @@ const MasterclassCheckout = () => {
                     </div>
 
                     <div className="space-y-5">
-                      <div className="overflow-hidden rounded-[1.75rem] border border-border/30 bg-background shadow-[0_10px_30px_rgba(0,0,0,0.03)]">
-                        <div className="flex items-center gap-3 justify-center border-b border-border/20 bg-secondary/30 px-4 py-4">
+                      <div className="overflow-hidden rounded-[1.75rem] border-2 border-dusty-rose/40 bg-background shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center gap-3 justify-center bg-dusty-rose/15 px-4 py-4">
                           <Building2 className="h-5 w-5 text-dusty-rose" />
-                          <h2 className="font-serif text-xl text-foreground">
+                          <h2 className="font-serif text-xl font-semibold text-foreground">
                             Bank Details
                           </h2>
                         </div>
 
-                        <div className="space-y-0 p-5 md:p-6">
-                          {bankDetails.map((detail, index) => (
-                            <div
-                              key={detail.label}
-                              className={`flex items-start justify-between gap-4 py-3 ${
-                                index === bankDetails.length - 1
-                                  ? ""
-                                  : "border-b border-border/20"
-                              }`}
-                            >
-                              <span className="font-sans text-xs tracking-[0.18em] text-muted-foreground uppercase sm:text-[0.78rem]">
-                                {detail.label}
-                              </span>
-                              <span className="max-w-[60%] text-right font-serif text-sm text-foreground sm:text-base">
-                                {detail.value}
-                              </span>
-                            </div>
-                          ))}
+                        <div className="p-5 md:p-6">
+                          {bankDetails.map((detail, index) => {
+                            const isCritical =
+                              detail.label === "Account Number" ||
+                              detail.label === "IFSC Code";
+
+                            return (
+                              <div
+                                key={detail.label}
+                                className={`flex flex-col gap-2 py-3.5 ${
+                                  index === bankDetails.length - 1
+                                    ? ""
+                                    : "border-b border-dashed border-border/30"
+                                }`}
+                              >
+                                <span className="font-sans text-[11px] font-semibold tracking-[0.2em] text-muted-foreground/80 uppercase">
+                                  {detail.label}
+                                </span>
+                                {isCritical ? (
+                                  <div className="flex items-center justify-between gap-3 rounded-xl border border-dusty-rose/40 bg-white px-4 py-2.5 shadow-sm">
+                                    <span className="font-serif text-lg font-bold tracking-wide text-foreground">
+                                      {detail.value}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyValue(detail.label, detail.value)}
+                                      aria-label={`Copy ${detail.label}`}
+                                      title={copiedField === detail.label ? "Copied" : `Copy ${detail.label}`}
+                                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-dusty-rose/10 text-dusty-rose transition-colors duration-300 hover:bg-dusty-rose/20"
+                                    >
+                                      {copiedField === detail.label ? (
+                                        <Check className="h-4 w-4" />
+                                      ) : (
+                                        <Copy className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="font-serif text-base font-medium text-foreground/90">
+                                    {detail.value}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -213,10 +256,10 @@ const MasterclassCheckout = () => {
                           href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 font-sans text-xs tracking-[0.2em] text-background uppercase transition-colors duration-300 hover:bg-dusty-rose sm:w-auto"
+                          className="mt-4 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-foreground px-5 py-3 font-sans text-xs tracking-[0.2em] text-background uppercase transition-colors duration-300 hover:bg-dusty-rose sm:w-auto"
                         >
                           <MessageCircle className="h-4 w-4" />
-                          WhatsApp +91 98187 93850
+                          Send on WhatsApp
                         </a>
                       </div>
 
