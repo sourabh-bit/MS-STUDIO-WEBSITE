@@ -1,15 +1,9 @@
-import { MessageCircle, Phone } from "lucide-react";
+import { FileText } from "lucide-react";
 import Logo from "@/assets/logo.png";
-import { MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
-const WHATSAPP_NUMBER = "919818793850";
+const MASTERCLASS_INTEREST_FORM_URL = "https://forms.gle/ZLgaduULWF7hEAYt7";
 
 const OnlineClasses = () => {
-  const waitlistMessage = encodeURIComponent(
-    `Hi Meera, I'm interested in the ${MASTERCLASS_DETAILS.courseName}. Please let me know when the next batch is announced.`
-  );
-  const waitlistHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${waitlistMessage}`;
-
   return (
     <section className="flex min-h-[65vh] items-center justify-center bg-warm-cream px-4 py-16 md:py-24">
       <div className="mx-auto max-w-xl text-center">
@@ -32,29 +26,25 @@ const OnlineClasses = () => {
         </h2>
 
         <p className="text-elegant mx-auto mb-10 max-w-md text-muted-foreground">
-          We're putting together something special for the next live online
-          masterclass. Reach out and we'll keep you posted the moment
+          We're preparing something special for our next live online
+          masterclass. Register your interest and be the first to know when
           applications open.
         </p>
 
-        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <div className="flex flex-col items-center justify-center gap-4">
           <a
-            href={waitlistHref}
+            href={MASTERCLASS_INTEREST_FORM_URL}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
           >
-            <MessageCircle className="h-4 w-4" />
-            Keep Me Posted
+            <FileText className="h-4 w-4" />
+            Register Your Interest
           </a>
 
-          <a
-            href="tel:+919818793850"
-            className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-8 py-4 font-sans text-sm tracking-[0.2em] text-foreground uppercase transition-all duration-300 hover:bg-foreground/5"
-          >
-            <Phone className="h-4 w-4" />
-            Call Us
-          </a>
+          <p className="font-sans text-xs text-muted-foreground">
+            Share your details and we'll notify you when applications open.
+          </p>
         </div>
       </div>
     </section>
