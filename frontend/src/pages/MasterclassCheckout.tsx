@@ -9,9 +9,9 @@ const WHATSAPP_NUMBER = "919818793850";
 const bankDetails = [
   { label: "Account Name", value: "MEERA SAKHRANI BEAUTY" },
   { label: "Account Number", value: "071405003337" },
-  { label: "Account Type", value: "Current Account (C/A)" },
+  { label: "Account Type", value: "CURRENT ACCOUNT (C/A)" },
   { label: "IFSC Code", value: "ICIC0000714" },
-  { label: "Branch", value: "DLF Gurgaon" },
+  { label: "Branch", value: "LAJPAT NAGAR" },
 ];
 
 const MasterclassCheckout = () => {
@@ -192,7 +192,7 @@ const MasterclassCheckout = () => {
                       <div className="overflow-hidden rounded-[1.75rem] border-2 border-dusty-rose/40 bg-background shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
                         <div className="flex items-center gap-3 justify-center bg-dusty-rose/15 px-4 py-4">
                           <Building2 className="h-5 w-5 text-dusty-rose" />
-                          <h2 className="font-serif text-xl font-semibold text-foreground">
+                          <h2 className="font-sans text-xl font-bold text-foreground">
                             Bank Details
                           </h2>
                         </div>
@@ -217,7 +217,7 @@ const MasterclassCheckout = () => {
                                 </span>
                                 {isCritical ? (
                                   <div className="flex items-center justify-between gap-3 rounded-xl border border-dusty-rose/40 bg-white px-4 py-2.5 shadow-sm">
-                                    <span className="font-serif text-lg font-bold tracking-wide text-foreground">
+                                    <span className="font-sans text-lg font-bold tracking-wide text-foreground">
                                       {detail.value}
                                     </span>
                                     <button
@@ -235,7 +235,7 @@ const MasterclassCheckout = () => {
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="font-serif text-base font-medium text-foreground/90">
+                                  <span className="font-sans text-base font-bold text-foreground/90">
                                     {detail.value}
                                   </span>
                                 )}
