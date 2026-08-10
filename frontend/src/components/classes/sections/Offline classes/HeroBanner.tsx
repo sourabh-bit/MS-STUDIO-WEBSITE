@@ -9,14 +9,14 @@ const HeroBanner = ({ onOpenCheckout }: HeroBannerProps) => {
   return (
     <section
       className="
-        relative w-full 
-        min-h-[100vh] 
-        flex items-center 
+        relative w-full
+        md:min-h-[100vh]
+        flex items-center
         section-cream bg-pattern-soft
-        pt-20 md:pt-24  
+        pt-8 md:pt-24
         overflow-visible
       "
-      
+
     >
 
       {/* Main container */}

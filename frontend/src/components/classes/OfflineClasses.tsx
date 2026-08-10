@@ -31,17 +31,26 @@ const OfflineClasses = () => {
 
   return (
     <>
-      <div className="border-y border-dusty-rose/30 bg-dusty-rose/10 py-3.5 px-4">
-        <div className="container mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center">
-          <span className="inline-flex items-center gap-2 font-sans text-sm font-bold tracking-wide text-foreground">
-            <Calendar className="h-4 w-4 text-dusty-rose" />
-            18 – 24 Sept 2026
-          </span>
-          <span className="hidden text-dusty-rose sm:inline">•</span>
-          <span className="inline-flex items-center gap-2 font-sans text-sm font-bold tracking-wide text-foreground">
-            <MapPin className="h-4 w-4 text-dusty-rose" />
-            The Maidens Oberoi, New Delhi
-          </span>
+      <div className="section-cream px-4 py-6 md:py-8">
+        <div className="container mx-auto max-w-md">
+          <div className="rounded-2xl border border-dusty-rose/30 bg-background px-6 py-6 text-center shadow-elegant md:px-8">
+            <span className="mb-3 inline-block font-sans text-[11px] tracking-[0.35em] text-dusty-rose uppercase">
+              Offline Masterclass
+            </span>
+            <div className="flex items-center justify-center gap-2.5">
+              <Calendar className="h-5 w-5 shrink-0 text-dusty-rose" />
+              <span className="font-serif text-lg font-semibold text-foreground md:text-xl">
+                18 – 24 Sept 2026
+              </span>
+            </div>
+            <div className="mx-auto my-3 h-px w-16 bg-dusty-rose/30" />
+            <div className="flex items-center justify-center gap-2.5">
+              <MapPin className="h-5 w-5 shrink-0 text-dusty-rose" />
+              <span className="font-sans text-sm font-medium text-foreground/90 md:text-base">
+                The Maidens Oberoi, New Delhi
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
