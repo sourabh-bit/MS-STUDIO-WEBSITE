@@ -87,7 +87,7 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
               To secure your seat
             </p>
             <p className="whitespace-nowrap font-sans text-[10px] sm:text-sm font-semibold tracking-[0.02em] text-[#8B6D5C]">
-              *₹{new Intl.NumberFormat("en-IN").format(Math.round(OFFLINE_MASTERCLASS_DETAILS.fee / 1.18))} + 18% GST = ₹{new Intl.NumberFormat("en-IN").format(OFFLINE_MASTERCLASS_DETAILS.fee)}
+              *₹{new Intl.NumberFormat("en-IN").format(Math.round(OFFLINE_MASTERCLASS_DETAILS.fee / 1.18))} + GST = ₹{new Intl.NumberFormat("en-IN").format(OFFLINE_MASTERCLASS_DETAILS.fee)}
             </p>
             <div className="mt-8 pt-6 border-t border-dusty-rose/20">
               <button

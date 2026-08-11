@@ -8,7 +8,7 @@ export const MASTERCLASS_DETAILS = {
 
 export const OFFLINE_MASTERCLASS_DETAILS = {
   courseName: "Meera Sakhrani Offline Masterclass",
-  fee: 118000,
+  fee: 100000,
   totalFeeLabel: "Total Course Fee",
   totalFeeRange: "₹3L +",
   totalFeeGst: "GST",
