@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Lock } from "lucide-react";
 
 import heroMasterclass from "@/assets/classes/hero-masterclass.jpg";
-import RegistrationDialog from "@/components/classes/RegistrationDialog";
 import { getMasterclassPaymentDetails } from "@/lib/masterclass";
 
 const ICICI_PAYMENT_LINK =
@@ -13,7 +12,6 @@ const MasterclassCheckout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const paymentDetails = getMasterclassPaymentDetails(searchParams);
-  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -137,14 +135,13 @@ const MasterclassCheckout = () => {
                     as the amount there to complete your booking.
                   </p>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsFormOpen(true)}
+                  <a
+                    href={ICICI_PAYMENT_LINK}
                     className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
                   >
                     Pay Now
                     <ExternalLink className="h-4 w-4" />
-                  </button>
+                  </a>
 
                   <p className="flex items-center justify-center gap-1.5 font-sans text-[11px] text-muted-foreground">
                     <Lock className="h-3 w-3" />
@@ -156,17 +153,6 @@ const MasterclassCheckout = () => {
           </div>
         </div>
       </div>
-
-      <RegistrationDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        courseName={paymentDetails.courseName}
-        variant={isOffline ? "offline" : "online"}
-        amount={paymentDetails.fee}
-        onSuccess={() => {
-          window.location.href = ICICI_PAYMENT_LINK;
-        }}
-      />
     </section>
   );
 };
