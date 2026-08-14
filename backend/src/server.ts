@@ -9,6 +9,7 @@ import { logger } from "./lib/logger.js";
 import { startReconciliationScheduler } from "./lib/reconcile.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentRouter } from "./routes/payment.routes.js";
+import { registrationRouter } from "./routes/registration.routes.js";
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.get("/api/health", async (_request, response) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/registrations", registrationRouter);
 
 app.use(
   (error: unknown, _request: Request, response: Response, _next: NextFunction) => {
