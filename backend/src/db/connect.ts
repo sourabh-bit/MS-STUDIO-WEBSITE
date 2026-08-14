@@ -33,6 +33,7 @@ export const connectToDatabase = async () => {
 
   if (!connectionPromise) {
     connectionPromise = mongoose.connect(env.mongodbUri, {
+      dbName: "meera_sakhrani",
       autoIndex: true,
     });
   }

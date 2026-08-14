@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin } from "lucide-react";
 
+import { useAuth } from "@/context/AuthContext";
+
 import HeroBanner from "./sections/Offline classes/HeroBanner.tsx";
 import DayStructure from "./sections/Offline classes/DayStructure.tsx";
 import AddedBenefits from "./sections/Offline classes/AddedBenefits.tsx";
@@ -15,18 +17,21 @@ import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
 const OfflineClasses = () => {
   const navigate = useNavigate();
+  const { requireAuth } = useAuth();
 
   const openCheckout = () => {
-    const params = new URLSearchParams({
-      variant: "offline",
-      course: OFFLINE_MASTERCLASS_DETAILS.courseName,
-      amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
-      feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
-      summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
-      trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
-    });
+    requireAuth(() => {
+      const params = new URLSearchParams({
+        variant: "offline",
+        course: OFFLINE_MASTERCLASS_DETAILS.courseName,
+        amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
+        feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
+        summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
+        trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
+      });
 
-    navigate(`/classes/checkout?${params.toString()}`);
+      navigate(`/classes/checkout?${params.toString()}`);
+    });
   };
 
   return (
@@ -55,7 +60,7 @@ const OfflineClasses = () => {
       </div>
 
       <div className="space-y-0 pb-28 md:pb-32 lg:pb-0">
-        <HeroBanner onOpenCheckout={openCheckout} />
+        <HeroBanner />
         <DayStructure />
         <AddedBenefits />
         <VenueSection />

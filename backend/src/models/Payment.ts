@@ -2,26 +2,36 @@ import mongoose, { Schema } from "mongoose";
 
 import type { PaymentLifecycleStatus, PaymentLogStage } from "../types/payment.js";
 
+const PAYMENT_LOG_STAGES = [
+  "INITIATE_REQUEST",
+  "INITIATE_RESPONSE",
+  "REUSED_TRANSACTION",
+  "NEW_TRANSACTION_CREATED",
+  "TRANSACTION_EXPIRED",
+  "RETURN_RECEIVED",
+  "RETURN_VERIFIED",
+  "RETURN_HASH_MISMATCH",
+  "ADVICE_RECEIVED",
+  "ADVICE_VERIFIED",
+  "ADVICE_HASH_MISMATCH",
+  "RECONCILE_CHECK",
+  "STATUS_API_VERIFICATION_STARTED",
+  "STATUS_API_VERIFIED_SUCCESS",
+  "STATUS_API_VERIFIED_FAILED",
+  "STATUS_REQUEST",
+  "STATUS_RESPONSE",
+  "APPLY_STATUS_NOOP",
+  "REFUND_REQUEST",
+  "REFUND_RESPONSE",
+  "REFUND_FAILED",
+  "REDIRECT",
+] satisfies PaymentLogStage[];
+
 const paymentLogSchema = new Schema(
   {
     stage: {
       type: String,
-      enum: [
-        "INITIATE_REQUEST",
-        "INITIATE_RESPONSE",
-        "REUSED_TRANSACTION",
-        "NEW_TRANSACTION_CREATED",
-        "TRANSACTION_EXPIRED",
-        "CALLBACK_RECEIVED",
-        "CALLBACK_VERIFIED",
-        "CALLBACK_HASH_MISMATCH",
-        "STATUS_API_VERIFICATION_STARTED",
-        "STATUS_API_VERIFIED_SUCCESS",
-        "STATUS_API_VERIFIED_FAILED",
-        "STATUS_REQUEST",
-        "STATUS_RESPONSE",
-        "REDIRECT",
-      ] satisfies PaymentLogStage[],
+      enum: PAYMENT_LOG_STAGES,
       required: true,
     },
     message: {
@@ -54,6 +64,12 @@ const paymentSchema = new Schema(
       type: String,
       default: "",
       trim: true,
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
       index: true,
     },
     customerName: {
@@ -108,6 +124,7 @@ const paymentSchema = new Schema(
         "EXPIRED",
         "HASH_MISMATCH",
         "ERROR",
+        "REFUNDED",
       ] satisfies PaymentLifecycleStatus[],
       default: "CREATED",
       index: true,
@@ -144,11 +161,11 @@ const paymentSchema = new Schema(
 );
 
 paymentSchema.index({ email: 1, mobile: 1, amount: 1, createdAt: -1 });
+paymentSchema.index({ paymentStatus: 1, createdAt: 1 });
 
 export type PaymentDocument = mongoose.HydratedDocument<
   mongoose.InferSchemaType<typeof paymentSchema>
 >;
 
 export const Payment =
-  mongoose.models.Payment ||
-  mongoose.model("Payment", paymentSchema, "payments");
+  mongoose.models.Payment || mongoose.model("Payment", paymentSchema, "payments");

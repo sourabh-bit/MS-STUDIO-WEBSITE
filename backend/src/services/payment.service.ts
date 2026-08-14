@@ -17,25 +17,38 @@ import {
   attachSecureHash,
   buildInitiateSaleRequest,
   buildRedirectUrl,
+  buildRefundRequest,
   buildStatusCheckRequest,
   isPendingPayment,
   isSuccessfulPayment,
   normaliseGatewayPayload,
   verifyCallbackSecureHash,
   verifyInitiateSaleResponse,
-  verifySecureHash,
 } from "../utils/icici.js";
 
 const ICICI_HTTP_TIMEOUT_MS = 30000;
 const INITIATED_REUSE_WINDOW_MS = 90 * 1000;
 
+// Terminal states. Once a payment lands here, none of the three redundant
+// confirmation paths (return callback, advice webhook, reconcile sweep) are
+// allowed to move it — whichever one arrives first wins, the rest are no-ops.
+const TERMINAL_STATUSES: PaymentLifecycleStatus[] = ["SUCCESS", "FAILED", "REFUNDED"];
+
 const iciciClient = axios.create({
   timeout: ICICI_HTTP_TIMEOUT_MS,
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
+
+const assertGatewayConfigured = () => {
+  if (!env.iciciMerchantId || !env.iciciSecretKey) {
+    throw new HttpError(
+      500,
+      "Payment gateway is not configured. Set ICICI_MERCHANT_ID and ICICI_SECRET_KEY.",
+    );
+  }
+};
 
 const sanitizeForLogs = (payload: Record<string, unknown>) => {
   const clone = { ...payload };
@@ -59,23 +72,23 @@ const serializeAxiosErrorData = (value: unknown) => {
   }
 };
 
+// merchantTxnNo must be alphanumeric only, max 20 chars — hyphens/slashes/
+// underscores are rejected outright by the gateway.
 const createMerchantTxnNo = () =>
   `MS${Date.now().toString().slice(-10)}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
-const buildTransactionExpiry = () =>
-  new Date(Date.now() + INITIATED_REUSE_WINDOW_MS);
+
+const buildTransactionExpiry = () => new Date(Date.now() + INITIATED_REUSE_WINDOW_MS);
 
 const toFormUrlEncodedBody = (payload: Record<string, unknown>) =>
   new URLSearchParams(
     Object.entries(payload).map(([key, value]) => [key, String(value ?? "")]),
   ).toString();
 
-const isHtml502Response = (value: unknown) =>
-  typeof value === "string" && /502 Bad Gateway/i.test(value);
+const isHtml502Response = (value: unknown) => typeof value === "string" && /502 Bad Gateway/i.test(value);
 
-const postIciciInitiateSale = async <TResponse>(
-  url: string,
-  payload: Record<string, unknown>,
-) => {
+// The gateway occasionally 502s on the documented form-urlencoded content
+// type but accepts the same payload as JSON — fall back rather than fail.
+const postIcici = async <TResponse>(url: string, payload: Record<string, unknown>) => {
   try {
     return await iciciClient.post<TResponse>(url, toFormUrlEncodedBody(payload), {
       headers: {
@@ -99,6 +112,7 @@ const postIciciInitiateSale = async <TResponse>(
     });
   }
 };
+
 const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus => {
   if (isSuccessfulPayment(payload)) {
     return "SUCCESS";
@@ -109,66 +123,6 @@ const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus =
   }
 
   return "FAILED";
-};
-
-const fetchVerifiedGatewayStatus = async (
-  payment: PaymentDocument,
-  stage: "STATUS_REQUEST" | "STATUS_API_VERIFICATION_STARTED",
-) => {
-  const statusRequest = buildStatusCheckRequest({
-    merchantId: env.iciciMerchantId,
-    aggregatorID: env.iciciAggregatorId,
-    merchantTxnNo: payment.merchantTxnNo,
-    originalTxnNo: payment.merchantTxnNo,
-  });
-
-  const signedRequest = attachSecureHash(statusRequest, env.iciciSecretKey);
-
-  await appendLog(
-    payment.merchantTxnNo,
-    stage,
-    stage === "STATUS_REQUEST"
-      ? "Status check request created."
-      : "Status API verification started after callback hash mismatch.",
-    sanitizeForLogs(signedRequest),
-  );
-
-  const response = await iciciClient.post<Record<string, unknown>>(
-    env.iciciStatusUrl,
-    signedRequest,
-  );
-
-  const payload = normaliseGatewayPayload(response.data);
-
-  await appendLog(
-    payment.merchantTxnNo,
-    "STATUS_RESPONSE",
-    "Status check response received.",
-    sanitizeForLogs(payload),
-  );
-
-  if (!verifySecureHash(payload, env.iciciSecretKey)) {
-    payment.paymentStatus = "HASH_MISMATCH";
-    payment.gatewayResponse = payload;
-    payment.transactionExpiresAt = null;
-    await payment.save();
-
-    throw new Error("ICICI status response hash verification failed.");
-  }
-
-  const resolvedStatus = resolvePaymentStatus(payload);
-
-  payment.paymentStatus = resolvedStatus;
-  payment.txnID = payload.txnID || payment.txnID;
-  payment.gatewayResponse = payload;
-  payment.transactionExpiresAt = null;
-  await payment.save();
-
-  return {
-    paymentStatus: resolvedStatus,
-    payload,
-    txnID: payment.txnID,
-  };
 };
 
 const appendLog = async (
@@ -192,8 +146,105 @@ const appendLog = async (
   );
 };
 
+// Single source of truth for moving a payment out of a non-terminal state.
+// Uses an atomic conditional update (not read-then-save) so that whichever
+// of the return callback / advice webhook / reconcile sweep arrives first
+// wins, and the others become no-ops instead of racing each other.
+const applyStatus = async (
+  merchantTxnNo: string,
+  status: PaymentLifecycleStatus,
+  payload: GatewayPayload,
+  stage: PaymentLogStage,
+  source: string,
+): Promise<PaymentDocument | null> => {
+  await connectToDatabase();
+
+  const setFields: Record<string, unknown> = {
+    paymentStatus: status,
+    gatewayResponse: payload,
+  };
+
+  if (payload.txnID) {
+    setFields.txnID = payload.txnID;
+  }
+
+  if (TERMINAL_STATUSES.includes(status)) {
+    setFields.transactionExpiresAt = null;
+  }
+
+  const updated = await Payment.findOneAndUpdate(
+    { merchantTxnNo, paymentStatus: { $nin: TERMINAL_STATUSES } },
+    { $set: setFields },
+    { new: true },
+  );
+
+  if (updated) {
+    await appendLog(merchantTxnNo, stage, `Payment marked ${status} via ${source}.`, sanitizeForLogs(payload));
+    return updated;
+  }
+
+  const existing = await Payment.findOne({ merchantTxnNo });
+
+  if (existing) {
+    await appendLog(
+      merchantTxnNo,
+      "APPLY_STATUS_NOOP",
+      `${source} reported ${status} but payment was already ${existing.paymentStatus}; ignored.`,
+      sanitizeForLogs(payload),
+    );
+  }
+
+  return existing;
+};
+
+// Authoritative check against the STATUS command endpoint. Never use the
+// settlement API for this — settlement lags up to 12 hours and answers
+// "has the money reached my account", not "did the customer pay".
+const fetchVerifiedGatewayStatus = async (
+  merchantTxnNo: string,
+  stage: "STATUS_REQUEST" | "STATUS_API_VERIFICATION_STARTED" | "RECONCILE_CHECK",
+  source: string,
+) => {
+  assertGatewayConfigured();
+
+  const statusRequest = buildStatusCheckRequest({
+    merchantId: env.iciciMerchantId,
+    aggregatorID: env.iciciAggregatorId || undefined,
+    merchantTxnNo,
+    originalTxnNo: merchantTxnNo,
+  });
+
+  const signedRequest = attachSecureHash(statusRequest, env.iciciSecretKey);
+
+  await appendLog(merchantTxnNo, stage, "Status check request created.", sanitizeForLogs(signedRequest));
+
+  const response = await postIcici<Record<string, unknown>>(env.iciciCommandUrl, signedRequest);
+  const payload = normaliseGatewayPayload(response.data);
+
+  await appendLog(merchantTxnNo, "STATUS_RESPONSE", "Status check response received.", sanitizeForLogs(payload));
+
+  const hashVerification = verifyCallbackSecureHash(payload, env.iciciSecretKey);
+
+  if (!hashVerification.isValid) {
+    await appendLog(
+      merchantTxnNo,
+      "APPLY_STATUS_NOOP",
+      "Status API response hash verification failed; not applying.",
+      { generatedHash: hashVerification.generatedHash, receivedHash: hashVerification.receivedHash },
+    );
+    throw new HttpError(502, "ICICI status response hash verification failed.");
+  }
+
+  const resolvedStatus = resolvePaymentStatus(payload);
+  const finalStage: PaymentLogStage =
+    resolvedStatus === "SUCCESS" ? "STATUS_API_VERIFIED_SUCCESS" : "STATUS_API_VERIFIED_FAILED";
+
+  const payment = await applyStatus(merchantTxnNo, resolvedStatus, payload, finalStage, source);
+
+  return { paymentStatus: payment?.paymentStatus ?? resolvedStatus, payload, payment };
+};
+
 const buildFrontendRedirect = (
-  pathname: "/success" | "/failure",
   payment: Pick<
     PaymentDocument,
     | "merchantTxnNo"
@@ -204,9 +255,25 @@ const buildFrontendRedirect = (
     | "variant"
     | "feeLabel"
     | "summaryLabel"
+    | "paymentStatus"
   >,
   statusMessage?: string,
 ) => {
+  const failureStatuses: PaymentLifecycleStatus[] = [
+    "FAILED",
+    "CANCELLED",
+    "EXPIRED",
+    "ERROR",
+    "HASH_MISMATCH",
+  ];
+
+  const pathname =
+    payment.paymentStatus === "SUCCESS" || payment.paymentStatus === "REFUNDED"
+      ? "/success"
+      : failureStatuses.includes(payment.paymentStatus as PaymentLifecycleStatus)
+        ? "/failure"
+        : "/payment/pending";
+
   const redirectUrl = new URL(pathname, env.frontendBaseUrl);
 
   redirectUrl.searchParams.set("merchantTxnNo", payment.merchantTxnNo);
@@ -227,6 +294,22 @@ const buildFrontendRedirect = (
   if (statusMessage) {
     redirectUrl.searchParams.set("message", statusMessage);
   }
+
+  return redirectUrl.toString();
+};
+
+const buildFailureRedirectUrl = (payload: Record<string, unknown>, fallbackMessage: string) => {
+  const redirectUrl = new URL("/failure", env.frontendBaseUrl);
+  const merchantTxnNo = String(payload.merchantTxnNo || "").trim();
+  const message =
+    String(payload.txnRespDescription || payload.respDescription || fallbackMessage).trim() ||
+    fallbackMessage;
+
+  if (merchantTxnNo) {
+    redirectUrl.searchParams.set("merchantTxnNo", merchantTxnNo);
+  }
+
+  redirectUrl.searchParams.set("message", message);
 
   return redirectUrl.toString();
 };
@@ -257,10 +340,7 @@ const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput) => 
       payment.merchantTxnNo,
       "TRANSACTION_EXPIRED",
       "Marked stale initiated transaction as expired before creating a new one.",
-      {
-        expiredAt: now.toISOString(),
-        previousStatus: "INITIATED",
-      },
+      { expiredAt: now.toISOString() },
     );
   }
 };
@@ -280,9 +360,30 @@ const findReusableTransaction = async (input: InitiatePaymentInput) => {
   }).sort({ createdAt: -1 });
 };
 
-const createPaymentRecord = async (input: InitiatePaymentInput) =>
-  Payment.create({
+export const initiatePayment = async (input: InitiatePaymentInput & { userId: string }) => {
+  assertGatewayConfigured();
+  await connectToDatabase();
+
+  await expireStaleInitiatedTransactions(input);
+
+  const existingPayment = await findReusableTransaction(input);
+
+  if (existingPayment && existingPayment.redirectURI && existingPayment.tranCtx) {
+    const redirectUrl = buildRedirectUrl(existingPayment.redirectURI, existingPayment.tranCtx);
+
+    await appendLog(
+      existingPayment.merchantTxnNo,
+      "REUSED_TRANSACTION",
+      "Reused a still-valid initiated transaction within the short timeout window.",
+      { redirectUrl, expiresAt: existingPayment.transactionExpiresAt?.toISOString() || null },
+    );
+
+    return { merchantTxnNo: existingPayment.merchantTxnNo, redirectUrl, reused: true };
+  }
+
+  const payment = await Payment.create({
     merchantTxnNo: createMerchantTxnNo(),
+    userId: input.userId,
     customerName: input.customerName,
     email: input.email.toLowerCase(),
     mobile: input.mobile,
@@ -295,50 +396,13 @@ const createPaymentRecord = async (input: InitiatePaymentInput) =>
     transactionExpiresAt: null,
   });
 
-export const initiatePayment = async (input: InitiatePaymentInput) => {
-  await connectToDatabase();
-
-  await expireStaleInitiatedTransactions(input);
-
-  const existingPayment = await findReusableTransaction(input);
-
-  if (existingPayment && existingPayment.redirectURI && existingPayment.tranCtx) {
-    const redirectUrl = buildRedirectUrl(
-      existingPayment.redirectURI,
-      existingPayment.tranCtx,
-    );
-
-    await appendLog(
-      existingPayment.merchantTxnNo,
-      "REUSED_TRANSACTION",
-      "Reused a still-valid initiated transaction within the short timeout window.",
-      {
-        redirectUrl,
-        expiresAt: existingPayment.transactionExpiresAt?.toISOString() || null,
-      },
-    );
-
-    return {
-      merchantTxnNo: existingPayment.merchantTxnNo,
-      redirectUrl,
-      reused: true,
-    };
-  }
-
-  const payment = await createPaymentRecord(input);
-
-  await appendLog(
-    payment.merchantTxnNo,
-    "NEW_TRANSACTION_CREATED",
-    "Created a fresh payment transaction.",
-    {
-      reason: "No reusable transaction found within the timeout window.",
-    },
-  );
+  await appendLog(payment.merchantTxnNo, "NEW_TRANSACTION_CREATED", "Created a fresh payment transaction.", {
+    reason: "No reusable transaction found within the timeout window.",
+  });
 
   const initiateRequest = buildInitiateSaleRequest({
     merchantId: env.iciciMerchantId,
-    aggregatorID: env.iciciAggregatorId,
+    aggregatorID: env.iciciAggregatorId || undefined,
     merchantTxnNo: payment.merchantTxnNo,
     amount: input.amount,
     customerEmailID: input.email.toLowerCase(),
@@ -349,11 +413,7 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
 
   const signedRequest = attachSecureHash(initiateRequest, env.iciciSecretKey);
 
-  await Payment.updateOne(
-    { merchantTxnNo: payment.merchantTxnNo },
-    { gatewayRequest: signedRequest },
-  );
-
+  await Payment.updateOne({ merchantTxnNo: payment.merchantTxnNo }, { gatewayRequest: signedRequest });
   await appendLog(
     payment.merchantTxnNo,
     "INITIATE_REQUEST",
@@ -361,15 +421,10 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
     sanitizeForLogs(signedRequest),
   );
 
-  logger.info("Sending initiateSale request to ICICI.", {
-    merchantTxnNo: payment.merchantTxnNo,
-  });
+  logger.info("Sending initiateSale request to ICICI.", { merchantTxnNo: payment.merchantTxnNo });
 
   try {
-    const response = await postIciciInitiateSale<InitiateSaleResponse>(
-      env.iciciInitiateSaleUrl,
-      signedRequest,
-    );
+    const response = await postIcici<InitiateSaleResponse>(env.iciciInitiateSaleUrl, signedRequest);
 
     await appendLog(
       payment.merchantTxnNo,
@@ -381,52 +436,28 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
     if (!verifyInitiateSaleResponse(response.data, env.iciciSecretKey)) {
       await Payment.updateOne(
         { merchantTxnNo: payment.merchantTxnNo },
-        {
-          paymentStatus: "HASH_MISMATCH",
-          gatewayResponse: response.data,
-        },
+        { paymentStatus: "HASH_MISMATCH", gatewayResponse: response.data },
       );
-
-      throw new HttpError(
-        502,
-        "ICICI initiateSale response hash verification failed.",
-      );
+      throw new HttpError(502, "ICICI initiateSale response hash verification failed.");
     }
 
     if (response.data.responseCode !== "R1000") {
       await Payment.updateOne(
         { merchantTxnNo: payment.merchantTxnNo },
-        {
-          paymentStatus: "FAILED",
-          gatewayResponse: response.data,
-        },
+        { paymentStatus: "FAILED", gatewayResponse: response.data },
       );
-
-      throw new HttpError(
-        502,
-        `ICICI initiateSale failed with responseCode ${response.data.responseCode}.`,
-      );
+      throw new HttpError(502, `ICICI initiateSale failed with responseCode ${response.data.responseCode}.`);
     }
 
     if (!response.data.redirectURI || !response.data.tranCtx) {
       await Payment.updateOne(
         { merchantTxnNo: payment.merchantTxnNo },
-        {
-          paymentStatus: "FAILED",
-          gatewayResponse: response.data,
-        },
+        { paymentStatus: "FAILED", gatewayResponse: response.data },
       );
-
-      throw new HttpError(
-        502,
-        "ICICI initiateSale response did not include a valid redirect payload.",
-      );
+      throw new HttpError(502, "ICICI initiateSale response did not include a valid redirect payload.");
     }
 
-    const redirectUrl = buildRedirectUrl(
-      response.data.redirectURI,
-      response.data.tranCtx,
-    );
+    const redirectUrl = buildRedirectUrl(response.data.redirectURI, response.data.tranCtx);
 
     await Payment.updateOne(
       { merchantTxnNo: payment.merchantTxnNo },
@@ -439,152 +470,132 @@ export const initiatePayment = async (input: InitiatePaymentInput) => {
       },
     );
 
-    await appendLog(
-      payment.merchantTxnNo,
-      "REDIRECT",
-      "Redirect URL generated for hosted payment page.",
-      { redirectUrl },
-    );
-
-    return {
-      merchantTxnNo: payment.merchantTxnNo,
+    await appendLog(payment.merchantTxnNo, "REDIRECT", "Redirect URL generated for hosted payment page.", {
       redirectUrl,
-      reused: false,
-    };
-  } catch (error) {
-    const message =
-      error instanceof AxiosError
-        ? serializeAxiosErrorData(error.response?.data) || error.message
-        : error instanceof Error
-          ? error.message
-          : "Unknown ICICI initiateSale error.";
-
-    await Payment.updateOne(
-      { merchantTxnNo: payment.merchantTxnNo },
-      {
-        paymentStatus: "ERROR",
-        transactionExpiresAt: null,
-      },
-    );
-
-    logger.error("Failed to initiate ICICI payment.", {
-      merchantTxnNo: payment.merchantTxnNo,
-      message,
     });
 
+    return { merchantTxnNo: payment.merchantTxnNo, redirectUrl, reused: false };
+  } catch (error) {
+    const message =
+      error instanceof HttpError
+        ? error.message
+        : error instanceof AxiosError
+          ? serializeAxiosErrorData(error.response?.data) || error.message
+          : error instanceof Error
+            ? error.message
+            : "Unknown ICICI initiateSale error.";
+
+    if (!(error instanceof HttpError)) {
+      await Payment.updateOne(
+        { merchantTxnNo: payment.merchantTxnNo },
+        { paymentStatus: "ERROR", transactionExpiresAt: null },
+      );
+    }
+
+    logger.error("Failed to initiate ICICI payment.", { merchantTxnNo: payment.merchantTxnNo, message });
     throw error;
   }
 };
-export const processPaymentCallback = async (
-  rawPayload: Record<string, unknown>,
-) => {
+
+// Browser return from the hosted payment page (POST to our returnURL).
+export const processPaymentReturn = async (rawPayload: Record<string, unknown>) => {
   await connectToDatabase();
 
   const payload = normaliseGatewayPayload(rawPayload);
   const merchantTxnNo = payload.merchantTxnNo;
 
   if (!merchantTxnNo) {
-    throw new Error("Callback payload is missing merchantTxnNo.");
+    throw new Error("Return payload is missing merchantTxnNo.");
   }
 
-  const payment = await Payment.findOne({ merchantTxnNo });
+  let payment = await Payment.findOne({ merchantTxnNo });
 
   if (!payment) {
     throw new Error(`Payment not found for merchantTxnNo ${merchantTxnNo}.`);
   }
 
-  await appendLog(
-    merchantTxnNo,
-    "CALLBACK_RECEIVED",
-    "ICICI callback payload received.",
-    sanitizeForLogs(payload),
-  );
+  await appendLog(merchantTxnNo, "RETURN_RECEIVED", "Browser return payload received.", sanitizeForLogs(payload));
 
-  const callbackHashVerification = verifyCallbackSecureHash(
-    payload,
-    env.iciciSecretKey,
-  );
-  const isHashValid = callbackHashVerification.isValid;
-
-  logger.info("DEBUG ICICI callback secureHash verification.", {
-    merchantTxnNo,
-    payloadKeys: callbackHashVerification.payloadKeys,
-    sortedCallbackKeys: callbackHashVerification.sortedKeys,
-    verificationString: callbackHashVerification.verificationString,
-    generatedHash: callbackHashVerification.generatedHash,
-    receivedSecureHash: callbackHashVerification.receivedHash,
-  });
-
-  let nextStatus: PaymentLifecycleStatus;
+  const hashVerification = verifyCallbackSecureHash(payload, env.iciciSecretKey);
   let statusMessage = payload.txnRespDescription || payload.respDescription || "";
 
-  if (isHashValid) {
-    nextStatus = resolvePaymentStatus(payload);
-
-    payment.paymentStatus = nextStatus;
-    payment.txnID = payload.txnID || payment.txnID;
-    payment.gatewayResponse = payload;
-    payment.transactionExpiresAt = null;
-
-    await payment.save();
-
-    await appendLog(
-      merchantTxnNo,
-      "CALLBACK_VERIFIED",
-      "Callback secureHash verified successfully.",
-      {
-        paymentStatus: nextStatus,
-        txnID: payment.txnID,
-      },
-    );
+  if (hashVerification.isValid) {
+    const resolvedStatus = resolvePaymentStatus(payload);
+    payment = (await applyStatus(merchantTxnNo, resolvedStatus, payload, "RETURN_VERIFIED", "return")) ?? payment;
   } else {
     await appendLog(
       merchantTxnNo,
-      "CALLBACK_HASH_MISMATCH",
-      "Callback secureHash verification failed. Starting authoritative status API verification.",
-      {
-        txnID: payload.txnID || payment.txnID || "",
-        callbackResponseCode: payload.responseCode || payload.respCode || "",
-        callbackDescription:
-          payload.txnRespDescription || payload.respDescription || "",
-      },
+      "RETURN_HASH_MISMATCH",
+      "Return secureHash verification failed. Falling back to authoritative status check.",
+      { generatedHash: hashVerification.generatedHash, receivedHash: hashVerification.receivedHash },
     );
 
-    const verifiedStatus = await fetchVerifiedGatewayStatus(
-      payment,
-      "STATUS_API_VERIFICATION_STARTED",
-    );
-
-    nextStatus = verifiedStatus.paymentStatus;
-    statusMessage =
-      verifiedStatus.payload.txnRespDescription ||
-      verifiedStatus.payload.respDescription ||
-      statusMessage;
-
-    await appendLog(
-      merchantTxnNo,
-      nextStatus === "SUCCESS"
-        ? "STATUS_API_VERIFIED_SUCCESS"
-        : "STATUS_API_VERIFIED_FAILED",
-      nextStatus === "SUCCESS"
-        ? "Status API verified the transaction as successful after callback hash mismatch."
-        : "Status API verified the transaction as non-successful after callback hash mismatch.",
-      {
-        paymentStatus: nextStatus,
-        txnID: verifiedStatus.txnID,
-        gatewayResponse: sanitizeForLogs(verifiedStatus.payload),
-      },
-    );
+    try {
+      const verified = await fetchVerifiedGatewayStatus(
+        merchantTxnNo,
+        "STATUS_API_VERIFICATION_STARTED",
+        "return-hash-mismatch",
+      );
+      statusMessage = verified.payload.txnRespDescription || verified.payload.respDescription || statusMessage;
+    } catch (error) {
+      logger.error("Status API verification failed after return hash mismatch.", {
+        merchantTxnNo,
+        message: error instanceof Error ? error.message : "unknown error",
+      });
+    }
   }
 
-  const targetPath = nextStatus === "SUCCESS" ? "/success" : "/failure";
+  // Re-read: the return handler's own view of the status may already be
+  // stale if the advice webhook or a reconcile tick beat it to a terminal
+  // state. Always redirect based on what's actually in the database now.
+  const finalPayment = (await Payment.findOne({ merchantTxnNo })) ?? payment;
 
   return {
-    redirectUrl: buildFrontendRedirect(targetPath, payment, statusMessage),
-    paymentStatus: nextStatus,
+    redirectUrl: buildFrontendRedirect(finalPayment, statusMessage),
+    paymentStatus: finalPayment.paymentStatus,
   };
 };
 
+// Bank-initiated server-to-server webhook. Must always be acknowledged with
+// 200 once the payload is durably applied (or determined invalid) — the
+// bank retries on any non-200, and retries won't fix a bad hash.
+export const processPaymentAdvice = async (rawPayload: Record<string, unknown>) => {
+  await connectToDatabase();
+
+  const payload = normaliseGatewayPayload(rawPayload);
+  const merchantTxnNo = payload.merchantTxnNo;
+
+  if (!merchantTxnNo) {
+    logger.warn("Ignoring ICICI advice payload with no merchantTxnNo.", { payload: sanitizeForLogs(payload) });
+    return;
+  }
+
+  const payment = await Payment.findOne({ merchantTxnNo });
+
+  if (!payment) {
+    logger.warn("Ignoring ICICI advice payload for unknown merchantTxnNo.", { merchantTxnNo });
+    return;
+  }
+
+  await appendLog(merchantTxnNo, "ADVICE_RECEIVED", "Payment advice webhook payload received.", sanitizeForLogs(payload));
+
+  const hashVerification = verifyCallbackSecureHash(payload, env.iciciSecretKey);
+
+  if (!hashVerification.isValid) {
+    await appendLog(
+      merchantTxnNo,
+      "ADVICE_HASH_MISMATCH",
+      "Advice secureHash verification failed; ignoring payload.",
+      { generatedHash: hashVerification.generatedHash, receivedHash: hashVerification.receivedHash },
+    );
+    return;
+  }
+
+  const resolvedStatus = resolvePaymentStatus(payload);
+  await applyStatus(merchantTxnNo, resolvedStatus, payload, "ADVICE_VERIFIED", "advice");
+};
+
+// Polled by the frontend pending page, and reused by the reconcile sweep.
 export const checkPaymentStatus = async (merchantTxnNo: string) => {
   await connectToDatabase();
 
@@ -594,33 +605,141 @@ export const checkPaymentStatus = async (merchantTxnNo: string) => {
     throw new Error(`Payment not found for merchantTxnNo ${merchantTxnNo}.`);
   }
 
+  if (TERMINAL_STATUSES.includes(payment.paymentStatus as PaymentLifecycleStatus)) {
+    return {
+      merchantTxnNo: payment.merchantTxnNo,
+      txnID: payment.txnID,
+      paymentStatus: payment.paymentStatus,
+      gatewayResponse: (payment.gatewayResponse as GatewayPayload) || {},
+    };
+  }
+
   if (
     payment.paymentStatus === "INITIATED" &&
     payment.transactionExpiresAt &&
     payment.transactionExpiresAt <= new Date()
   ) {
-    payment.paymentStatus = "EXPIRED";
-    await payment.save();
+    await Payment.updateOne({ merchantTxnNo }, { paymentStatus: "EXPIRED" });
+    await appendLog(merchantTxnNo, "TRANSACTION_EXPIRED", "Marked initiated transaction as expired during status check.", {
+      expiredAt: new Date().toISOString(),
+    });
 
-    await appendLog(
+    return {
       merchantTxnNo,
-      "TRANSACTION_EXPIRED",
-      "Marked initiated transaction as expired during status check.",
-      {
-        expiredAt: new Date().toISOString(),
-      },
-    );
+      txnID: payment.txnID,
+      paymentStatus: "EXPIRED" as PaymentLifecycleStatus,
+      gatewayResponse: (payment.gatewayResponse as GatewayPayload) || {},
+    };
   }
 
-  const verifiedStatus = await fetchVerifiedGatewayStatus(payment, "STATUS_REQUEST");
+  const verified = await fetchVerifiedGatewayStatus(merchantTxnNo, "STATUS_REQUEST", "status-poll");
 
   return {
-    merchantTxnNo: payment.merchantTxnNo,
-    txnID: verifiedStatus.txnID,
-    paymentStatus: verifiedStatus.paymentStatus,
-    gatewayResponse: verifiedStatus.payload,
+    merchantTxnNo,
+    txnID: verified.payment?.txnID || payment.txnID,
+    paymentStatus: verified.paymentStatus,
+    gatewayResponse: verified.payload,
   };
 };
 
+// Safety-net sweep: re-checks payments that have been sitting in a
+// non-terminal state longer than RECONCILE_STALE_AFTER_MS, in case the
+// return callback never arrived (tab closed mid-payment) and the advice
+// webhook isn't registered yet or was missed.
+export const reconcilePendingPayments = async () => {
+  await connectToDatabase();
 
+  const staleBefore = new Date(Date.now() - env.reconcileStaleAfterMs);
 
+  const stalePayments = await Payment.find({
+    paymentStatus: { $in: ["INITIATED", "PENDING"] },
+    createdAt: { $lte: staleBefore },
+  })
+    .sort({ createdAt: 1 })
+    .limit(50);
+
+  let checked = 0;
+  let resolved = 0;
+
+  for (const payment of stalePayments) {
+    checked += 1;
+
+    try {
+      const before = payment.paymentStatus;
+      const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
+
+      if (result.paymentStatus !== before) {
+        resolved += 1;
+      }
+    } catch (error) {
+      logger.error("Reconcile sweep failed to verify a payment.", {
+        merchantTxnNo: payment.merchantTxnNo,
+        message: error instanceof Error ? error.message : "unknown error",
+      });
+    }
+  }
+
+  if (checked > 0) {
+    logger.info("Reconcile sweep completed.", { checked, resolved });
+  }
+
+  return { checked, resolved };
+};
+
+export const refundPayment = async (merchantTxnNo: string, amount?: number, addlParam1?: string) => {
+  assertGatewayConfigured();
+  await connectToDatabase();
+
+  const payment = await Payment.findOne({ merchantTxnNo });
+
+  if (!payment) {
+    throw new HttpError(404, `Payment not found for merchantTxnNo ${merchantTxnNo}.`);
+  }
+
+  if (payment.paymentStatus !== "SUCCESS") {
+    throw new HttpError(400, `Only successful payments can be refunded (current status: ${payment.paymentStatus}).`);
+  }
+
+  const refundAmount = amount ?? payment.amount;
+
+  if (refundAmount <= 0 || refundAmount > payment.amount) {
+    throw new HttpError(400, "Refund amount must be greater than zero and no more than the original amount.");
+  }
+
+  // The spec table describes originalTxnNo as "the reference No. of the
+  // initial transaction", but the sample curl passes the PG's txnID rather
+  // than our merchantTxnNo. Following the working sample here — confirm
+  // against a real UAT transaction before relying on this in production.
+  const originalTxnNo = payment.txnID || payment.merchantTxnNo;
+  const refundMerchantTxnNo = createMerchantTxnNo();
+
+  const refundRequest = buildRefundRequest({
+    merchantId: env.iciciMerchantId,
+    aggregatorID: env.iciciAggregatorId || undefined,
+    merchantTxnNo: refundMerchantTxnNo,
+    originalTxnNo,
+    amount: refundAmount,
+    addlParam1,
+  });
+
+  const signedRequest = attachSecureHash(refundRequest, env.iciciSecretKey);
+
+  await appendLog(merchantTxnNo, "REFUND_REQUEST", "Refund request created.", sanitizeForLogs(signedRequest));
+
+  const response = await postIcici<Record<string, unknown>>(env.iciciCommandUrl, signedRequest);
+  const payload = normaliseGatewayPayload(response.data);
+
+  await appendLog(merchantTxnNo, "REFUND_RESPONSE", "Refund response received.", sanitizeForLogs(payload));
+
+  const hashVerification = verifyCallbackSecureHash(payload, env.iciciSecretKey);
+  const isSuccess = ["000", "0000", "R1000"].includes(payload.responseCode || "");
+
+  if (!hashVerification.isValid || !isSuccess) {
+    await appendLog(merchantTxnNo, "REFUND_FAILED", "Refund was not confirmed by the gateway.", sanitizeForLogs(payload));
+    throw new HttpError(502, payload.respDescription || "Refund request was not confirmed by the gateway.");
+  }
+
+  await Payment.updateOne({ merchantTxnNo }, { paymentStatus: "REFUNDED", gatewayResponse: payload });
+
+  return { merchantTxnNo, refundMerchantTxnNo, payload };
+};

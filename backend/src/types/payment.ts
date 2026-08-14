@@ -9,7 +9,8 @@ export type PaymentLifecycleStatus =
   | "CANCELLED"
   | "EXPIRED"
   | "HASH_MISMATCH"
-  | "ERROR";
+  | "ERROR"
+  | "REFUNDED";
 
 export type PaymentLogStage =
   | "INITIATE_REQUEST"
@@ -17,14 +18,22 @@ export type PaymentLogStage =
   | "REUSED_TRANSACTION"
   | "NEW_TRANSACTION_CREATED"
   | "TRANSACTION_EXPIRED"
-  | "CALLBACK_RECEIVED"
-  | "CALLBACK_VERIFIED"
-  | "CALLBACK_HASH_MISMATCH"
+  | "RETURN_RECEIVED"
+  | "RETURN_VERIFIED"
+  | "RETURN_HASH_MISMATCH"
+  | "ADVICE_RECEIVED"
+  | "ADVICE_VERIFIED"
+  | "ADVICE_HASH_MISMATCH"
+  | "RECONCILE_CHECK"
   | "STATUS_API_VERIFICATION_STARTED"
   | "STATUS_API_VERIFIED_SUCCESS"
   | "STATUS_API_VERIFIED_FAILED"
   | "STATUS_REQUEST"
   | "STATUS_RESPONSE"
+  | "APPLY_STATUS_NOOP"
+  | "REFUND_REQUEST"
+  | "REFUND_RESPONSE"
+  | "REFUND_FAILED"
   | "REDIRECT";
 
 export type InitiatePaymentInput = {
@@ -71,11 +80,6 @@ export type InitiateSaleResponse = {
   [key: string]: unknown;
 };
 
-export type BrowserGatewayRequest = {
-  gatewayUrl: string;
-  gatewayFields: Record<string, string>;
-};
-
 export type StatusCheckRequest = {
   merchantId: string;
   aggregatorID?: string;
@@ -85,9 +89,19 @@ export type StatusCheckRequest = {
   secureHash?: string;
 };
 
-export type GatewayPayload = Record<string, string>;
-
-export type ParsedCallbackRequest = Request & {
-  rawBody?: string;
+export type RefundRequest = {
+  merchantId: string;
+  aggregatorID?: string;
+  merchantTxnNo: string;
+  originalTxnNo: string;
+  amount: string;
+  transactionType: "REFUND";
+  addlParam1?: string;
+  secureHash?: string;
 };
 
+export type GatewayPayload = Record<string, string>;
+
+export type ParsedGatewayRequest = Request & {
+  rawBody?: string;
+};

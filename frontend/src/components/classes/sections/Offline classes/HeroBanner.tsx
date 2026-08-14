@@ -1,11 +1,6 @@
 import heroImage from "@/assets/classes/hero-masterclass.jpg";
-import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
-type HeroBannerProps = {
-  onOpenCheckout: () => void;
-};
-
-const HeroBanner = ({ onOpenCheckout }: HeroBannerProps) => {
+const HeroBanner = () => {
   return (
     <section
       className="
@@ -95,33 +90,14 @@ const HeroBanner = ({ onOpenCheckout }: HeroBannerProps) => {
             {/* CTA BUTTONS */}
             <div
               className="
-                flex flex-col sm:flex-row 
-                gap-4 
-                justify-center lg:justify-start 
-                pt-4 
+                flex flex-col sm:flex-row
+                gap-4
+                justify-center lg:justify-start
+                pt-4
                 animate-fade-up
               "
               style={{ animationDelay: "750ms" }}
             >
-              <button
-                type="button"
-                onClick={onOpenCheckout}
-                data-course={OFFLINE_MASTERCLASS_DETAILS.courseName}
-                data-price={String(OFFLINE_MASTERCLASS_DETAILS.fee)}
-                data-payment-trigger="hero"
-                className="
-                  px-8 py-4 
-                  bg-primary text-primary-foreground
-                  font-sans 
-                  text-sm tracking-[0.2em] uppercase
-                  hover:bg-dusty-rose 
-                  transition-all duration-300
-                  rounded-full
-                "
-              >
-                Pay Now
-              </button>
-
               <a
                 href="#enroll"
                 className="

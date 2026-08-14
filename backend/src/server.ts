@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
@@ -5,9 +6,9 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { connectToDatabase } from "./db/connect.js";
 import { logger } from "./lib/logger.js";
+import { startReconciliationScheduler } from "./lib/reconcile.js";
+import { authRouter } from "./routes/auth.routes.js";
 import { paymentRouter } from "./routes/payment.routes.js";
-
-type RawBodyRequest = Request & { rawBody?: string };
 
 const app = express();
 const allowedOrigins = new Set([
@@ -22,7 +23,6 @@ const allowedOrigins = new Set([
   "https://meerasakhrani.in",
   "https://www.meerasakhrani.in",
 ]);
-const paymentCallbackPath = "/api/payments/callback";
 
 const isTrustedBrowserOrigin = (origin?: string | null) => {
   if (!origin || origin === "null") {
@@ -46,22 +46,9 @@ const isTrustedBrowserOrigin = (origin?: string | null) => {
   return allowedOrigins.has(origin);
 };
 
-const saveRawBody = (
-  request: RawBodyRequest,
-  _response: Response,
-  buffer: Buffer,
-) => {
-  request.rawBody = buffer.toString("utf8");
-};
-
 app.use(helmet());
 
-app.use((request, response, next) => {
-  if (request.path === paymentCallbackPath) {
-    next();
-    return;
-  }
-
+app.use(
   cors({
     origin: (origin, callback) => {
       if (isTrustedBrowserOrigin(origin)) {
@@ -71,12 +58,18 @@ app.use((request, response, next) => {
 
       callback(new Error("CORS origin not allowed."));
     },
-  })(request, response, next);
-});
+    credentials: true,
+  }),
+);
 
-app.use(express.json({ verify: saveRawBody }));
-app.use(express.urlencoded({ extended: true, verify: saveRawBody }));
-app.use(express.text({ type: "text/plain", verify: saveRawBody }));
+app.use(cookieParser());
+
+// Mounted before the global express.json() below so this router owns body
+// parsing for its own routes — the ICICI return/advice endpoints need the
+// raw request bytes, not whatever express.json() would (or wouldn't) parse.
+app.use("/api/payments", paymentRouter);
+
+app.use(express.json());
 
 app.get("/api/health", async (_request, response) => {
   const connection = await connectToDatabase();
@@ -88,7 +81,7 @@ app.get("/api/health", async (_request, response) => {
   });
 });
 
-app.use("/api/payments", paymentRouter);
+app.use("/api/auth", authRouter);
 
 app.use(
   (error: unknown, _request: Request, response: Response, _next: NextFunction) => {
@@ -104,5 +97,6 @@ app.use(
 );
 
 app.listen(env.port, () => {
-  logger.info(`ICICI backend listening on port ${env.port}.`);
+  logger.info(`Backend listening on port ${env.port}.`);
+  startReconciliationScheduler();
 });

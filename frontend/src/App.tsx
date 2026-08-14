@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import LoginModal from "@/components/auth/LoginModal";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -18,6 +20,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import MasterclassCheckout from "./pages/MasterclassCheckout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
+import PaymentPending from "./pages/PaymentPending";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +31,8 @@ const App = () => (
       <Sonner />
 
       <BrowserRouter>
+      <AuthProvider>
+      <LoginModal />
 
   <ScrollToTop />
 
@@ -46,11 +51,13 @@ const App = () => (
       <Route path="/classes/checkout" element={<MasterclassCheckout />} />
       <Route path="/success" element={<PaymentSuccess />} />
       <Route path="/failure" element={<PaymentFailure />} />
+      <Route path="/payment/pending" element={<PaymentPending />} />
     </Route>
 
     <Route path="*" element={<NotFound />} />
   </Routes>
 
+      </AuthProvider>
 </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

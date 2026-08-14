@@ -1,9 +1,6 @@
 export type PaymentVariant = "online" | "offline";
 
 export type InitiatePaymentRequest = {
-  customerName: string;
-  email: string;
-  mobile: string;
   amount: number;
   courseName: string;
   variant: PaymentVariant;
@@ -13,10 +10,8 @@ export type InitiatePaymentRequest = {
 
 export type InitiatePaymentResponse = {
   merchantTxnNo: string;
-  redirectUrl?: string;
+  redirectUrl: string;
   reused?: boolean;
-  gatewayUrl?: string;
-  gatewayFields?: Record<string, string>;
 };
 
 export type PaymentStatusResponse = {

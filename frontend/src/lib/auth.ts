@@ -1,17 +1,18 @@
 import axios from "axios";
 
 import type {
-  InitiatePaymentRequest,
-  InitiatePaymentResponse,
-  PaymentStatusResponse,
-} from "@/types/payment";
+  MeResponse,
+  RequestOtpPayload,
+  RequestOtpResponse,
+  VerifyOtpResponse,
+} from "@/types/auth";
 
 const apiBaseUrl =
   import.meta.env.VITE_PAYMENT_API_BASE_URL?.trim() || "http://localhost:4000/api";
 
-const paymentApi = axios.create({
+const authApi = axios.create({
   baseURL: apiBaseUrl,
-  timeout: 30000,
+  timeout: 20000,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -22,7 +23,7 @@ const getErrorMessage = (error: unknown) => {
   if (!axios.isAxiosError(error)) {
     return error instanceof Error
       ? error.message
-      : "Unable to process your payment right now. Please try again.";
+      : "Something went wrong. Please try again.";
   }
 
   const responseMessage =
@@ -32,34 +33,38 @@ const getErrorMessage = (error: unknown) => {
       ? String(error.response.data.message)
       : "";
 
-  return (
-    responseMessage ||
-    error.message ||
-    "Unable to process your payment right now. Please try again."
-  );
+  return responseMessage || error.message || "Something went wrong. Please try again.";
 };
 
-export const initiatePayment = async (payload: InitiatePaymentRequest) => {
+export const requestOtp = async (payload: RequestOtpPayload) => {
   try {
-    const response = await paymentApi.post<InitiatePaymentResponse>(
-      "/payments/initiate",
+    const response = await authApi.post<RequestOtpResponse>(
+      "/auth/otp/request",
       payload,
     );
-
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));
   }
 };
 
-export const getPaymentStatus = async (merchantTxnNo: string) => {
+export const verifyOtp = async (mobile: string, code: string) => {
   try {
-    const response = await paymentApi.get<PaymentStatusResponse>(
-      `/payments/status/${encodeURIComponent(merchantTxnNo)}`,
-    );
-
+    const response = await authApi.post<VerifyOtpResponse>("/auth/otp/verify", {
+      mobile,
+      code,
+    });
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));
   }
+};
+
+export const fetchCurrentUser = async () => {
+  const response = await authApi.get<MeResponse>("/auth/me");
+  return response.data.user;
+};
+
+export const logout = async () => {
+  await authApi.post("/auth/logout");
 };
