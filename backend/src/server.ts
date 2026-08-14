@@ -11,6 +11,14 @@ import { authRouter } from "./routes/auth.routes.js";
 import { paymentRouter } from "./routes/payment.routes.js";
 
 const app = express();
+
+// Render (and most PaaS hosts) put the app behind a reverse proxy, so every
+// request arrives with an X-Forwarded-For header. Without this, Express
+// won't trust it, and express-rate-limit refuses to key rate limits off an
+// untrusted IP and throws instead. `1` trusts exactly one hop — the
+// platform's own proxy — not arbitrary client-supplied forwarding chains.
+app.set("trust proxy", 1);
+
 const allowedOrigins = new Set([
   "http://localhost:5173",
   "http://localhost:8080",
