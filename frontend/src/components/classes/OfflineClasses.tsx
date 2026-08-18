@@ -1,8 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin } from "lucide-react";
 
-import { useAuth } from "@/context/AuthContext";
-
 import HeroBanner from "./sections/Offline classes/HeroBanner.tsx";
 import DayStructure from "./sections/Offline classes/DayStructure.tsx";
 import AddedBenefits from "./sections/Offline classes/AddedBenefits.tsx";
@@ -17,21 +15,18 @@ import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
 const OfflineClasses = () => {
   const navigate = useNavigate();
-  const { requireAuth } = useAuth();
 
   const openCheckout = () => {
-    requireAuth(() => {
-      const params = new URLSearchParams({
-        variant: "offline",
-        course: OFFLINE_MASTERCLASS_DETAILS.courseName,
-        amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
-        feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
-        summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
-        trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
-      });
-
-      navigate(`/classes/checkout?${params.toString()}`);
+    const params = new URLSearchParams({
+      variant: "offline",
+      course: OFFLINE_MASTERCLASS_DETAILS.courseName,
+      amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
+      feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
+      summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
+      trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
     });
+
+    navigate(`/classes/checkout?${params.toString()}`);
   };
 
   return (
