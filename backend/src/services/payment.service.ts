@@ -423,7 +423,9 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
 
   logger.info("Sending initiateSale request to ICICI.", {
     url: env.iciciInitiateSaleUrl,
-    packet: signedRequest,
+    contentType: "application/x-www-form-urlencoded",
+    rawBody: toFormUrlEncodedBody(signedRequest),
+    packetAsJson: JSON.stringify(signedRequest, null, 2),
   });
 
   try {
