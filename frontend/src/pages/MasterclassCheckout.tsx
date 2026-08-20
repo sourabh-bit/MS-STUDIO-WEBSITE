@@ -1,17 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, Lock } from "lucide-react";
 
 import heroMasterclass from "@/assets/classes/hero-masterclass.jpg";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { initiatePayment } from "@/lib/payment";
 import { getMasterclassPaymentDetails } from "@/lib/masterclass";
-
-const ICICI_PAYMENT_LINK =
-  "https://pgpay.icici.bank.in/pg/portal/pay/initiatePayOrder?merchantID=100000000455550";
 
 const MasterclassCheckout = () => {
   const navigate = useNavigate();
+  const { requireAuth } = useAuth();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const paymentDetails = getMasterclassPaymentDetails(searchParams);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -35,6 +38,35 @@ const MasterclassCheckout = () => {
   }, [paymentDetails.fee, isOffline]);
 
   const formatInr = (value: number) => `₹${new Intl.NumberFormat("en-IN").format(value)}`;
+
+  const handlePayNow = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await initiatePayment({
+        amount: paymentDetails.fee,
+        courseName: paymentDetails.courseName,
+        variant: isOffline ? "offline" : "online",
+        feeLabel: paymentDetails.feeLabel,
+        summaryLabel: paymentDetails.summaryLabel,
+      });
+
+      window.location.href = result.redirectUrl;
+    } catch (error) {
+      toast({
+        title: "Couldn't start your payment",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayClick = () => requireAuth(handlePayNow);
 
   return (
     <section className="animate-fade-in min-h-screen bg-[#F8F3EB] py-6 sm:py-8 md:py-12 lg:py-16">
@@ -128,20 +160,22 @@ const MasterclassCheckout = () => {
 
                 <div className="space-y-4 border-t border-border/20 bg-primary/[0.03] px-5 py-5 sm:px-6 sm:py-6">
                   <p className="font-sans text-xs leading-relaxed text-muted-foreground">
-                    You'll be taken to ICICI Bank's secure payment page. Enter{" "}
+                    You'll be taken to ICICI Bank's secure payment page to pay{" "}
                     <span className="font-semibold text-foreground">
                       {formatInr(lineTotal)}
-                    </span>{" "}
-                    as the amount there to complete your booking.
+                    </span>
+                    .
                   </p>
 
-                  <a
-                    href={ICICI_PAYMENT_LINK}
-                    className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
+                  <button
+                    type="button"
+                    onClick={handlePayClick}
+                    disabled={isSubmitting}
+                    className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground shadow-elegant transition-all duration-300 hover:bg-dusty-rose disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    Pay Now
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Redirecting…" : "Pay Now"}
+                  </button>
 
                   <p className="flex items-center justify-center gap-1.5 font-sans text-[11px] text-muted-foreground">
                     <Lock className="h-3 w-3" />
