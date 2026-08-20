@@ -421,7 +421,10 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
     sanitizeForLogs(signedRequest),
   );
 
-  logger.info("Sending initiateSale request to ICICI.", { merchantTxnNo: payment.merchantTxnNo });
+  logger.info("Sending initiateSale request to ICICI.", {
+    url: env.iciciInitiateSaleUrl,
+    packet: signedRequest,
+  });
 
   try {
     const response = await postIcici<InitiateSaleResponse>(env.iciciInitiateSaleUrl, signedRequest);
