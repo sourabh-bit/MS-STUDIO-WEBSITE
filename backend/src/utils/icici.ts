@@ -134,17 +134,28 @@ export const verifyCallbackSecureHash = (
   };
 };
 
+// ICICI expects txnDate in IST. date.getHours() etc. would reflect whatever
+// timezone the server process runs in — Render defaults to UTC, not IST —
+// so this explicitly reads the date's components in Asia/Kolkata regardless
+// of the server's own local timezone. hourCycle "h23" (not hour12: false)
+// avoids a known ICU quirk where midnight can render as "24" instead of "00".
 export const formatTxnDate = (date = new Date()) => {
-  const pad = (value: number) => String(value).padStart(2, "0");
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
 
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-    pad(date.getHours()),
-    pad(date.getMinutes()),
-    pad(date.getSeconds()),
-  ].join("");
+  const parts = Object.fromEntries(
+    formatter.formatToParts(date).map(({ type, value }) => [type, value]),
+  );
+
+  return `${parts.year}${parts.month}${parts.day}${parts.hour}${parts.minute}${parts.second}`;
 };
 
 export const formatAmount = (amount: number) => amount.toFixed(2);
