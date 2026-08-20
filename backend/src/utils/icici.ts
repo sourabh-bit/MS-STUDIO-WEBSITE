@@ -134,28 +134,28 @@ export const verifyCallbackSecureHash = (
   };
 };
 
-// ICICI expects txnDate in IST. date.getHours() etc. would reflect whatever
-// timezone the server process runs in — Render defaults to UTC, not IST —
-// so this explicitly reads the date's components in Asia/Kolkata regardless
-// of the server's own local timezone. hourCycle "h23" (not hour12: false)
-// avoids a known ICU quirk where midnight can render as "24" instead of "00".
+// ICICI expects txnDate in IST. Render's Node build produced the same
+// digits as UTC when this used Intl.DateTimeFormat({ timeZone:
+// "Asia/Kolkata" }) — minimal Node builds often ship without full ICU
+// timezone-database support, so that call can silently fall back to UTC
+// instead of throwing. This avoids the timezone database entirely: shift
+// the raw epoch milliseconds by the fixed +5:30 offset (India has no DST,
+// so this is always correct) and read it back with the UTC getters, which
+// need no ICU data at all.
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
 export const formatTxnDate = (date = new Date()) => {
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
+  const istDate = new Date(date.getTime() + IST_OFFSET_MS);
+  const pad = (value: number) => String(value).padStart(2, "0");
 
-  const parts = Object.fromEntries(
-    formatter.formatToParts(date).map(({ type, value }) => [type, value]),
-  );
-
-  return `${parts.year}${parts.month}${parts.day}${parts.hour}${parts.minute}${parts.second}`;
+  return [
+    istDate.getUTCFullYear(),
+    pad(istDate.getUTCMonth() + 1),
+    pad(istDate.getUTCDate()),
+    pad(istDate.getUTCHours()),
+    pad(istDate.getUTCMinutes()),
+    pad(istDate.getUTCSeconds()),
+  ].join("");
 };
 
 export const formatAmount = (amount: number) => amount.toFixed(2);
