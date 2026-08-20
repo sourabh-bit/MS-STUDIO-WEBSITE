@@ -211,15 +211,15 @@ export const buildInitiateSaleRequest = (
     txnDate: formatTxnDate(),
     customerMobileNo: input.customerMobileNo,
     customerName: toAsciiSafe(input.customerName),
-    addlParam1: input.addlParam1 ?? "000",
+    addlParam1: input.addlParam1 ?? "0",
     addlParam2: input.addlParam2 ?? "111",
   };
 
-  // Omitted unless explicitly configured: the spec marks aggregatorID
-  // "Non Mandatory", the sample request includes it in the request but not
-  // in the hash string, and support has to confirm case-by-case whether it
-  // participates. Leaving it out entirely sidesteps that whole class of
-  // hash mismatches for a single, non-aggregator merchant account.
+  // Confirmed directly with ICICI's integration team: for this merchant
+  // (configured with an aggregator), aggregatorID participates in both the
+  // request and the secureHash calculation. Still conditional on
+  // input.aggregatorID being set, in case this code ever serves a
+  // non-aggregator merchant config where it should be omitted entirely.
   if (input.aggregatorID) {
     request.aggregatorID = input.aggregatorID;
   }
