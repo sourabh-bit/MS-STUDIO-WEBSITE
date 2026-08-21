@@ -19,7 +19,7 @@ import {
   buildRedirectUrl,
   buildRefundRequest,
   buildStatusCheckRequest,
-  isPendingPayment,
+  isFailedPayment,
   isSuccessfulPayment,
   normaliseGatewayPayload,
   verifyCallbackSecureHash,
@@ -133,11 +133,15 @@ const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus =
     return "SUCCESS";
   }
 
-  if (isPendingPayment(payload)) {
-    return "PENDING";
+  if (isFailedPayment(payload)) {
+    return "FAILED";
   }
 
-  return "FAILED";
+  // Covers both recognized-pending codes and any ambiguous/unrecognized
+  // response ICICI hasn't finalized yet (see isFailedPayment for why this
+  // must not default to FAILED). A genuinely abandoned transaction still
+  // resolves to EXPIRED via the transaction-expiry/reconcile path.
+  return "PENDING";
 };
 
 const appendLog = async (

@@ -204,6 +204,23 @@ export const isPendingPayment = (payload: GatewayPayload) => {
   );
 };
 
+// Deliberately conservative: only trust an *explicit* txnStatus of REJ/ERR
+// as a definitive failure. Confirmed by testing a real declined UPI
+// payment (insufficient balance) — ICICI's status check came back with
+// responseCode "P0030" / "Awaiting user action" and no txnStatus at all,
+// which isn't a recognized success or pending code, but is also not a
+// confirmed failure — the gateway itself hadn't finalized it yet. Without
+// this function, that ambiguous case would have fallen through to
+// "FAILED" by default, incorrectly telling a customer their payment
+// failed while ICICI still considered it in progress. Genuine, truly
+// abandoned transactions still resolve via the transaction-expiry /
+// reconcile-sweep path rather than being guessed at here.
+export const isFailedPayment = (payload: GatewayPayload) => {
+  const txnStatus = (payload.txnStatus || "").toUpperCase();
+
+  return txnStatus === "REJ" || txnStatus === "ERR";
+};
+
 export const buildInitiateSaleRequest = (
   input: Omit<
     InitiateSaleRequest,
