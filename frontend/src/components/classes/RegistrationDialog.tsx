@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import {
   Dialog,
@@ -127,24 +127,22 @@ const RegistrationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-soft-pink/50">
-            <ShieldCheck className="h-6 w-6 text-dusty-rose" />
-          </div>
-          <DialogTitle className="text-center font-serif text-2xl">
-            Tell Us About Yourself
-          </DialogTitle>
-          <DialogDescription className="text-center">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="font-serif text-xl">Tell Us About Yourself</DialogTitle>
+          <DialogDescription className="text-xs">
             A few quick details before you're taken to the secure payment page.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label htmlFor="reg-name">Full name</Label>
+        <div className="space-y-2.5">
+          <div className="space-y-1">
+            <Label htmlFor="reg-name" className="text-xs">
+              Full name
+            </Label>
             <Input
               id="reg-name"
+              className="h-9"
               placeholder="Your full name"
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -152,10 +150,13 @@ const RegistrationDialog = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reg-phone">Mobile number</Label>
+          <div className="space-y-1">
+            <Label htmlFor="reg-phone" className="text-xs">
+              Mobile number
+            </Label>
             <Input
               id="reg-phone"
+              className="h-9"
               type="tel"
               placeholder="98765 43210"
               value={phone}
@@ -163,10 +164,13 @@ const RegistrationDialog = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reg-email">Email address</Label>
+          <div className="space-y-1">
+            <Label htmlFor="reg-email" className="text-xs">
+              Email address
+            </Label>
             <Input
               id="reg-email"
+              className="h-9"
               type="email"
               placeholder="you@email.com"
               value={email}
@@ -174,13 +178,15 @@ const RegistrationDialog = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reg-experience">Experience</Label>
+          <div className="space-y-1">
+            <Label htmlFor="reg-experience" className="text-xs">
+              Experience
+            </Label>
             <Select
               value={experienceLevel}
               onValueChange={(value) => setExperienceLevel(value as ExperienceLevel)}
             >
-              <SelectTrigger id="reg-experience">
+              <SelectTrigger id="reg-experience" className="h-9">
                 <SelectValue placeholder="Select your experience level" />
               </SelectTrigger>
               <SelectContent>
@@ -193,31 +199,33 @@ const RegistrationDialog = ({
             </Select>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="reg-gstin-toggle">I have a GSTIN</Label>
-              <p className="text-xs text-muted-foreground">
-                Turn on to receive a GST invoice.
-              </p>
+          <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2">
+            <div className="space-y-0">
+              <Label htmlFor="reg-gstin-toggle" className="text-xs">
+                I have a GSTIN
+              </Label>
+              <p className="text-[11px] text-muted-foreground">Turn on for a GST invoice.</p>
             </div>
             <Switch id="reg-gstin-toggle" checked={hasGstin} onCheckedChange={setHasGstin} />
           </div>
 
           {hasGstin && (
-            <div className="space-y-2">
-              <Label htmlFor="reg-gstin">GSTIN</Label>
+            <div className="space-y-1">
+              <Label htmlFor="reg-gstin" className="text-xs">
+                GSTIN
+              </Label>
               <Input
                 id="reg-gstin"
+                className="h-9 uppercase"
                 placeholder="22AAAAA0000A1Z5"
                 value={gstin}
                 maxLength={15}
                 onChange={(event) => setGstin(event.target.value.toUpperCase())}
-                className="uppercase"
               />
             </div>
           )}
 
-          <Button className="w-full" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button className="h-10 w-full" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Continue to Payment
           </Button>
