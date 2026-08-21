@@ -6,6 +6,7 @@ import {
   meHandler,
   requestOtpHandler,
   verifyOtpHandler,
+  verifyWidgetHandler,
 } from "../controllers/auth.controller.js";
 
 const otpRequestLimiter = rateLimit({
@@ -28,5 +29,6 @@ export const authRouter = Router();
 
 authRouter.post("/otp/request", otpRequestLimiter, requestOtpHandler);
 authRouter.post("/otp/verify", otpVerifyLimiter, verifyOtpHandler);
+authRouter.post("/widget/verify", otpVerifyLimiter, verifyWidgetHandler);
 authRouter.get("/me", meHandler);
 authRouter.post("/logout", logoutHandler);

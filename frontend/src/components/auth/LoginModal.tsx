@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
-import { requestOtp, verifyOtp } from "@/lib/auth";
+import { verifyWidgetLogin } from "@/lib/auth";
+import { initMsg91Widget, retryWidgetOtp, sendWidgetOtp, verifyWidgetOtp } from "@/lib/msg91Widget";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -33,18 +34,21 @@ const LoginModal = () => {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const resendTimerRef = useRef<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
-    if (!isModalOpen) {
+    if (isModalOpen) {
+      // Pre-warm the widget script so the first "Send code" click isn't
+      // waiting on it to load. Errors here just surface again naturally
+      // when the user actually tries to send/verify.
+      initMsg91Widget().catch(() => undefined);
+    } else {
       setStep("details");
       setName("");
       setMobile("");
       setEmail("");
       setCode("");
-      setDevCode(null);
       setResendCooldown(0);
       if (resendTimerRef.current) {
         window.clearInterval(resendTimerRef.current);
@@ -88,12 +92,7 @@ const LoginModal = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await requestOtp({
-        name: name.trim(),
-        mobile: mobile.trim(),
-        email: email.trim(),
-      });
-      setDevCode(result.devCode ?? null);
+      await sendWidgetOtp(mobile.replace(/\D/g, "").slice(-10));
       setStep("otp");
       startResendCooldown();
       toast({
@@ -119,12 +118,34 @@ const LoginModal = () => {
 
     setIsSubmitting(true);
     try {
-      const { user } = await verifyOtp(mobile.trim(), code);
+      const accessToken = await verifyWidgetOtp(code);
+      const { user } = await verifyWidgetLogin({
+        accessToken,
+        name: name.trim(),
+        email: email.trim(),
+      });
       handleAuthenticated(user);
       toast({ title: user.name ? `Welcome, ${user.name}` : "Welcome" });
     } catch (error) {
       toast({
         title: "Couldn't verify that code",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setIsSubmitting(true);
+    try {
+      await retryWidgetOtp();
+      startResendCooldown();
+      toast({ title: "Code resent" });
+    } catch (error) {
+      toast({
+        title: "Couldn't resend the code",
         description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
@@ -142,7 +163,7 @@ const LoginModal = () => {
         }
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-soft-pink/50">
             <ShieldCheck className="h-6 w-6 text-dusty-rose" />
@@ -221,13 +242,6 @@ const LoginModal = () => {
               </InputOTP>
             </div>
 
-            {devCode && (
-              <p className="text-center text-xs text-muted-foreground">
-                Dev mode — SMS isn't configured yet. Your code is{" "}
-                <span className="font-semibold text-foreground">{devCode}</span>.
-              </p>
-            )}
-
             <Button
               className="w-full"
               onClick={handleVerifyCode}
@@ -248,7 +262,7 @@ const LoginModal = () => {
               <button
                 type="button"
                 className="underline underline-offset-2 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-                onClick={handleSendCode}
+                onClick={handleResendCode}
                 disabled={resendCooldown > 0 || isSubmitting}
               >
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}

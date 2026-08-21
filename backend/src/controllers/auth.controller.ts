@@ -3,7 +3,7 @@ import type { CookieOptions, NextFunction, Request, Response } from "express";
 import { env } from "../config/env.js";
 import { isHttpError } from "../lib/http-error.js";
 import { SESSION_TTL_SECONDS, verifySessionToken } from "../lib/jwt.js";
-import { getUserById, requestOtp, verifyOtp } from "../services/auth.service.js";
+import { getUserById, requestOtp, verifyOtp, verifyWidgetLogin } from "../services/auth.service.js";
 
 const getCookieOptions = (): CookieOptions => ({
   httpOnly: true,
@@ -72,6 +72,40 @@ export const verifyOtpHandler = async (
     }
 
     const { token, user } = await verifyOtp(mobile, code);
+
+    response.cookie(env.authCookieName, token, {
+      ...getCookieOptions(),
+      maxAge: SESSION_TTL_SECONDS * 1000,
+    });
+    response.status(200).json({ user });
+  } catch (error) {
+    if (respondWithAuthError(error, response)) {
+      return;
+    }
+
+    next(error);
+  }
+};
+
+export const verifyWidgetHandler = async (
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { accessToken, name, email } = request.body as Record<string, unknown>;
+
+    if (!accessToken || typeof accessToken !== "string") {
+      response.status(400).json({ message: "Missing OTP verification token." });
+      return;
+    }
+
+    if (!name || typeof name !== "string" || !email || typeof email !== "string") {
+      response.status(400).json({ message: "Enter your name and email." });
+      return;
+    }
+
+    const { token, user } = await verifyWidgetLogin(accessToken, name, email);
 
     response.cookie(env.authCookieName, token, {
       ...getCookieOptions(),

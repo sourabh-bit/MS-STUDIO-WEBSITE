@@ -14,6 +14,7 @@ import {
   verifyOtpCode,
 } from "../lib/otp.js";
 import { isSmsConfigured, sendOtpSms } from "../lib/sms.js";
+import { verifyMsg91WidgetToken } from "../lib/msg91-widget.js";
 import { OtpChallenge } from "../models/OtpChallenge.js";
 import { User, type UserDocument } from "../models/User.js";
 import { env } from "../config/env.js";
@@ -173,6 +174,51 @@ export const verifyOtp = async (rawMobile: string, rawCode: string) => {
         email: challenge.email,
         lastLoginAt: new Date(),
       },
+      $setOnInsert: { phone: mobile },
+    },
+    { new: true, upsert: true },
+  );
+
+  const token = signSessionToken({ userId: String(user._id) });
+
+  return { token, user: toPublicUser(user) };
+};
+
+// MSG91 OTP Widget login: the OTP itself was already sent and verified
+// entirely client-side by the widget. This only trusts the resulting
+// access token after confirming it server-side with MSG91 — the verified
+// mobile number that comes back from that check is the identity, never
+// whatever the client claims in the request body.
+export const verifyWidgetLogin = async (
+  accessToken: string,
+  rawName: string,
+  rawEmail: string,
+) => {
+  await connectToDatabase();
+
+  const name = rawName.trim();
+  const email = rawEmail.trim().toLowerCase();
+
+  if (name.length < 2) {
+    throw new HttpError(400, "Enter your full name.");
+  }
+
+  if (!isValidEmail(email)) {
+    throw new HttpError(400, "Enter a valid email address.");
+  }
+
+  const verification = await verifyMsg91WidgetToken(accessToken);
+
+  if (!verification.verified || detectContactChannel(verification.mobile) !== "phone") {
+    throw new HttpError(400, "OTP verification failed. Please try again.");
+  }
+
+  const mobile = normaliseContact(verification.mobile, "phone");
+
+  const user = await User.findOneAndUpdate(
+    { phone: mobile },
+    {
+      $set: { name, email, lastLoginAt: new Date() },
       $setOnInsert: { phone: mobile },
     },
     { new: true, upsert: true },

@@ -60,6 +60,19 @@ export const verifyOtp = async (mobile: string, code: string) => {
   }
 };
 
+export const verifyWidgetLogin = async (payload: {
+  accessToken: string;
+  name: string;
+  email: string;
+}) => {
+  try {
+    const response = await authApi.post<VerifyOtpResponse>("/auth/widget/verify", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
 export const fetchCurrentUser = async () => {
   const response = await authApi.get<MeResponse>("/auth/me");
   return response.data.user;
