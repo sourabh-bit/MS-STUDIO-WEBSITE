@@ -8,7 +8,7 @@ import { connectToDatabase } from "./db/connect.js";
 import { logger } from "./lib/logger.js";
 import { startReconciliationScheduler } from "./lib/reconcile.js";
 import { authRouter } from "./routes/auth.routes.js";
-import { paymentRouter } from "./routes/payment.routes.js";
+import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
 
 const app = express();
@@ -55,6 +55,14 @@ const isTrustedBrowserOrigin = (origin?: string | null) => {
   return allowedOrigins.has(origin);
 };
 
+// Mounted before helmet/CORS/cookies: the browser's redirect back from
+// ICICI's hosted payment page is a cross-origin navigation from their
+// domain, not ours, and their advice webhook is a pure server-to-server
+// call — neither should ever be subject to our frontend-only CORS
+// allowlist. Registering this first means these two routes are fully
+// handled and responded to before the CORS middleware below ever runs.
+app.use("/api/payments", paymentCallbackRouter);
+
 app.use(helmet());
 
 app.use(
@@ -73,9 +81,8 @@ app.use(
 
 app.use(cookieParser());
 
-// Mounted before the global express.json() below so this router owns body
-// parsing for its own routes — the ICICI return/advice endpoints need the
-// raw request bytes, not whatever express.json() would (or wouldn't) parse.
+// initiate/status/refund: our own frontend calls these, so CORS + auth
+// both apply normally here.
 app.use("/api/payments", paymentRouter);
 
 app.use(express.json());
