@@ -121,6 +121,21 @@ export const verifyWidgetHandler = async (
   }
 };
 
+// Serves the widget's tokenAuth at runtime instead of it being baked into
+// the built JS bundle at compile time. This is not full secrecy — the
+// widget SDK is client-side by design, so the value is still visible in
+// the browser's network tab once fetched — but it keeps it out of static
+// build artifacts and source control, and lets it be rotated without a
+// frontend redeploy.
+export const widgetConfigHandler = (_request: Request, response: Response) => {
+  if (!env.msg91WidgetTokenAuth) {
+    response.status(501).json({ message: "MSG91 widget is not configured." });
+    return;
+  }
+
+  response.status(200).json({ tokenAuth: env.msg91WidgetTokenAuth });
+};
+
 export const meHandler = async (
   request: Request,
   response: Response,

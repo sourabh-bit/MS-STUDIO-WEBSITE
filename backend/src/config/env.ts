@@ -34,6 +34,10 @@ export const env = {
   msg91AuthKey: readOptional("MSG91_AUTH_KEY"),
   msg91OtpTemplateId: readOptional("MSG91_OTP_TEMPLATE_ID"),
   msg91Sender: readOptional("MSG91_SENDER") || "MEERAS",
+  // OTP Widget's tokenAuth — deliberately NOT a VITE_ variable. It's
+  // served to the frontend at runtime via /api/auth/widget/config instead
+  // of being baked into the built JS bundle at compile time.
+  msg91WidgetTokenAuth: readOptional("MSG91_WIDGET_TOKEN_AUTH"),
 
   // ICICI Orange PG (Direct Integration)
   frontendBaseUrl: readOptional("FRONTEND_BASE_URL") || "http://localhost:5173",

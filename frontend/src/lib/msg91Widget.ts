@@ -1,3 +1,5 @@
+import { fetchWidgetConfig } from "@/lib/auth";
+
 declare global {
   interface Window {
     initSendOTP?: (config: Record<string, unknown>) => void;
@@ -20,7 +22,6 @@ declare global {
 }
 
 const WIDGET_ID = import.meta.env.VITE_MSG91_WIDGET_ID?.trim() || "";
-const TOKEN_AUTH = import.meta.env.VITE_MSG91_WIDGET_TOKEN_AUTH?.trim() || "";
 
 // MSG91 documents both hosts as valid; try the primary first, fall back
 // to the secondary if it fails to load (network block, regional issue).
@@ -41,32 +42,40 @@ const loadScript = (url: string) =>
 // Loads MSG91's widget script and initializes it in headless mode
 // (exposeMethods: true) so we keep our own login UI instead of MSG91's
 // own hosted OTP popup — we just call their exposed send/verify/retry
-// functions from our existing form.
+// functions from our existing form. tokenAuth is fetched from our own
+// backend at runtime rather than baked into the build, so it never sits
+// in a static JS bundle file (widgetId alone is fine to ship in the build
+// — it's not sensitive on its own).
 export const initMsg91Widget = () => {
   if (initPromise) {
     return initPromise;
   }
 
-  if (!WIDGET_ID || !TOKEN_AUTH) {
+  if (!WIDGET_ID) {
     return Promise.reject(new Error("MSG91 widget is not configured."));
   }
 
   initPromise = (async () => {
-    let lastError: unknown;
+    const [, tokenAuth] = await Promise.all([
+      (async () => {
+        let lastError: unknown;
 
-    for (const url of SCRIPT_URLS) {
-      try {
-        await loadScript(url);
-        lastError = undefined;
-        break;
-      } catch (error) {
-        lastError = error;
-      }
-    }
+        for (const url of SCRIPT_URLS) {
+          try {
+            await loadScript(url);
+            lastError = undefined;
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
 
-    if (lastError) {
-      throw lastError instanceof Error ? lastError : new Error("Failed to load the OTP widget.");
-    }
+        if (lastError) {
+          throw lastError instanceof Error ? lastError : new Error("Failed to load the OTP widget.");
+        }
+      })(),
+      fetchWidgetConfig(),
+    ]);
 
     if (typeof window.initSendOTP !== "function") {
       throw new Error("MSG91 widget script did not load correctly.");
@@ -74,7 +83,7 @@ export const initMsg91Widget = () => {
 
     window.initSendOTP({
       widgetId: WIDGET_ID,
-      tokenAuth: TOKEN_AUTH,
+      tokenAuth,
       exposeMethods: true,
       success: () => {},
       failure: () => {},

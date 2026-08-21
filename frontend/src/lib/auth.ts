@@ -73,6 +73,13 @@ export const verifyWidgetLogin = async (payload: {
   }
 };
 
+// Fetched at runtime rather than baked into the build (see msg91Widget.ts)
+// so the widget's tokenAuth never sits in a static JS bundle file.
+export const fetchWidgetConfig = async () => {
+  const response = await authApi.get<{ tokenAuth: string }>("/auth/widget/config");
+  return response.data.tokenAuth;
+};
+
 export const fetchCurrentUser = async () => {
   const response = await authApi.get<MeResponse>("/auth/me");
   return response.data.user;
