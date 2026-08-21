@@ -86,8 +86,9 @@ const toFormUrlEncodedBody = (payload: Record<string, unknown>) =>
 
 const isHtml502Response = (value: unknown) => typeof value === "string" && /502 Bad Gateway/i.test(value);
 
-// The gateway occasionally 502s on the documented form-urlencoded content
-// type but accepts the same payload as JSON — fall back rather than fail.
+// The STATUS/REFUND command endpoint's own documented sample curls use
+// application/x-www-form-urlencoded — this is specifically for
+// env.iciciCommandUrl, not initiateSale (see postIciciJson below).
 const postIcici = async <TResponse>(url: string, payload: Record<string, unknown>) => {
   try {
     return await iciciClient.post<TResponse>(url, toFormUrlEncodedBody(payload), {
@@ -112,6 +113,20 @@ const postIcici = async <TResponse>(url: string, payload: Record<string, unknown
     });
   }
 };
+
+// initiateSale specifically requires application/json — confirmed by
+// direct testing: the exact same payload sent as
+// application/x-www-form-urlencoded gets a bare, generic gateway-level
+// "Internal Server Error" with no ICICI response code at all, while JSON
+// gets a proper responseCode. This was the real root cause behind what
+// looked for a long time like an IP-whitelisting problem.
+const postIciciJson = <TResponse>(url: string, payload: Record<string, unknown>) =>
+  iciciClient.post<TResponse>(url, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  });
 
 const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus => {
   if (isSuccessfulPayment(payload)) {
@@ -423,13 +438,12 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
 
   logger.info("Sending initiateSale request to ICICI.", {
     url: env.iciciInitiateSaleUrl,
-    contentType: "application/x-www-form-urlencoded",
-    rawBody: toFormUrlEncodedBody(signedRequest),
+    contentType: "application/json",
     packetAsJson: JSON.stringify(signedRequest, null, 2),
   });
 
   try {
-    const response = await postIcici<InitiateSaleResponse>(env.iciciInitiateSaleUrl, signedRequest);
+    const response = await postIciciJson<InitiateSaleResponse>(env.iciciInitiateSaleUrl, signedRequest);
 
     await appendLog(
       payment.merchantTxnNo,
