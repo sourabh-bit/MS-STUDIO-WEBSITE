@@ -8,6 +8,7 @@ const apiBaseUrl =
 const registrationApi = axios.create({
   baseURL: apiBaseUrl,
   timeout: 20000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -34,5 +35,18 @@ export const submitRegistration = async (payload: RegistrationInput) => {
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));
+  }
+};
+
+export const checkRegistration = async (courseName: string, variant: "online" | "offline") => {
+  try {
+    const response = await registrationApi.get<{ registered: boolean }>("/registrations/check", {
+      params: { courseName, variant },
+    });
+    return response.data.registered;
+  } catch {
+    // If the check itself fails (network blip, not logged in yet), fail
+    // open to showing the form rather than silently blocking checkout.
+    return false;
   }
 };

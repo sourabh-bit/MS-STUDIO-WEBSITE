@@ -1,7 +1,8 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 
-import { createRegistrationHandler } from "../controllers/registration.controller.js";
+import { checkRegistrationHandler, createRegistrationHandler } from "../controllers/registration.controller.js";
+import { requireAuth } from "../middleware/require-auth.js";
 
 const registrationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -14,3 +15,4 @@ const registrationLimiter = rateLimit({
 export const registrationRouter = Router();
 
 registrationRouter.post("/", registrationLimiter, createRegistrationHandler);
+registrationRouter.get("/check", requireAuth, checkRegistrationHandler);

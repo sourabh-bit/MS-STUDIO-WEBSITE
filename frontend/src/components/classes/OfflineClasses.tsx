@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { checkRegistration } from "@/lib/registration";
 
 import HeroBanner from "./sections/Offline classes/HeroBanner.tsx";
 import DayStructure from "./sections/Offline classes/DayStructure.tsx";
@@ -22,16 +23,7 @@ const OfflineClasses = () => {
   const { requireAuth } = useAuth();
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
-  const openCheckout = () => {
-    requireAuth(() => setIsRegistrationOpen(true));
-  };
-
-  // Runs after the registration form is saved. This only takes the
-  // customer to the cart/review page — the actual ICICI payment is only
-  // started later, when they click Pay Now there.
-  const handleRegistrationSuccess = () => {
-    setIsRegistrationOpen(false);
-
+  const goToCheckout = () => {
     const params = new URLSearchParams({
       variant: "offline",
       course: OFFLINE_MASTERCLASS_DETAILS.courseName,
@@ -42,6 +34,33 @@ const OfflineClasses = () => {
     });
 
     navigate(`/classes/checkout?${params.toString()}`);
+  };
+
+  // Skip the registration form entirely if this person has already
+  // registered for this course — no need to fill it out again just
+  // because they navigated back and came in through "Book" again.
+  const openCheckout = () => {
+    requireAuth(async () => {
+      const alreadyRegistered = await checkRegistration(
+        OFFLINE_MASTERCLASS_DETAILS.courseName,
+        "offline",
+      );
+
+      if (alreadyRegistered) {
+        goToCheckout();
+        return;
+      }
+
+      setIsRegistrationOpen(true);
+    });
+  };
+
+  // Runs after the registration form is saved. This only takes the
+  // customer to the cart/review page — the actual ICICI payment is only
+  // started later, when they click Pay Now there.
+  const handleRegistrationSuccess = () => {
+    setIsRegistrationOpen(false);
+    goToCheckout();
   };
 
   return (
