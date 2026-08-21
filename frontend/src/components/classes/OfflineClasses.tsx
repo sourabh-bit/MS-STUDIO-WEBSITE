@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin } from "lucide-react";
 
@@ -11,6 +12,7 @@ import TimingSection from "./sections/Offline classes/TimingSection.tsx";
 import PaymentSection from "./sections/Offline classes/PaymentSection.tsx";
 import PortfolioSection from "./sections/Offline classes/PortfolioSection.tsx";
 import StickyPaymentBar from "./sections/Offline classes/StickyPaymentBar.tsx";
+import RegistrationDialog from "./RegistrationDialog";
 
 import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
@@ -18,20 +20,28 @@ import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 const OfflineClasses = () => {
   const navigate = useNavigate();
   const { requireAuth } = useAuth();
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
   const openCheckout = () => {
-    requireAuth(() => {
-      const params = new URLSearchParams({
-        variant: "offline",
-        course: OFFLINE_MASTERCLASS_DETAILS.courseName,
-        amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
-        feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
-        summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
-        trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
-      });
+    requireAuth(() => setIsRegistrationOpen(true));
+  };
 
-      navigate(`/classes/checkout?${params.toString()}`);
+  // Runs after the registration form is saved. This only takes the
+  // customer to the cart/review page — the actual ICICI payment is only
+  // started later, when they click Pay Now there.
+  const handleRegistrationSuccess = () => {
+    setIsRegistrationOpen(false);
+
+    const params = new URLSearchParams({
+      variant: "offline",
+      course: OFFLINE_MASTERCLASS_DETAILS.courseName,
+      amount: String(OFFLINE_MASTERCLASS_DETAILS.fee),
+      feeLabel: OFFLINE_MASTERCLASS_DETAILS.feeLabel,
+      summaryLabel: OFFLINE_MASTERCLASS_DETAILS.summaryLabel,
+      trustLine: OFFLINE_MASTERCLASS_DETAILS.trustLine,
     });
+
+    navigate(`/classes/checkout?${params.toString()}`);
   };
 
   return (
@@ -69,6 +79,15 @@ const OfflineClasses = () => {
         <PortfolioSection />
       </div>
       <StickyPaymentBar onOpenCheckout={openCheckout} />
+
+      <RegistrationDialog
+        open={isRegistrationOpen}
+        onOpenChange={setIsRegistrationOpen}
+        courseName={OFFLINE_MASTERCLASS_DETAILS.courseName}
+        variant="offline"
+        amount={OFFLINE_MASTERCLASS_DETAILS.fee}
+        onSuccess={handleRegistrationSuccess}
+      />
     </>
   );
 };
