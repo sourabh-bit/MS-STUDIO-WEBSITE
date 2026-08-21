@@ -1,4 +1,4 @@
-export type ExperienceLevel = "beginner" | "intermediate" | "professional";
+export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
 
 export type RegistrationVariant = "online" | "offline";
 

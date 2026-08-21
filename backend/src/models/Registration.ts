@@ -24,7 +24,7 @@ const registrationSchema = new Schema(
     },
     experienceLevel: {
       type: String,
-      enum: ["beginner", "intermediate", "professional"] satisfies ExperienceLevel[],
+      enum: ["beginner", "intermediate", "advanced"] satisfies ExperienceLevel[],
       required: true,
     },
     hasGstin: {

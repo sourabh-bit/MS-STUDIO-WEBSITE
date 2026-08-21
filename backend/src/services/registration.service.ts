@@ -5,7 +5,7 @@ import { detectContactChannel, isValidEmail, normaliseContact } from "../lib/otp
 import { Registration } from "../models/Registration.js";
 import type { CreateRegistrationInput } from "../types/registration.js";
 
-const EXPERIENCE_LEVELS = ["beginner", "intermediate", "professional"];
+const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced"];
 
 export const createRegistration = async (input: CreateRegistrationInput) => {
   await connectToDatabase();

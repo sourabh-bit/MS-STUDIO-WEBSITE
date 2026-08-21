@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { submitRegistration } from "@/lib/registration";
 import type { ExperienceLevel } from "@/types/registration";
@@ -28,7 +29,7 @@ const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const EXPERIENCE_OPTIONS: { value: ExperienceLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
-  { value: "professional", label: "Professional" },
+  { value: "advanced", label: "Advanced" },
 ];
 
 type RegistrationDialogProps = {
@@ -48,6 +49,7 @@ const RegistrationDialog = ({
   amount,
   onSuccess,
 }: RegistrationDialogProps) => {
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -59,25 +61,25 @@ const RegistrationDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) {
-      setName("");
-      setPhone("");
-      setEmail("");
+    if (open) {
+      setName(user?.name ?? "");
+      setPhone(user?.phone ?? "");
+      setEmail(user?.email ?? "");
       setExperienceLevel("");
       setHasGstin(false);
       setGstin("");
       setIsSubmitting(false);
     }
-  }, [open]);
+  }, [open, user]);
 
   const handleSubmit = async () => {
     if (name.trim().length < 2) {
-      toast({ title: "Enter your full name", variant: "destructive" });
+      toast({ title: "Name is mandatory", variant: "destructive" });
       return;
     }
 
     if (phone.replace(/\D/g, "").length < 10) {
-      toast({ title: "Enter a valid mobile number", variant: "destructive" });
+      toast({ title: "Mobile number is mandatory", variant: "destructive" });
       return;
     }
 
@@ -87,7 +89,7 @@ const RegistrationDialog = ({
     }
 
     if (!experienceLevel) {
-      toast({ title: "Select your experience level", variant: "destructive" });
+      toast({ title: "Experience level is mandatory", variant: "destructive" });
       return;
     }
 

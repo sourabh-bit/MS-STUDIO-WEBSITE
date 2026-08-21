@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 
 import heroMasterclass from "@/assets/classes/hero-masterclass.jpg";
+import RegistrationDialog from "@/components/classes/RegistrationDialog";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { initiatePayment } from "@/lib/payment";
@@ -14,6 +15,7 @@ const MasterclassCheckout = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const paymentDetails = getMasterclassPaymentDetails(searchParams);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
@@ -39,11 +41,14 @@ const MasterclassCheckout = () => {
 
   const formatInr = (value: number) => `₹${new Intl.NumberFormat("en-IN").format(value)}`;
 
-  const handlePayNow = async () => {
+  // Runs after the registration form is saved — this is what actually
+  // starts the real ICICI payment and redirects to the hosted page.
+  const handleStartPayment = async () => {
     if (isSubmitting) {
       return;
     }
 
+    setIsFormOpen(false);
     setIsSubmitting(true);
 
     try {
@@ -66,7 +71,9 @@ const MasterclassCheckout = () => {
     }
   };
 
-  const handlePayClick = () => requireAuth(handlePayNow);
+  // Pay Now: log in first (if needed), then show the registration form —
+  // payment only starts once that form is submitted successfully.
+  const handlePayClick = () => requireAuth(() => setIsFormOpen(true));
 
   return (
     <section className="animate-fade-in min-h-screen bg-[#F8F3EB] py-6 sm:py-8 md:py-12 lg:py-16">
@@ -187,6 +194,15 @@ const MasterclassCheckout = () => {
           </div>
         </div>
       </div>
+
+      <RegistrationDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        courseName={paymentDetails.courseName}
+        variant={isOffline ? "offline" : "online"}
+        amount={paymentDetails.fee}
+        onSuccess={handleStartPayment}
+      />
     </section>
   );
 };
