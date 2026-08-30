@@ -10,6 +10,7 @@ import { startReconciliationScheduler } from "./lib/reconcile.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
+import { backfillPaymentTypes } from "./services/payment.service.js";
 
 const app = express();
 
@@ -116,4 +117,9 @@ app.use(
 app.listen(env.port, () => {
   logger.info(`Backend listening on port ${env.port}.`);
   startReconciliationScheduler();
+  backfillPaymentTypes().catch((error) => {
+    logger.error("Failed to backfill legacy payment types.", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  });
 });

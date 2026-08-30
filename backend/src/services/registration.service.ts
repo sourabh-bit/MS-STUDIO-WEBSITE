@@ -1,11 +1,11 @@
 import { connectToDatabase } from "../db/connect.js";
 import { HttpError } from "../lib/http-error.js";
 import { isValidGstin } from "../lib/gstin.js";
+import { isValidPan } from "../lib/pan.js";
 import { detectContactChannel, isValidEmail, normaliseContact } from "../lib/otp.js";
+import { appendRegistrationRow } from "../lib/sheets.js";
 import { Registration } from "../models/Registration.js";
 import type { CreateRegistrationInput, RegistrationVariant } from "../types/registration.js";
-
-const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced"];
 
 export const createRegistration = async (input: CreateRegistrationInput) => {
   await connectToDatabase();
@@ -27,8 +27,25 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Enter a valid email address.");
   }
 
-  if (!EXPERIENCE_LEVELS.includes(input.experienceLevel)) {
-    throw new HttpError(400, "Select your experience level.");
+  const instagramHandle = input.instagramHandle.trim();
+
+  if (!instagramHandle) {
+    throw new HttpError(400, "Enter your Instagram handle.");
+  }
+
+  const pan = input.pan.trim().toUpperCase();
+
+  if (!isValidPan(pan)) {
+    throw new HttpError(400, "Enter a valid 10-character PAN (e.g. ABCDE1234F).");
+  }
+
+  const experienceMonths =
+    input.experienceMonths === undefined || input.experienceMonths === null
+      ? null
+      : Number(input.experienceMonths);
+
+  if (experienceMonths !== null && (!Number.isFinite(experienceMonths) || experienceMonths < 0)) {
+    throw new HttpError(400, "Enter a valid number of months.");
   }
 
   const gstin = input.gstin?.trim().toUpperCase() || "";
@@ -45,12 +62,29 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     name,
     phone,
     email,
-    experienceLevel: input.experienceLevel,
+    city: input.city?.trim() || "",
+    state: input.state?.trim() || "",
+    instagramHandle,
+    experienceMonths,
+    pan,
     hasGstin: Boolean(gstin),
     gstin,
     courseName: input.courseName.trim(),
     variant: input.variant === "online" ? "online" : "offline",
     amount: input.amount,
+  });
+
+  // Best-effort — never let a Sheets outage block a registration.
+  await appendRegistrationRow({
+    name,
+    phone,
+    email,
+    city: input.city?.trim() || "",
+    courseName: input.courseName.trim(),
+    variant: input.variant === "online" ? "online" : "offline",
+    amount: input.amount,
+    pan,
+    gstin,
   });
 
   return { id: String(registration._id) };

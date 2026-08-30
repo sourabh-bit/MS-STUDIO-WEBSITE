@@ -7,12 +7,13 @@ import { logger } from "../lib/logger.js";
 import type { AuthenticatedRequest } from "../middleware/require-auth.js";
 import {
   checkPaymentStatus,
+  getPaymentSummary,
   initiatePayment,
   processPaymentAdvice,
   processPaymentReturn,
   refundPayment,
 } from "../services/payment.service.js";
-import type { ParsedGatewayRequest } from "../types/payment.js";
+import type { ParsedGatewayRequest, PaymentType } from "../types/payment.js";
 
 const normaliseTextPayload = (value: string) => {
   const trimmed = value.trim();
@@ -114,10 +115,8 @@ export const initiatePaymentHandler = async (
       return;
     }
 
-    const { amount, courseName, variant, feeLabel, summaryLabel } = request.body as Record<
-      string,
-      unknown
-    >;
+    const { amount, courseName, variant, feeLabel, summaryLabel, paymentType } =
+      request.body as Record<string, unknown>;
 
     if (!amount || !courseName || !variant) {
       response.status(400).json({ message: "Missing required payment fields." });
@@ -130,6 +129,11 @@ export const initiatePaymentHandler = async (
       response.status(400).json({ message: "Amount must be a valid positive number." });
       return;
     }
+
+    // Never trust an arbitrary client-supplied string here — only the two
+    // known values are accepted, anything else silently falls back to the
+    // safe default rather than being passed through to the service layer.
+    const parsedPaymentType: PaymentType = paymentType === "SECOND_INSTALLMENT" ? "SECOND_INSTALLMENT" : "ADVANCE";
 
     const normalizedMobile = normalizeMobileNumber(user.phone);
 
@@ -150,6 +154,7 @@ export const initiatePaymentHandler = async (
       variant: String(variant).trim().toLowerCase() === "offline" ? "offline" : "online",
       feeLabel: String(feeLabel || "").trim(),
       summaryLabel: String(summaryLabel || "").trim(),
+      paymentType: parsedPaymentType,
     });
 
     response.status(200).json(result);
@@ -203,6 +208,47 @@ export const paymentAdviceHandler = async (
   }
 
   response.status(200).json({ received: true });
+};
+
+export const paymentSummaryHandler = async (
+  request: AuthenticatedRequest,
+  response: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = request.user;
+
+    if (!user) {
+      response.status(401).json({ message: "Please log in to continue." });
+      return;
+    }
+
+    const courseName = String(request.query.courseName || "").trim();
+    const variant = String(request.query.variant || "").trim().toLowerCase() === "offline" ? "offline" : "online";
+
+    if (!courseName) {
+      response.status(400).json({ message: "courseName is required." });
+      return;
+    }
+
+    const normalizedMobile = normalizeMobileNumber(user.phone);
+
+    if (normalizedMobile.length !== 10) {
+      response.status(400).json({
+        message: "Your account is missing a valid mobile number. Please log in again.",
+      });
+      return;
+    }
+
+    const summary = await getPaymentSummary(normalizedMobile, courseName, variant);
+    response.status(200).json(summary);
+  } catch (error) {
+    if (respondWithPaymentError(error, response)) {
+      return;
+    }
+
+    next(error);
+  }
 };
 
 export const paymentStatusHandler = async (

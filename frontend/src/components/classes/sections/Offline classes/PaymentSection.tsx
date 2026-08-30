@@ -1,4 +1,4 @@
-﻿import { CreditCard, Landmark, Phone } from "lucide-react";
+﻿import { CreditCard, Landmark } from "lucide-react";
 
 import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
@@ -83,25 +83,6 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="max-w-2xl mx-auto">
-          <div className="p-6 bg-white border border-dusty-rose/20 text-center">
-            <p className="font-sans text-sm text-muted-foreground mb-3">
-              For queries and booking confirmation
-            </p>
-            <a
-              href="tel:+919818793850"
-              className="inline-flex items-center gap-3 font-serif text-xl text-foreground hover:text-dusty-rose transition-colors duration-300"
-            >
-              <Phone className="w-5 h-5" />
-              +91 98187 93850
-            </a>
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground mt-6 italic">
-            Seats are limited and blocked on a first-come, first-serve basis.
-          </p>
         </div>
       </div>
     </section>

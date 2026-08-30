@@ -6,6 +6,7 @@ import {
   paymentAdviceHandler,
   paymentReturnHandler,
   paymentStatusHandler,
+  paymentSummaryHandler,
   refundPaymentHandler,
 } from "../controllers/payment.controller.js";
 import { requireAdmin } from "../middleware/require-admin.js";
@@ -46,4 +47,5 @@ export const paymentRouter = Router();
 paymentRouter.post("/initiate", requireAuth, initiateLimiter, jsonBody, initiatePaymentHandler);
 paymentRouter.get("/status/:merchantTxnNo", requireAuth, paymentStatusHandler);
 paymentRouter.get("/status", requireAuth, paymentStatusHandler);
+paymentRouter.get("/summary", requireAuth, paymentSummaryHandler);
 paymentRouter.post("/:merchantTxnNo/refund", requireAdmin, jsonBody, refundPaymentHandler);

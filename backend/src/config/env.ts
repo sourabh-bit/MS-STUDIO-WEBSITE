@@ -54,4 +54,14 @@ export const env = {
   adminApiKey: readOptional("ADMIN_API_KEY"),
   reconcileIntervalMs: Number(readOptional("RECONCILE_INTERVAL_MS") || 5 * 60 * 1000),
   reconcileStaleAfterMs: Number(readOptional("RECONCILE_STALE_AFTER_MS") || 2 * 60 * 1000),
+
+  // Google Sheets sync — optional. Left blank, the sheet-write calls just
+  // no-op (see lib/sheets.ts), so registrations/payments still work fine
+  // without it configured.
+  googleSheetsClientEmail: readOptional("GOOGLE_SHEETS_CLIENT_EMAIL"),
+  googleSheetsPrivateKey: readOptional("GOOGLE_SHEETS_PRIVATE_KEY"),
+  googleSheetId: readOptional("GOOGLE_SHEET_ID"),
+  // The tab name changes every cohort (e.g. "September_2026") — configurable
+  // rather than hardcoded so a new month doesn't need a code change.
+  googleSheetsTabName: readOptional("GOOGLE_SHEETS_TAB_NAME") || "Registrations",
 };

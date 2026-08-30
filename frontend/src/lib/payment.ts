@@ -4,6 +4,8 @@ import type {
   InitiatePaymentRequest,
   InitiatePaymentResponse,
   PaymentStatusResponse,
+  PaymentSummaryResponse,
+  PaymentVariant,
 } from "@/types/payment";
 
 const apiBaseUrl =
@@ -57,6 +59,18 @@ export const getPaymentStatus = async (merchantTxnNo: string) => {
     const response = await paymentApi.get<PaymentStatusResponse>(
       `/payments/status/${encodeURIComponent(merchantTxnNo)}`,
     );
+
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
+export const getPaymentSummary = async (courseName: string, variant: PaymentVariant) => {
+  try {
+    const response = await paymentApi.get<PaymentSummaryResponse>("/payments/summary", {
+      params: { courseName, variant },
+    });
 
     return response.data;
   } catch (error) {

@@ -2,9 +2,11 @@ import axios, { AxiosError } from "axios";
 import crypto from "node:crypto";
 
 import { env } from "../config/env.js";
+import { getSecondInstallmentTotal, SECOND_INSTALLMENT_MIN_AMOUNT } from "../config/installment.js";
 import { connectToDatabase } from "../db/connect.js";
 import { logger } from "../lib/logger.js";
 import { HttpError } from "../lib/http-error.js";
+import { upsertPaymentStatusRow } from "../lib/sheets.js";
 import { Payment, type PaymentDocument } from "../models/Payment.js";
 import type {
   GatewayPayload,
@@ -12,6 +14,8 @@ import type {
   InitiateSaleResponse,
   PaymentLifecycleStatus,
   PaymentLogStage,
+  PaymentSummary,
+  PaymentType,
 } from "../types/payment.js";
 import {
   attachSecureHash,
@@ -33,6 +37,91 @@ const INITIATED_REUSE_WINDOW_MS = 90 * 1000;
 // confirmation paths (return callback, advice webhook, reconcile sweep) are
 // allowed to move it — whichever one arrives first wins, the rest are no-ops.
 const TERMINAL_STATUSES: PaymentLifecycleStatus[] = ["SUCCESS", "FAILED", "REFUNDED"];
+
+// Matches ADVANCE payments created either after paymentType existed, or
+// before it did (those documents have no paymentType field at all). The
+// startup backfill (see backfillPaymentTypes) sets the field on every
+// pre-existing document, but this stays as cheap defense in depth.
+const ADVANCE_TYPE_FILTER = { $or: [{ paymentType: "ADVANCE" }, { paymentType: { $exists: false } }] };
+
+// One-time, idempotent backfill for documents created before paymentType
+// existed — run once at server startup. Safe to call on every boot: once
+// every document has the field, the match returns nothing and this is a
+// no-op.
+export const backfillPaymentTypes = async () => {
+  await connectToDatabase();
+
+  const result = await Payment.updateMany(
+    { paymentType: { $exists: false } },
+    { $set: { paymentType: "ADVANCE" } },
+  );
+
+  if (result.modifiedCount > 0) {
+    logger.info("Backfilled paymentType on legacy payment records.", {
+      modifiedCount: result.modifiedCount,
+    });
+  }
+};
+
+export const getPaymentSummary = async (
+  mobile: string,
+  courseName: string,
+  variant: "online" | "offline",
+): Promise<PaymentSummary> => {
+  await connectToDatabase();
+
+  const advancePayment = await Payment.findOne({
+    mobile,
+    courseName,
+    variant,
+    paymentStatus: "SUCCESS",
+    ...ADVANCE_TYPE_FILTER,
+  }).sort({ createdAt: -1 });
+
+  const totalAmount = getSecondInstallmentTotal(courseName);
+
+  if (!advancePayment) {
+    return {
+      advance: { status: "UNPAID" },
+      secondInstallment: {
+        totalAmount,
+        amountPaid: 0,
+        remainingAmount: totalAmount,
+        status: "UNPAID",
+        minAmount: SECOND_INSTALLMENT_MIN_AMOUNT,
+      },
+    };
+  }
+
+  const successfulInstallments = await Payment.find({
+    mobile,
+    courseName,
+    variant,
+    paymentType: "SECOND_INSTALLMENT",
+    paymentStatus: "SUCCESS",
+  });
+
+  const amountPaid = successfulInstallments.reduce((sum, payment) => sum + payment.amount, 0);
+  const remainingAmount = Math.max(0, totalAmount - amountPaid);
+  const status: PaymentSummary["secondInstallment"]["status"] =
+    amountPaid >= totalAmount && totalAmount > 0 ? "PAID" : amountPaid > 0 ? "PARTIAL" : "UNPAID";
+
+  return {
+    advance: {
+      status: "PAID",
+      amount: advancePayment.amount,
+      transactionId: advancePayment.txnID || advancePayment.merchantTxnNo,
+      paidAt: (advancePayment.updatedAt as Date).toISOString(),
+    },
+    secondInstallment: {
+      totalAmount,
+      amountPaid,
+      remainingAmount,
+      status,
+      minAmount: SECOND_INSTALLMENT_MIN_AMOUNT,
+    },
+  };
+};
 
 const iciciClient = axios.create({
   timeout: ICICI_HTTP_TIMEOUT_MS,
@@ -144,6 +233,15 @@ const resolvePaymentStatus = (payload: GatewayPayload): PaymentLifecycleStatus =
   return "PENDING";
 };
 
+// A payment stuck in a non-terminal state gets re-checked forever (every
+// reconcile sweep, every pending-page poll) with no natural end — without a
+// cap, its transactionLogs array (each entry carrying a full gateway
+// request/response payload) grows without bound. Some existing production
+// documents reached ~2MB this way. $slice keeps only the most recent
+// entries, permanently bounding size regardless of how long a payment
+// stays unresolved.
+const MAX_TRANSACTION_LOG_ENTRIES = 50;
+
 const appendLog = async (
   merchantTxnNo: string,
   stage: PaymentLogStage,
@@ -155,10 +253,8 @@ const appendLog = async (
     {
       $push: {
         transactionLogs: {
-          stage,
-          message,
-          payload,
-          timestamp: new Date(),
+          $each: [{ stage, message, payload, timestamp: new Date() }],
+          $slice: -MAX_TRANSACTION_LOG_ENTRIES,
         },
       },
     },
@@ -199,6 +295,30 @@ const applyStatus = async (
 
   if (updated) {
     await appendLog(merchantTxnNo, stage, `Payment marked ${status} via ${source}.`, sanitizeForLogs(payload));
+
+    const updatedPaymentType: PaymentType = updated.paymentType === "SECOND_INSTALLMENT" ? "SECOND_INSTALLMENT" : "ADVANCE";
+    const ledger = await getPaymentSummary(updated.mobile, updated.courseName, updated.variant as "online" | "offline");
+
+    const advanceStatusText =
+      ledger.advance.status === "PAID" ? "PAID" : updatedPaymentType === "ADVANCE" ? status : "UNPAID";
+
+    const remainingStatusText =
+      ledger.advance.status !== "PAID"
+        ? "LOCKED"
+        : ledger.secondInstallment.status === "PAID"
+          ? "PAID"
+          : ledger.secondInstallment.status === "PARTIAL"
+            ? `PARTIAL (₹${ledger.secondInstallment.amountPaid.toLocaleString("en-IN")} / ₹${ledger.secondInstallment.totalAmount.toLocaleString("en-IN")})`
+            : "UNPAID";
+
+    await upsertPaymentStatusRow({
+      mobile: updated.mobile,
+      courseName: updated.courseName,
+      advanceMerchantTxnNo: updatedPaymentType === "ADVANCE" ? updated.merchantTxnNo : undefined,
+      advanceStatusText,
+      remainingStatusText,
+    });
+
     return updated;
   }
 
@@ -284,6 +404,7 @@ const buildFrontendRedirect = (
     | "feeLabel"
     | "summaryLabel"
     | "paymentStatus"
+    | "paymentType"
   >,
   statusMessage?: string,
 ) => {
@@ -310,6 +431,7 @@ const buildFrontendRedirect = (
   redirectUrl.searchParams.set("amount", payment.amount.toFixed(2));
   redirectUrl.searchParams.set("course", payment.courseName);
   redirectUrl.searchParams.set("variant", payment.variant);
+  redirectUrl.searchParams.set("paymentType", payment.paymentType || "ADVANCE");
 
   if (payment.feeLabel) {
     redirectUrl.searchParams.set("feeLabel", payment.feeLabel);
@@ -342,13 +464,14 @@ const buildFailureRedirectUrl = (payload: Record<string, unknown>, fallbackMessa
   return redirectUrl.toString();
 };
 
-const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput) => {
+const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput, paymentType: PaymentType) => {
   const now = new Date();
   const staleInitiatedPayments = await Payment.find({
     email: input.email.toLowerCase(),
     mobile: input.mobile,
     amount: input.amount,
     courseName: input.courseName,
+    paymentType,
     paymentStatus: "INITIATED",
     redirectURI: { $ne: "" },
     tranCtx: { $ne: "" },
@@ -373,7 +496,7 @@ const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput) => 
   }
 };
 
-const findReusableTransaction = async (input: InitiatePaymentInput) => {
+const findReusableTransaction = async (input: InitiatePaymentInput, paymentType: PaymentType) => {
   const now = new Date();
 
   return Payment.findOne({
@@ -381,6 +504,7 @@ const findReusableTransaction = async (input: InitiatePaymentInput) => {
     mobile: input.mobile,
     amount: input.amount,
     courseName: input.courseName,
+    paymentType,
     paymentStatus: "INITIATED",
     redirectURI: { $ne: "" },
     tranCtx: { $ne: "" },
@@ -392,9 +516,67 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
   assertGatewayConfigured();
   await connectToDatabase();
 
-  await expireStaleInitiatedTransactions(input);
+  const paymentType: PaymentType = input.paymentType === "SECOND_INSTALLMENT" ? "SECOND_INSTALLMENT" : "ADVANCE";
 
-  const existingPayment = await findReusableTransaction(input);
+  // Server-side source of truth, independent of whatever the frontend
+  // believes: an advance can never be charged twice, and a second
+  // installment can never be charged before the advance clears, nor for
+  // more than what's actually still owed. The frontend's own summary call
+  // may already have blocked these in the UI, but that's advisory only.
+  let requestedAmount = input.amount;
+
+  if (paymentType === "ADVANCE") {
+    const existingAdvance = await Payment.findOne({
+      mobile: input.mobile,
+      courseName: input.courseName,
+      variant: input.variant,
+      paymentStatus: "SUCCESS",
+      ...ADVANCE_TYPE_FILTER,
+    });
+
+    if (existingAdvance) {
+      throw new HttpError(409, "Advance payment has already been completed.");
+    }
+  } else {
+    const advancePayment = await Payment.findOne({
+      mobile: input.mobile,
+      courseName: input.courseName,
+      variant: input.variant,
+      paymentStatus: "SUCCESS",
+      ...ADVANCE_TYPE_FILTER,
+    });
+
+    if (!advancePayment) {
+      throw new HttpError(400, "Please complete your advance payment first.");
+    }
+
+    const totalAmount = getSecondInstallmentTotal(input.courseName);
+    const successfulInstallments = await Payment.find({
+      mobile: input.mobile,
+      courseName: input.courseName,
+      variant: input.variant,
+      paymentType: "SECOND_INSTALLMENT",
+      paymentStatus: "SUCCESS",
+    });
+    const amountPaid = successfulInstallments.reduce((sum, payment) => sum + payment.amount, 0);
+    const remainingAmount = Math.max(0, totalAmount - amountPaid);
+
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      throw new HttpError(400, "Amount must be a valid positive number.");
+    }
+
+    if (requestedAmount < SECOND_INSTALLMENT_MIN_AMOUNT) {
+      throw new HttpError(400, `Minimum payment is ₹${SECOND_INSTALLMENT_MIN_AMOUNT.toLocaleString("en-IN")}.`);
+    }
+
+    if (requestedAmount > remainingAmount) {
+      throw new HttpError(400, `Amount cannot exceed the remaining balance of ₹${remainingAmount.toLocaleString("en-IN")}.`);
+    }
+  }
+
+  await expireStaleInitiatedTransactions(input, paymentType);
+
+  const existingPayment = await findReusableTransaction(input, paymentType);
 
   if (existingPayment && existingPayment.redirectURI && existingPayment.tranCtx) {
     const redirectUrl = buildRedirectUrl(existingPayment.redirectURI, existingPayment.tranCtx);
@@ -415,11 +597,12 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
     customerName: input.customerName,
     email: input.email.toLowerCase(),
     mobile: input.mobile,
-    amount: input.amount,
+    amount: requestedAmount,
     courseName: input.courseName,
     variant: input.variant,
     feeLabel: input.feeLabel,
     summaryLabel: input.summaryLabel,
+    paymentType,
     paymentStatus: "CREATED",
     transactionExpiresAt: null,
   });

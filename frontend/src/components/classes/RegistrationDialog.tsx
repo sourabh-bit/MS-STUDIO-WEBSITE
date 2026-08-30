@@ -11,26 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { submitRegistration } from "@/lib/registration";
-import type { ExperienceLevel } from "@/types/registration";
 
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-const EXPERIENCE_OPTIONS: { value: ExperienceLevel; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-];
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 type RegistrationDialogProps = {
   open: boolean;
@@ -55,7 +42,11 @@ const RegistrationDialog = ({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | "">("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [experienceMonths, setExperienceMonths] = useState("");
+  const [pan, setPan] = useState("");
   const [hasGstin, setHasGstin] = useState(false);
   const [gstin, setGstin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +56,11 @@ const RegistrationDialog = ({
       setName(user?.name ?? "");
       setPhone(user?.phone ?? "");
       setEmail(user?.email ?? "");
-      setExperienceLevel("");
+      setCity("");
+      setState("");
+      setInstagramHandle("");
+      setExperienceMonths("");
+      setPan("");
       setHasGstin(false);
       setGstin("");
       setIsSubmitting(false);
@@ -88,8 +83,15 @@ const RegistrationDialog = ({
       return;
     }
 
-    if (!experienceLevel) {
-      toast({ title: "Experience level is mandatory", variant: "destructive" });
+    if (!instagramHandle.trim()) {
+      toast({ title: "Instagram handle is mandatory", variant: "destructive" });
+      return;
+    }
+
+    const trimmedPan = pan.trim().toUpperCase();
+
+    if (!PAN_PATTERN.test(trimmedPan)) {
+      toast({ title: "Enter a valid 10-character PAN", variant: "destructive" });
       return;
     }
 
@@ -107,7 +109,11 @@ const RegistrationDialog = ({
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim(),
-        experienceLevel,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        instagramHandle: instagramHandle.trim(),
+        experienceMonths: experienceMonths.trim() ? Number(experienceMonths) : undefined,
+        pan: trimmedPan,
         gstin: hasGstin ? trimmedGstin : undefined,
         courseName,
         variant,
@@ -135,7 +141,7 @@ const RegistrationDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2.5">
+        <div className="max-h-[70vh] space-y-2.5 overflow-y-auto pr-1">
           <div className="space-y-1">
             <Label htmlFor="reg-name" className="text-xs">
               Full name
@@ -178,31 +184,83 @@ const RegistrationDialog = ({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="reg-city" className="text-xs">
+                City
+              </Label>
+              <Input
+                id="reg-city"
+                className="h-9"
+                placeholder="Mumbai"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="reg-state" className="text-xs">
+                State
+              </Label>
+              <Input
+                id="reg-state"
+                className="h-9"
+                placeholder="Maharashtra"
+                value={state}
+                onChange={(event) => setState(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="reg-instagram" className="text-xs">
+              Instagram handle
+            </Label>
+            <Input
+              id="reg-instagram"
+              className="h-9"
+              placeholder="@yourhandle"
+              value={instagramHandle}
+              onChange={(event) => setInstagramHandle(event.target.value)}
+            />
+          </div>
+
           <div className="space-y-1">
             <Label htmlFor="reg-experience" className="text-xs">
-              Experience
+              Experience (in months)
             </Label>
-            <Select
-              value={experienceLevel}
-              onValueChange={(value) => setExperienceLevel(value as ExperienceLevel)}
-            >
-              <SelectTrigger id="reg-experience" className="h-9">
-                <SelectValue placeholder="Select your experience level" />
-              </SelectTrigger>
-              <SelectContent>
-                {EXPERIENCE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="reg-experience"
+              className="h-9"
+              type="number"
+              min={0}
+              placeholder="e.g. 6"
+              value={experienceMonths}
+              onChange={(event) => setExperienceMonths(event.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="reg-pan" className="text-xs">
+              PAN card number
+            </Label>
+            <Input
+              id="reg-pan"
+              className="h-9 uppercase"
+              placeholder="ABCDE1234F"
+              maxLength={10}
+              value={pan}
+              onChange={(event) => setPan(event.target.value.toUpperCase())}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              If you're a minor, enter your guardian's PAN instead.
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2">
             <div className="space-y-0">
               <Label htmlFor="reg-gstin-toggle" className="text-xs">
-                I have a GSTIN
+                Do you want a GST invoice?
               </Label>
               <p className="text-[11px] text-muted-foreground">Turn on for a GST invoice.</p>
             </div>

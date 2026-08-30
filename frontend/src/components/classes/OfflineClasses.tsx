@@ -4,6 +4,7 @@ import { Calendar, MapPin } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { checkRegistration } from "@/lib/registration";
+import { getPaymentSummary } from "@/lib/payment";
 
 import HeroBanner from "./sections/Offline classes/HeroBanner.tsx";
 import DayStructure from "./sections/Offline classes/DayStructure.tsx";
@@ -11,6 +12,7 @@ import AddedBenefits from "./sections/Offline classes/AddedBenefits.tsx";
 import VenueSection from "./sections/Offline classes/VenueSection.tsx";
 import TimingSection from "./sections/Offline classes/TimingSection.tsx";
 import PaymentSection from "./sections/Offline classes/PaymentSection.tsx";
+import SecondInstallmentSection from "./sections/Offline classes/SecondInstallmentSection.tsx";
 import PortfolioSection from "./sections/Offline classes/PortfolioSection.tsx";
 import StickyPaymentBar from "./sections/Offline classes/StickyPaymentBar.tsx";
 import RegistrationDialog from "./RegistrationDialog";
@@ -36,9 +38,23 @@ const OfflineClasses = () => {
     navigate(`/classes/checkout?${params.toString()}`);
   };
 
+  const goToSecondInstallmentConfirmation = () => {
+    const params = new URLSearchParams({
+      variant: "offline",
+      course: OFFLINE_MASTERCLASS_DETAILS.courseName,
+      installment: "second",
+      showAdvanceConfirmation: "1",
+    });
+
+    navigate(`/classes/checkout?${params.toString()}`);
+  };
+
   // Skip the registration form entirely if this person has already
   // registered for this course — no need to fill it out again just
-  // because they navigated back and came in through "Book" again.
+  // because they navigated back and came in through "Book" again. And if
+  // they've already paid the advance, never send them back into the
+  // ₹1,00,000 checkout a second time — the backend is the source of truth
+  // here, not just this in-memory check.
   const openCheckout = () => {
     requireAuth(async () => {
       const alreadyRegistered = await checkRegistration(
@@ -46,12 +62,21 @@ const OfflineClasses = () => {
         "offline",
       );
 
-      if (alreadyRegistered) {
-        goToCheckout();
+      if (!alreadyRegistered) {
+        setIsRegistrationOpen(true);
         return;
       }
 
-      setIsRegistrationOpen(true);
+      const summary = await getPaymentSummary(OFFLINE_MASTERCLASS_DETAILS.courseName, "offline").catch(
+        () => null,
+      );
+
+      if (summary?.advance.status === "PAID") {
+        goToSecondInstallmentConfirmation();
+        return;
+      }
+
+      goToCheckout();
     });
   };
 
@@ -95,6 +120,7 @@ const OfflineClasses = () => {
         <VenueSection />
         <TimingSection />
         <PaymentSection onOpenCheckout={openCheckout} />
+        <SecondInstallmentSection onNeedsRegistration={() => setIsRegistrationOpen(true)} />
         <PortfolioSection />
       </div>
       <StickyPaymentBar onOpenCheckout={openCheckout} />

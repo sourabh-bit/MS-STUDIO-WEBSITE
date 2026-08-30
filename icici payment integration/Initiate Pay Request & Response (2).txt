@@ -1,0 +1,38 @@
+API EndPoints:		
+
+MID – 100000000006873
+
+Key - c9dbb8c6ab664b4bbaffe65beced35af
+
+Agg ID - A100000000006873 - Non Mandatory						
+						
+Initiate Sale URL: https://pgpayuat.icicibank.com/tsp/pg/api/v2/initiateSale								
+Initiate Sale Request:								
+{								
+    "merchantId": "100000000006873",
+    "aggregatorID" :"A100000000006873",								
+    "merchantTxnNo": "757585887575",								
+    "amount": "2.00",								
+    "currencyCode": "356",								
+    "payType": "0",								
+    "customerEmailID": "narayan.kapase@phicommerce.com",								
+    "transactionType": "SALE",								
+    "returnURL": "https://pgpayuat.icicibank.com/tsp/pg/api/merchant",								
+    "txnDate": "20241121115413",								
+    "customerMobileNo": "917709356362",								
+    "customerName": "Narayan",								
+    "addlParam1": "000",								
+    "addlParam2": "111",								
+    "secureHash": "205a2c1e897d3d654bbc92858b1da4929d0e2b1bbcedb781723f6db22768a10b"								
+}								
+								
+								
+Initiate Sale Response:								
+{"responseCode":"R1000","merchantId":"T_S0001","aggregatorID":null,"merchantTxnNo":"757585887575","redirectURI":"https://pgpayuat.icicibank.com/tsp/pg/api/v2/authRedirect","showOTPCapturePage":"N","generateOTPURI":null,"verifyOTPURI":null,"authorizeURI":null,"tranCtx":"Ra3c22840-bb8b-4e44-b622-e35928b86858","secureHash":"1033eedc162c60a3dc4ed6c51fb73ddbc6f01d21d28f77cea20140747514144e"}								
+								
+Sample URL from Response: https://pgpayuat.icicibank.com/tsp/pg/api/v2/authRedirect?tranCtx=Ra3c22840-bb8b-4e44-b622-e35928b86858								
+								
+HashKey = addlParam1addlParam2amountcurrencyCodecustomerEmailIDcustomerMobileNocustomerNamemerchantIdmerchantTxnNopayTypereturnURLtransactionTypetxnDate								
+HashText:= 0001112.00356narayan.kapase@phicommerce.com917709356362NarayanT_S00017575858875750https://pgpayuat.icicibank.com/tsp/pg/api/merchantSALE20241121115413								
+secureHash: 205a2c1e897d3d654bbc92858b1da4929d0e2b1bbcedb781723f6db22768a10b								
+								

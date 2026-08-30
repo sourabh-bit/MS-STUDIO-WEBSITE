@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-import type { ExperienceLevel, RegistrationVariant } from "../types/registration.js";
+import type { RegistrationVariant } from "../types/registration.js";
 
 const registrationSchema = new Schema(
   {
@@ -22,10 +22,31 @@ const registrationSchema = new Schema(
       lowercase: true,
       index: true,
     },
-    experienceLevel: {
+    city: {
       type: String,
-      enum: ["beginner", "intermediate", "advanced"] satisfies ExperienceLevel[],
+      default: "",
+      trim: true,
+    },
+    state: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    instagramHandle: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    experienceMonths: {
+      type: Number,
+      default: null,
+    },
+    pan: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      index: true,
     },
     hasGstin: {
       type: Boolean,

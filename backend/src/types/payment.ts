@@ -37,6 +37,8 @@ export type PaymentLogStage =
   | "REFUND_FAILED"
   | "REDIRECT";
 
+export type PaymentType = "ADVANCE" | "SECOND_INSTALLMENT";
+
 export type InitiatePaymentInput = {
   customerName: string;
   email: string;
@@ -46,6 +48,24 @@ export type InitiatePaymentInput = {
   variant: "online" | "offline";
   feeLabel: string;
   summaryLabel: string;
+  paymentType?: PaymentType;
+};
+
+export type AdvancePaymentSummary =
+  | { status: "UNPAID" }
+  | { status: "PAID"; amount: number; transactionId: string; paidAt: string };
+
+export type SecondInstallmentSummary = {
+  totalAmount: number;
+  amountPaid: number;
+  remainingAmount: number;
+  status: "UNPAID" | "PARTIAL" | "PAID";
+  minAmount: number;
+};
+
+export type PaymentSummary = {
+  advance: AdvancePaymentSummary;
+  secondInstallment: SecondInstallmentSummary;
 };
 
 export type InitiateSaleRequest = {

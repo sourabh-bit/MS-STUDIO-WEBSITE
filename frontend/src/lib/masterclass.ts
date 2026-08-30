@@ -17,6 +17,11 @@ export const OFFLINE_MASTERCLASS_DETAILS = {
   trustLine: "Secure payment via ICICI Bank",
 } as const;
 
+// Display-only fallback shown before the backend summary call resolves —
+// the backend (SECOND_INSTALLMENT_TOTALS in payment.service) stays the
+// authoritative source once a real summary loads.
+export const SECOND_INSTALLMENT_TOTAL = 136000;
+
 export const formatInr = (amount: number) =>
   `INR ${new Intl.NumberFormat("en-IN").format(amount)}`;
 
@@ -52,4 +57,5 @@ export const getMasterclassPaymentDetails = (params: URLSearchParams) => ({
     "",
   userName: params.get("name")?.trim() || params.get("fullName")?.trim() || "",
   message: params.get("message")?.trim() || "",
+  paymentType: params.get("paymentType")?.trim() === "SECOND_INSTALLMENT" ? "SECOND_INSTALLMENT" : "ADVANCE",
 });

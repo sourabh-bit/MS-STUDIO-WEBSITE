@@ -31,6 +31,13 @@ const PaymentFailure = () => {
   copyParam("phone");
   copyParam("mobile");
 
+  // Preserve which flow the failed attempt was in — otherwise a failed
+  // second-installment payment would retry straight back into the advance
+  // checkout instead of the installment amount-entry view.
+  if (paymentDetails.paymentType === "SECOND_INSTALLMENT") {
+    retryParams.set("installment", "second");
+  }
+
   const retryLink = retryParams.toString()
     ? `/classes/checkout?${retryParams.toString()}`
     : "/classes/checkout";

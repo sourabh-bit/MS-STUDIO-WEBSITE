@@ -1,20 +1,51 @@
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import MasterclassPaymentStatusCard from "@/components/classes/MasterclassPaymentStatusCard";
 import { Button } from "@/components/ui/button";
-import { getMasterclassPaymentDetails } from "@/lib/masterclass";
+import { formatInr, getMasterclassPaymentDetails } from "@/lib/masterclass";
+import { getPaymentSummary } from "@/lib/payment";
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const paymentDetails = getMasterclassPaymentDetails(searchParams);
+  const isSecondInstallment = paymentDetails.paymentType === "SECOND_INSTALLMENT";
+  const [remainingAmount, setRemainingAmount] = useState<number | null>(null);
+
+  // Re-fetch from the backend rather than trusting anything in the URL —
+  // this gives an up-to-date remaining balance even though the payment
+  // that just completed already changed it.
+  useEffect(() => {
+    if (!isSecondInstallment) {
+      return;
+    }
+
+    getPaymentSummary(paymentDetails.courseName, paymentDetails.variant)
+      .then((summary) => setRemainingAmount(summary.secondInstallment.remainingAmount))
+      .catch(() => {
+        // Non-critical — the success confirmation still stands without it.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSecondInstallment, paymentDetails.courseName, paymentDetails.variant]);
 
   return (
     <MasterclassPaymentStatusCard
-      badge="Booking Confirmed"
-      title="Payment Successful"
-      description="Your seat has been successfully booked."
+      badge={isSecondInstallment ? "Payment Received" : "Booking Confirmed"}
+      title={isSecondInstallment ? "Installment Received" : "Payment Successful"}
+      description={
+        isSecondInstallment
+          ? "Your payment has been recorded towards your course fee."
+          : "Your seat has been successfully booked."
+      }
       infoText="A confirmation message will be sent to your email shortly."
+      statusMessage={
+        remainingAmount !== null
+          ? remainingAmount > 0
+            ? `Remaining Due: ${formatInr(remainingAmount)}`
+            : "Your second installment has been paid in full."
+          : undefined
+      }
       amountLabel="Amount Paid"
       courseName={paymentDetails.courseName}
       amount={paymentDetails.fee}

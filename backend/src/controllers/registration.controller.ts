@@ -3,7 +3,6 @@ import type { NextFunction, Request, Response } from "express";
 import { isHttpError } from "../lib/http-error.js";
 import type { AuthenticatedRequest } from "../middleware/require-auth.js";
 import { createRegistration, hasRegistered } from "../services/registration.service.js";
-import type { ExperienceLevel } from "../types/registration.js";
 
 export const createRegistrationHandler = async (
   request: Request,
@@ -11,10 +10,22 @@ export const createRegistrationHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, phone, email, experienceLevel, gstin, courseName, variant, amount } =
-      request.body as Record<string, unknown>;
+    const {
+      name,
+      phone,
+      email,
+      city,
+      state,
+      instagramHandle,
+      experienceMonths,
+      pan,
+      gstin,
+      courseName,
+      variant,
+      amount,
+    } = request.body as Record<string, unknown>;
 
-    if (!name || !phone || !email || !experienceLevel || !courseName || !amount) {
+    if (!name || !phone || !email || !instagramHandle || !pan || !courseName || !amount) {
       response.status(400).json({ message: "Missing required fields." });
       return;
     }
@@ -26,11 +37,20 @@ export const createRegistrationHandler = async (
       return;
     }
 
+    const parsedExperienceMonths =
+      experienceMonths === undefined || experienceMonths === null || experienceMonths === ""
+        ? undefined
+        : Number(experienceMonths);
+
     const result = await createRegistration({
       name: String(name),
       phone: String(phone),
       email: String(email),
-      experienceLevel: String(experienceLevel) as ExperienceLevel,
+      city: city ? String(city) : undefined,
+      state: state ? String(state) : undefined,
+      instagramHandle: String(instagramHandle),
+      experienceMonths: parsedExperienceMonths,
+      pan: String(pan),
       gstin: gstin ? String(gstin) : undefined,
       courseName: String(courseName),
       variant: String(variant).trim().toLowerCase() === "online" ? "online" : "offline",

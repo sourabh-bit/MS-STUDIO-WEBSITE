@@ -113,6 +113,16 @@ const paymentSchema = new Schema(
       type: String,
       default: "",
     },
+    // Distinguishes the one-shot masterclass advance from a partial payment
+    // against the second-installment balance. Documents created before this
+    // field existed have no value at all (not even null) — see the
+    // paymentType backfill migration run at server startup.
+    paymentType: {
+      type: String,
+      enum: ["ADVANCE", "SECOND_INSTALLMENT"],
+      default: "ADVANCE",
+      index: true,
+    },
     paymentStatus: {
       type: String,
       enum: [
@@ -163,6 +173,7 @@ const paymentSchema = new Schema(
 
 paymentSchema.index({ email: 1, mobile: 1, amount: 1, createdAt: -1 });
 paymentSchema.index({ paymentStatus: 1, createdAt: 1 });
+paymentSchema.index({ mobile: 1, courseName: 1, variant: 1, paymentType: 1, paymentStatus: 1 });
 
 export type PaymentDocument = mongoose.HydratedDocument<
   mongoose.InferSchemaType<typeof paymentSchema>
