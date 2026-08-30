@@ -4,6 +4,7 @@ import { isValidGstin } from "../lib/gstin.js";
 import { isValidPan } from "../lib/pan.js";
 import { detectContactChannel, isValidEmail, normaliseContact } from "../lib/otp.js";
 import { appendRegistrationRow } from "../lib/sheets.js";
+import { getSecondInstallmentTotal } from "../config/installment.js";
 import { Registration } from "../models/Registration.js";
 import type { CreateRegistrationInput, RegistrationVariant } from "../types/registration.js";
 
@@ -75,16 +76,18 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
   });
 
   // Best-effort — never let a Sheets outage block a registration.
+  const courseName = input.courseName.trim();
   await appendRegistrationRow({
     name,
     phone,
     email,
     city: input.city?.trim() || "",
-    courseName: input.courseName.trim(),
+    courseName,
     variant: input.variant === "online" ? "online" : "offline",
-    amount: input.amount,
+    advanceAmount: input.amount,
     pan,
     gstin,
+    secondInstallmentTotal: getSecondInstallmentTotal(courseName),
   });
 
   return { id: String(registration._id) };

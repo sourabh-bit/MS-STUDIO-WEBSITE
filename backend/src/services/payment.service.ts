@@ -302,21 +302,15 @@ const applyStatus = async (
     const advanceStatusText =
       ledger.advance.status === "PAID" ? "PAID" : updatedPaymentType === "ADVANCE" ? status : "UNPAID";
 
-    const remainingStatusText =
-      ledger.advance.status !== "PAID"
-        ? "LOCKED"
-        : ledger.secondInstallment.status === "PAID"
-          ? "PAID"
-          : ledger.secondInstallment.status === "PARTIAL"
-            ? `PARTIAL (₹${ledger.secondInstallment.amountPaid.toLocaleString("en-IN")} / ₹${ledger.secondInstallment.totalAmount.toLocaleString("en-IN")})`
-            : "UNPAID";
-
     await upsertPaymentStatusRow({
       mobile: updated.mobile,
       courseName: updated.courseName,
       advanceMerchantTxnNo: updatedPaymentType === "ADVANCE" ? updated.merchantTxnNo : undefined,
+      advanceAmount: ledger.advance.status === "PAID" ? ledger.advance.amount : undefined,
       advanceStatusText,
-      remainingStatusText,
+      secondInstallmentTotal: ledger.secondInstallment.totalAmount,
+      secondInstallmentPaid: ledger.secondInstallment.amountPaid,
+      secondInstallmentRemaining: ledger.secondInstallment.remainingAmount,
     });
 
     return updated;

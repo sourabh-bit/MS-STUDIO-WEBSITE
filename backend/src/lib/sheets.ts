@@ -5,14 +5,36 @@ import { env } from "../config/env.js";
 import { logger } from "./logger.js";
 
 // Must match the sheet's actual header row (row 1) exactly:
-// Timestamp | Name | Phone | Email | City | Course | Variant | Amount | PAN
-// | GSTIN | BillingName | MerchantTxnNo | AdvancePaymentStatus |
-// RemainingPaymentStatus | UpdatedAt
+// Timestamp | Name | Phone | Email | City | Course | Variant | PAN | GSTIN
+// | BillingName | MerchantTxnNo | AdvanceAmount | AdvancePaymentStatus |
+// SecondInstallmentTotal | SecondInstallmentPaid | SecondInstallmentRemaining
+// | UpdatedAt
 //
 // One row per registration (keyed by Phone + Course) rather than one row
-// per transaction — MerchantTxnNo always references the advance payment,
-// and RemainingPaymentStatus is a human-readable summary of the second
-// installment ledger, not a per-transaction log.
+// per transaction — MerchantTxnNo always references the advance payment.
+// The second-installment ledger is three plain numeric columns (Total /
+// Paid / Remaining) rather than one crammed status string, so it reads
+// clearly and can be summed/filtered/sorted directly in the sheet.
+
+export const SHEET_HEADERS = [
+  "Timestamp",
+  "Name",
+  "Phone",
+  "Email",
+  "City",
+  "Course",
+  "Variant",
+  "PAN",
+  "GSTIN",
+  "BillingName",
+  "MerchantTxnNo",
+  "AdvanceAmount",
+  "AdvancePaymentStatus",
+  "SecondInstallmentTotal",
+  "SecondInstallmentPaid",
+  "SecondInstallmentRemaining",
+  "UpdatedAt",
+];
 
 const isConfigured = () =>
   Boolean(env.googleSheetsClientEmail && env.googleSheetsPrivateKey && env.googleSheetId);
@@ -59,9 +81,10 @@ export const appendRegistrationRow = async (row: {
   city: string;
   courseName: string;
   variant: string;
-  amount: number;
+  advanceAmount: number;
   pan: string;
   gstin: string;
+  secondInstallmentTotal: number;
 }) => {
   if (!isConfigured()) {
     return;
@@ -77,13 +100,15 @@ export const appendRegistrationRow = async (row: {
       City: row.city,
       Course: row.courseName,
       Variant: row.variant,
-      Amount: row.amount,
       PAN: row.pan,
       GSTIN: row.gstin,
       BillingName: row.name,
       MerchantTxnNo: "",
+      AdvanceAmount: row.advanceAmount,
       AdvancePaymentStatus: "UNPAID",
-      RemainingPaymentStatus: "LOCKED",
+      SecondInstallmentTotal: row.secondInstallmentTotal,
+      SecondInstallmentPaid: 0,
+      SecondInstallmentRemaining: row.secondInstallmentTotal,
       UpdatedAt: "",
     });
   } catch (error) {
@@ -93,10 +118,9 @@ export const appendRegistrationRow = async (row: {
   }
 };
 
-// One-time backfill helper (see scripts/backfill-sheet.ts) — inserts a
-// fully-populated row for a pre-existing registration, computed with
-// whatever status it already has. Idempotent: skips rows that already
-// exist (matched by Phone + Course) so the script is safe to re-run.
+// One-time backfill/resync helper (see scripts/backfill-sheet.ts and
+// scripts/resync-sheet.ts) — inserts a fully-populated row for a
+// pre-existing registration, computed with whatever status it already has.
 export const upsertFullRegistrationRow = async (row: {
   createdAt: string;
   name: string;
@@ -105,12 +129,14 @@ export const upsertFullRegistrationRow = async (row: {
   city: string;
   courseName: string;
   variant: string;
-  amount: number;
   pan: string;
   gstin: string;
   advanceMerchantTxnNo: string;
+  advanceAmount: number;
   advanceStatusText: string;
-  remainingStatusText: string;
+  secondInstallmentTotal: number;
+  secondInstallmentPaid: number;
+  secondInstallmentRemaining: number;
 }): Promise<{ added: boolean; reason?: string }> => {
   if (!isConfigured()) {
     return { added: false, reason: "Google Sheets is not configured." };
@@ -135,13 +161,15 @@ export const upsertFullRegistrationRow = async (row: {
       City: row.city,
       Course: row.courseName,
       Variant: row.variant,
-      Amount: row.amount,
       PAN: row.pan,
       GSTIN: row.gstin,
       BillingName: row.name,
       MerchantTxnNo: row.advanceMerchantTxnNo,
+      AdvanceAmount: row.advanceAmount,
       AdvancePaymentStatus: row.advanceStatusText,
-      RemainingPaymentStatus: row.remainingStatusText,
+      SecondInstallmentTotal: row.secondInstallmentTotal,
+      SecondInstallmentPaid: row.secondInstallmentPaid,
+      SecondInstallmentRemaining: row.secondInstallmentRemaining,
       UpdatedAt: new Date().toISOString(),
     });
 
@@ -157,8 +185,11 @@ export const upsertPaymentStatusRow = async (input: {
   mobile: string;
   courseName: string;
   advanceMerchantTxnNo?: string;
+  advanceAmount?: number;
   advanceStatusText: string;
-  remainingStatusText: string;
+  secondInstallmentTotal: number;
+  secondInstallmentPaid: number;
+  secondInstallmentRemaining: number;
 }) => {
   if (!isConfigured()) {
     return;
@@ -177,8 +208,13 @@ export const upsertPaymentStatusRow = async (input: {
       if (input.advanceMerchantTxnNo) {
         match.set("MerchantTxnNo", input.advanceMerchantTxnNo);
       }
+      if (input.advanceAmount !== undefined) {
+        match.set("AdvanceAmount", input.advanceAmount);
+      }
       match.set("AdvancePaymentStatus", input.advanceStatusText);
-      match.set("RemainingPaymentStatus", input.remainingStatusText);
+      match.set("SecondInstallmentTotal", input.secondInstallmentTotal);
+      match.set("SecondInstallmentPaid", input.secondInstallmentPaid);
+      match.set("SecondInstallmentRemaining", input.secondInstallmentRemaining);
       match.set("UpdatedAt", updatedAt);
       await match.save();
       return;
@@ -192,8 +228,11 @@ export const upsertPaymentStatusRow = async (input: {
       Phone: input.mobile,
       Course: input.courseName,
       MerchantTxnNo: input.advanceMerchantTxnNo || "",
+      AdvanceAmount: input.advanceAmount ?? "",
       AdvancePaymentStatus: input.advanceStatusText,
-      RemainingPaymentStatus: input.remainingStatusText,
+      SecondInstallmentTotal: input.secondInstallmentTotal,
+      SecondInstallmentPaid: input.secondInstallmentPaid,
+      SecondInstallmentRemaining: input.secondInstallmentRemaining,
       UpdatedAt: updatedAt,
     });
   } catch (error) {
