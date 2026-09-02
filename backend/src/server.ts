@@ -3,10 +3,13 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 
+import puppeteer from "puppeteer";
+
 import { env } from "./config/env.js";
 import { connectToDatabase } from "./db/connect.js";
 import { logger } from "./lib/logger.js";
 import { startReconciliationScheduler } from "./lib/reconcile.js";
+import { requireAdmin } from "./middleware/require-admin.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
@@ -96,6 +99,31 @@ app.get("/api/health", async (_request, response) => {
     status: "ok",
     mongodb: connection.readyState === 1 ? "connected" : "disconnected",
   });
+});
+
+// One-off deployment check: confirms headless Chrome can actually launch
+// on this host — the thing that matters for invoice PDF generation, which
+// nothing else here (DB connectivity, server boot) proves on its own.
+// Admin-gated since launching a browser process on every hit is wasteful
+// to leave open to the public. Safe to remove once you've confirmed a new
+// deployment works; harmless to leave in otherwise.
+app.get("/api/admin/diagnostics/chrome", requireAdmin, async (_request, response) => {
+  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    response.status(200).json({ chrome: "ok" });
+  } catch (error) {
+    response.status(500).json({
+      chrome: "failed",
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  } finally {
+    await browser?.close();
+  }
 });
 
 app.use("/api/auth", authRouter);
