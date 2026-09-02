@@ -113,6 +113,19 @@ const paymentSchema = new Schema(
       type: String,
       default: "",
     },
+    // Set once the post-payment invoice has actually been generated and
+    // emailed — checked before issuing another one so a reconcile sweep
+    // re-touching an already-SUCCESS payment can never double-send.
+    invoiceNo: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+    invoiceSentAt: {
+      type: Date,
+      default: null,
+    },
     // Distinguishes the one-shot masterclass advance from a partial payment
     // against the second-installment balance. Documents created before this
     // field existed have no value at all (not even null) — see the

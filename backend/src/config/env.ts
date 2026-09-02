@@ -31,6 +31,8 @@ export const env = {
   smtpUser: readOptional("SMTP_USER"),
   smtpPass: readOptional("SMTP_PASS"),
   smtpFrom: readOptional("SMTP_FROM") || "Meera Sakhrani <no-reply@meerasakhrani.in>",
+  resendApiKey: readOptional("RESEND_API_KEY"),
+  resendFrom: readOptional("RESEND_FROM") || "Meera Sakhrani <no-reply@meerasakhrani.in>",
   msg91AuthKey: readOptional("MSG91_AUTH_KEY"),
   msg91OtpTemplateId: readOptional("MSG91_OTP_TEMPLATE_ID"),
   msg91Sender: readOptional("MSG91_SENDER") || "MEERAS",
@@ -54,6 +56,10 @@ export const env = {
   adminApiKey: readOptional("ADMIN_API_KEY"),
   reconcileIntervalMs: Number(readOptional("RECONCILE_INTERVAL_MS") || 5 * 60 * 1000),
   reconcileStaleAfterMs: Number(readOptional("RECONCILE_STALE_AFTER_MS") || 2 * 60 * 1000),
+  // Hard cutoff: a payment stuck non-terminal this long (with the gateway
+  // itself unable to resolve it) is force-expired rather than re-checked
+  // forever. Mirrors the frontend's own pending-page deadline.
+  pendingExpiryMs: Number(readOptional("PENDING_EXPIRY_MS") || 10 * 60 * 1000),
 
   // Google Sheets sync — optional. Left blank, the sheet-write calls just
   // no-op (see lib/sheets.ts), so registrations/payments still work fine

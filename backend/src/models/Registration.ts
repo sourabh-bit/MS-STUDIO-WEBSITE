@@ -24,17 +24,17 @@ const registrationSchema = new Schema(
     },
     city: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     state: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     instagramHandle: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     experienceMonths: {
@@ -57,6 +57,18 @@ const registrationSchema = new Schema(
       default: "",
       trim: true,
       uppercase: true,
+    },
+    // Only meaningful when hasGstin is true — who/where the GST invoice
+    // should actually be billed to, which can differ from the registrant.
+    billerName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: "",
+      trim: true,
     },
     courseName: {
       type: String,

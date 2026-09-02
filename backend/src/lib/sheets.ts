@@ -5,10 +5,10 @@ import { env } from "../config/env.js";
 import { logger } from "./logger.js";
 
 // Must match the sheet's actual header row (row 1) exactly:
-// Timestamp | Name | Phone | Email | City | Course | Variant | PAN | GSTIN
-// | BillingName | MerchantTxnNo | AdvanceAmount | AdvancePaymentStatus |
-// SecondInstallmentTotal | SecondInstallmentPaid | SecondInstallmentRemaining
-// | UpdatedAt
+// Timestamp | Name | Phone | Email | City | State | Course | Variant | PAN
+// | GSTIN | BillingName | MerchantTxnNo | AdvanceAmount |
+// AdvancePaymentStatus | SecondInstallmentTotal | SecondInstallmentPaid |
+// SecondInstallmentRemaining | UpdatedAt
 //
 // One row per registration (keyed by Phone + Course) rather than one row
 // per transaction — MerchantTxnNo always references the advance payment.
@@ -22,6 +22,7 @@ export const SHEET_HEADERS = [
   "Phone",
   "Email",
   "City",
+  "State",
   "Course",
   "Variant",
   "PAN",
@@ -79,11 +80,15 @@ export const appendRegistrationRow = async (row: {
   phone: string;
   email: string;
   city: string;
+  state: string;
   courseName: string;
   variant: string;
   advanceAmount: number;
   pan: string;
   gstin: string;
+  // Who the GST invoice should actually be billed to — falls back to the
+  // registrant's own name when no GST invoice was requested.
+  billerName: string;
   secondInstallmentTotal: number;
 }) => {
   if (!isConfigured()) {
@@ -98,11 +103,12 @@ export const appendRegistrationRow = async (row: {
       Phone: row.phone,
       Email: row.email,
       City: row.city,
+      State: row.state,
       Course: row.courseName,
       Variant: row.variant,
       PAN: row.pan,
       GSTIN: row.gstin,
-      BillingName: row.name,
+      BillingName: row.billerName || row.name,
       MerchantTxnNo: "",
       AdvanceAmount: row.advanceAmount,
       AdvancePaymentStatus: "UNPAID",
@@ -127,10 +133,12 @@ export const upsertFullRegistrationRow = async (row: {
   phone: string;
   email: string;
   city: string;
+  state?: string;
   courseName: string;
   variant: string;
   pan: string;
   gstin: string;
+  billerName?: string;
   advanceMerchantTxnNo: string;
   advanceAmount: number;
   advanceStatusText: string;
@@ -159,11 +167,12 @@ export const upsertFullRegistrationRow = async (row: {
       Phone: row.phone,
       Email: row.email,
       City: row.city,
+      State: row.state || "",
       Course: row.courseName,
       Variant: row.variant,
       PAN: row.pan,
       GSTIN: row.gstin,
-      BillingName: row.name,
+      BillingName: row.billerName || row.name,
       MerchantTxnNo: row.advanceMerchantTxnNo,
       AdvanceAmount: row.advanceAmount,
       AdvancePaymentStatus: row.advanceStatusText,

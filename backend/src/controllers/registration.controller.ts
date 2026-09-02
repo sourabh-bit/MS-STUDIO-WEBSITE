@@ -20,12 +20,14 @@ export const createRegistrationHandler = async (
       experienceMonths,
       pan,
       gstin,
+      billerName,
+      address,
       courseName,
       variant,
       amount,
     } = request.body as Record<string, unknown>;
 
-    if (!name || !phone || !email || !instagramHandle || !pan || !courseName || !amount) {
+    if (!name || !phone || !email || !city || !state || !pan || !courseName || !amount) {
       response.status(400).json({ message: "Missing required fields." });
       return;
     }
@@ -46,12 +48,14 @@ export const createRegistrationHandler = async (
       name: String(name),
       phone: String(phone),
       email: String(email),
-      city: city ? String(city) : undefined,
-      state: state ? String(state) : undefined,
-      instagramHandle: String(instagramHandle),
+      city: String(city),
+      state: String(state),
+      instagramHandle: instagramHandle ? String(instagramHandle) : undefined,
       experienceMonths: parsedExperienceMonths,
       pan: String(pan),
       gstin: gstin ? String(gstin) : undefined,
+      billerName: billerName ? String(billerName) : undefined,
+      address: address ? String(address) : undefined,
       courseName: String(courseName),
       variant: String(variant).trim().toLowerCase() === "online" ? "online" : "offline",
       amount: parsedAmount,

@@ -4,10 +4,14 @@ import crypto from "node:crypto";
 import { env } from "../config/env.js";
 import { getSecondInstallmentTotal, SECOND_INSTALLMENT_MIN_AMOUNT } from "../config/installment.js";
 import { connectToDatabase } from "../db/connect.js";
+import { getStateCode } from "../lib/indian-states.js";
 import { logger } from "../lib/logger.js";
 import { HttpError } from "../lib/http-error.js";
+import { sendInvoiceEmail } from "../lib/mailer.js";
 import { upsertPaymentStatusRow } from "../lib/sheets.js";
+import { nextInvoiceNumber, renderInvoicePdf } from "./invoice.service.js";
 import { Payment, type PaymentDocument } from "../models/Payment.js";
+import { Registration } from "../models/Registration.js";
 import type {
   GatewayPayload,
   InitiatePaymentInput,
@@ -37,6 +41,26 @@ const INITIATED_REUSE_WINDOW_MS = 90 * 1000;
 // confirmation paths (return callback, advice webhook, reconcile sweep) are
 // allowed to move it — whichever one arrives first wins, the rest are no-ops.
 const TERMINAL_STATUSES: PaymentLifecycleStatus[] = ["SUCCESS", "FAILED", "REFUNDED"];
+
+// SAC (Services Accounting Code) for commercial training/coaching services
+// under GST — what every course-fee invoice line is billed under.
+const COURSE_SAC_CODE = "999293";
+
+// Every amount actually charged at checkout is GST-inclusive (see the
+// baseTotal = Math.round(total / 1.18) calculation in
+// MasterclassCheckout.tsx, used to display the Price/GST breakdown for the
+// exact same figure the customer pays). The invoice must reflect that: the
+// taxable value is backed out of what was paid, not added on top of it —
+// otherwise the invoice's Net Amount would overstate the real charge by
+// another 18%.
+const COURSE_GST_RATE = 18;
+const taxableAmountFromInclusive = (amountPaid: number) => amountPaid / (1 + COURSE_GST_RATE / 100);
+
+// Fallback seller-state code used only if a payment somehow has no buyer
+// state on file (should not happen once the checkout form is in place).
+// Mirrors the template's own seller state (Delhi), the safest default for
+// a predominantly India-wide but Delhi-anchored customer base.
+const FALLBACK_STATE_CODE = "07";
 
 // Matches ADVANCE payments created either after paymentType existed, or
 // before it did (those documents have no paymentType field at all). The
@@ -261,6 +285,89 @@ const appendLog = async (
   );
 };
 
+// Generates the GST invoice PDF and emails it to the customer, then records
+// the invoice number on the payment so it's never issued twice. Called only
+// from applyStatus once a payment has genuinely just turned SUCCESS — never
+// awaited by the caller, so a slow PDF render/email never delays the
+// customer's redirect or the bank's webhook acknowledgement. Any failure is
+// caught by the caller and logged; it does not affect the payment record.
+const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: PaymentSummary) => {
+  if (payment.invoiceNo) {
+    return;
+  }
+
+  // Buyer/billing details live on the Registration record (collected once,
+  // before payment, via the "Tell Us About Yourself" form) rather than on
+  // the Payment document itself — Payment only tracks the transaction.
+  const registration = await Registration.findOne({
+    phone: payment.mobile,
+    courseName: payment.courseName,
+    variant: payment.variant,
+  }).sort({ createdAt: -1 });
+
+  const invoiceNo = await nextInvoiceNumber();
+
+  const paymentTypeLabel =
+    payment.paymentType === "SECOND_INSTALLMENT" ? "Second Installment" : "Advance Payment";
+  const variantLabel = payment.variant === "offline" ? "Offline" : "Online";
+
+  const buyerName =
+    (registration?.hasGstin && registration.billerName) || registration?.name || payment.customerName;
+  const buyerState = registration?.state || "";
+
+  const pdfBuffer = await renderInvoicePdf({
+    invoiceNo,
+    invoiceDate: new Date().toISOString(),
+    name: buyerName,
+    address: (registration?.hasGstin && registration.address) || "",
+    city: registration?.city || "",
+    state: buyerState,
+    stateCode: (buyerState && getStateCode(buyerState)) || FALLBACK_STATE_CODE,
+    gstin: (registration?.hasGstin && registration.gstin) || "",
+    pan: registration?.pan || "",
+    gstRate: COURSE_GST_RATE,
+    items: [
+      {
+        description: `${payment.courseName} (${variantLabel}) — ${paymentTypeLabel}`,
+        hsn: COURSE_SAC_CODE,
+        amount: taxableAmountFromInclusive(payment.amount),
+      },
+    ],
+  });
+
+  // A remaining balance under a rupee is rounding noise, not a real due
+  // amount — treat the course as fully paid rather than emailing someone
+  // a "pay ₹0.37 more" link.
+  const remainingAmount = ledger.secondInstallment.remainingAmount;
+  const hasRemainingBalance = remainingAmount > 1;
+
+  let payRemainingUrl: string | undefined;
+
+  if (hasRemainingBalance) {
+    const params = new URLSearchParams({
+      variant: payment.variant,
+      course: payment.courseName,
+      installment: "second",
+    });
+    payRemainingUrl = `${env.frontendBaseUrl}/classes/checkout?${params.toString()}`;
+  }
+
+  await sendInvoiceEmail(payment.email, {
+    invoiceNo,
+    customerName: payment.customerName,
+    courseName: payment.courseName,
+    amount: payment.amount,
+    pdfBuffer,
+    remainingAmount: hasRemainingBalance ? remainingAmount : undefined,
+    payRemainingUrl,
+  });
+
+  await Payment.updateOne(
+    { _id: payment._id },
+    { $set: { invoiceNo, invoiceSentAt: new Date() } },
+  );
+};
+
 // Single source of truth for moving a payment out of a non-terminal state.
 // Uses an atomic conditional update (not read-then-save) so that whichever
 // of the return callback / advice webhook / reconcile sweep arrives first
@@ -312,6 +419,15 @@ const applyStatus = async (
       secondInstallmentPaid: ledger.secondInstallment.amountPaid,
       secondInstallmentRemaining: ledger.secondInstallment.remainingAmount,
     });
+
+    if (status === "SUCCESS") {
+      void issueInvoiceForPayment(updated, ledger).catch((error) => {
+        logger.error("Failed to generate/send invoice for a successful payment.", {
+          merchantTxnNo: updated.merchantTxnNo,
+          message: error instanceof Error ? error.message : "unknown error",
+        });
+      });
+    }
 
     return updated;
   }
@@ -855,10 +971,20 @@ export const checkPaymentStatus = async (merchantTxnNo: string) => {
 // non-terminal state longer than RECONCILE_STALE_AFTER_MS, in case the
 // return callback never arrived (tab closed mid-payment) and the advice
 // webhook isn't registered yet or was missed.
+//
+// A payment ICICI itself still can't resolve (genuinely abandoned by the
+// customer) would otherwise be re-checked here forever — every sweep,
+// indefinitely — with the customer's own pending page stuck watching a
+// spinner the whole time. Past PENDING_EXPIRY_MS this forces it to EXPIRED
+// instead of re-asking ICICI again. That's still safe to reverse later: a
+// late ADVICE webhook confirming SUCCESS overwrites EXPIRED just fine,
+// since EXPIRED isn't a terminal status — this sweep just stops being the
+// one holding the door open.
 export const reconcilePendingPayments = async () => {
   await connectToDatabase();
 
   const staleBefore = new Date(Date.now() - env.reconcileStaleAfterMs);
+  const expireBefore = new Date(Date.now() - env.pendingExpiryMs);
 
   const stalePayments = await Payment.find({
     paymentStatus: { $in: ["INITIATED", "PENDING"] },
@@ -869,16 +995,42 @@ export const reconcilePendingPayments = async () => {
 
   let checked = 0;
   let resolved = 0;
+  let expired = 0;
 
   for (const payment of stalePayments) {
     checked += 1;
 
     try {
       const before = payment.paymentStatus;
-      const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
+      let currentStatus = before;
 
-      if (result.paymentStatus !== before) {
-        resolved += 1;
+      // Skip asking a gateway that's had ten-plus minutes and still
+      // hasn't resolved it — go straight to expiring instead of paying
+      // for (and waiting on) another status call that's unlikely to
+      // suddenly return something new.
+      if ((payment.createdAt as Date) > expireBefore) {
+        const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
+        currentStatus = result.paymentStatus as typeof before;
+
+        if (currentStatus !== before) {
+          resolved += 1;
+        }
+      }
+
+      const stillUnresolved = !TERMINAL_STATUSES.includes(currentStatus) && currentStatus !== "EXPIRED";
+
+      if (stillUnresolved && (payment.createdAt as Date) <= expireBefore) {
+        const expiredPayment = await applyStatus(
+          payment.merchantTxnNo,
+          "EXPIRED",
+          {},
+          "TRANSACTION_EXPIRED",
+          "reconcile-timeout",
+        );
+
+        if (expiredPayment) {
+          expired += 1;
+        }
       }
     } catch (error) {
       logger.error("Reconcile sweep failed to verify a payment.", {
@@ -889,10 +1041,10 @@ export const reconcilePendingPayments = async () => {
   }
 
   if (checked > 0) {
-    logger.info("Reconcile sweep completed.", { checked, resolved });
+    logger.info("Reconcile sweep completed.", { checked, resolved, expired });
   }
 
-  return { checked, resolved };
+  return { checked, resolved, expired };
 };
 
 export const refundPayment = async (merchantTxnNo: string, amount?: number, addlParam1?: string) => {

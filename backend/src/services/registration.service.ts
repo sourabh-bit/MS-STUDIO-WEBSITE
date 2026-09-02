@@ -28,10 +28,18 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Enter a valid email address.");
   }
 
-  const instagramHandle = input.instagramHandle.trim();
+  const instagramHandle = input.instagramHandle?.trim() || "";
 
-  if (!instagramHandle) {
-    throw new HttpError(400, "Enter your Instagram handle.");
+  const city = input.city.trim();
+
+  if (!city) {
+    throw new HttpError(400, "Enter your city.");
+  }
+
+  const state = input.state.trim();
+
+  if (!state) {
+    throw new HttpError(400, "Select your state.");
   }
 
   const pan = input.pan.trim().toUpperCase();
@@ -55,6 +63,21 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Enter a valid 15-character GSTIN.");
   }
 
+  // Biller name and address are only asked for (and shown) once the GST
+  // toggle is on — without them a GST invoice can't legally be issued, so
+  // they're required together with a GSTIN rather than each optional on
+  // their own.
+  const billerName = input.billerName?.trim() || "";
+  const address = input.address?.trim() || "";
+
+  if (gstin && !billerName) {
+    throw new HttpError(400, "Enter the name the GST invoice should be billed to.");
+  }
+
+  if (gstin && !address) {
+    throw new HttpError(400, "Enter the billing address for the GST invoice.");
+  }
+
   if (!input.courseName.trim() || !Number.isFinite(input.amount) || input.amount <= 0) {
     throw new HttpError(400, "Missing course details.");
   }
@@ -63,13 +86,15 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     name,
     phone,
     email,
-    city: input.city?.trim() || "",
-    state: input.state?.trim() || "",
+    city,
+    state,
     instagramHandle,
     experienceMonths,
     pan,
     hasGstin: Boolean(gstin),
     gstin,
+    billerName,
+    address,
     courseName: input.courseName.trim(),
     variant: input.variant === "online" ? "online" : "offline",
     amount: input.amount,
@@ -81,7 +106,9 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     name,
     phone,
     email,
-    city: input.city?.trim() || "",
+    city,
+    state,
+    billerName,
     courseName,
     variant: input.variant === "online" ? "online" : "offline",
     advanceAmount: input.amount,

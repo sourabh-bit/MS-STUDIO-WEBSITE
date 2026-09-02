@@ -50,34 +50,29 @@ const run = async () => {
 
     const advanceStatusText = summary.advance.status === "PAID" ? "PAID" : "UNPAID";
 
-    const remainingStatusText =
-      summary.advance.status !== "PAID"
-        ? "LOCKED"
-        : summary.secondInstallment.status === "PAID"
-          ? "PAID"
-          : summary.secondInstallment.status === "PARTIAL"
-            ? `PARTIAL (₹${summary.secondInstallment.amountPaid.toLocaleString("en-IN")} / ₹${summary.secondInstallment.totalAmount.toLocaleString("en-IN")})`
-            : "UNPAID";
-
     const result = await upsertFullRegistrationRow({
       createdAt: (registration.createdAt as Date).toISOString(),
       name: registration.name,
       phone: registration.phone,
       email: registration.email,
       city: registration.city || "",
+      state: registration.state || "",
       courseName: COURSE_NAME,
       variant,
-      amount: registration.amount,
       pan: registration.pan,
       gstin: registration.gstin || "",
+      billerName: registration.billerName || "",
       advanceMerchantTxnNo: advancePayment ? advancePayment.txnID || advancePayment.merchantTxnNo : "",
+      advanceAmount: summary.advance.status === "PAID" ? summary.advance.amount : registration.amount,
       advanceStatusText,
-      remainingStatusText,
+      secondInstallmentTotal: summary.secondInstallment.totalAmount,
+      secondInstallmentPaid: summary.secondInstallment.amountPaid,
+      secondInstallmentRemaining: summary.secondInstallment.remainingAmount,
     });
 
     if (result.added) {
       added += 1;
-      console.log(`✓ Added ${registration.phone} (${registration.name}) — advance: ${advanceStatusText}, remaining: ${remainingStatusText}`);
+      console.log(`✓ Added ${registration.phone} (${registration.name}) — advance: ${advanceStatusText}`);
     } else {
       skipped += 1;
       console.log(`- Skipped ${registration.phone} (${registration.name}) — ${result.reason}`);
