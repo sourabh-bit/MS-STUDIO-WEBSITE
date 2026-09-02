@@ -74,7 +74,11 @@ export const renderInvoicePdf = async (data: InvoiceData): Promise<Buffer> => {
   const html = await getTemplateHtml();
   const browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    // --disable-dev-shm-usage: containerized hosts (Render included) give
+    // Docker a tiny /dev/shm by default, which Chrome otherwise tries to
+    // use for shared memory and can crash on under low-RAM instances.
+    // This makes it fall back to disk-backed temp files instead.
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   });
 
   try {
