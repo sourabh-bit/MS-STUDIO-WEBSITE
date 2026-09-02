@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -330,25 +329,26 @@ const RegistrationDialog = ({
               </div>
 
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
+                <div className="relative flex items-center gap-1.5">
                   <Label htmlFor="reg-biller-name" className="text-xs">
                     Biller name <RequiredMark />
                   </Label>
-                  <Popover open={showBillerInfo} onOpenChange={setShowBillerInfo}>
-                    <PopoverTrigger
-                      type="button"
-                      className="text-muted-foreground"
-                      onMouseEnter={() => setShowBillerInfo(true)}
-                      onMouseLeave={() => setShowBillerInfo(false)}
-                      onClick={() => setShowBillerInfo(true)}
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-3 text-xs leading-relaxed">
+                  <button
+                    type="button"
+                    aria-label="What is biller name?"
+                    className="text-muted-foreground"
+                    onMouseEnter={() => setShowBillerInfo(true)}
+                    onMouseLeave={() => setShowBillerInfo(false)}
+                    onClick={() => setShowBillerInfo((current) => !current)}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                  {showBillerInfo && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md">
                       The name your GST invoice should be issued to — this can be a company
                       name or a different person's name, not necessarily your own.
-                    </PopoverContent>
-                  </Popover>
+                    </div>
+                  )}
                 </div>
                 <Input
                   id="reg-biller-name"

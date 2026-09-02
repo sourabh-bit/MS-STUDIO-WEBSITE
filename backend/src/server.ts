@@ -3,19 +3,14 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 
-import puppeteer from "puppeteer";
-
 import { env } from "./config/env.js";
 import { connectToDatabase } from "./db/connect.js";
-import { sendInvoiceEmail } from "./lib/mailer.js";
 import { logger } from "./lib/logger.js";
 import { startReconciliationScheduler } from "./lib/reconcile.js";
-import { requireAdmin } from "./middleware/require-admin.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
 import { backfillPaymentTypes } from "./services/payment.service.js";
-import { renderInvoicePdf } from "./services/invoice.service.js";
 
 const app = express();
 
@@ -101,73 +96,6 @@ app.get("/api/health", async (_request, response) => {
     status: "ok",
     mongodb: connection.readyState === 1 ? "connected" : "disconnected",
   });
-});
-
-// One-off deployment check: confirms headless Chrome can actually launch
-// on this host — the thing that matters for invoice PDF generation, which
-// nothing else here (DB connectivity, server boot) proves on its own.
-// Admin-gated since launching a browser process on every hit is wasteful
-// to leave open to the public. Safe to remove once you've confirmed a new
-// deployment works; harmless to leave in otherwise.
-app.get("/api/admin/diagnostics/chrome", requireAdmin, async (_request, response) => {
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
-
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-    });
-    response.status(200).json({ chrome: "ok" });
-  } catch (error) {
-    response.status(500).json({
-      chrome: "failed",
-      message: error instanceof Error ? error.message : "unknown error",
-    });
-  } finally {
-    await browser?.close();
-  }
-});
-
-// One-off deployment check: renders a real (fake-data) invoice PDF and
-// sends it through Resend, proving the full pipeline — Chrome, the
-// template, and email delivery — works on this deployment. Doesn't touch
-// the database; only sends to whatever address you pass in. Admin-gated
-// and safe to remove once you've confirmed a new deployment works.
-app.post("/api/admin/diagnostics/test-invoice", requireAdmin, async (request, response) => {
-  const to = String((request.body as Record<string, unknown> | undefined)?.to || "").trim();
-
-  if (!to) {
-    response.status(400).json({ message: 'Provide { "to": "you@example.com" } in the request body.' });
-    return;
-  }
-
-  try {
-    const pdfBuffer = await renderInvoicePdf({
-      invoiceNo: "MSB-B2C/DIAGNOSTIC",
-      invoiceDate: new Date().toISOString(),
-      name: "Test Student",
-      city: "Delhi",
-      state: "Delhi",
-      stateCode: "07",
-      gstRate: 18,
-      items: [{ description: "Deployment diagnostic invoice", hsn: "999293", amount: 42372.88 }],
-    });
-
-    await sendInvoiceEmail(to, {
-      invoiceNo: "MSB-B2C/DIAGNOSTIC",
-      customerName: "Test Student",
-      courseName: "Deployment Diagnostic",
-      amount: 50000,
-      pdfBuffer,
-    });
-
-    response.status(200).json({ sent: true, to });
-  } catch (error) {
-    response.status(500).json({
-      sent: false,
-      message: error instanceof Error ? error.message : "unknown error",
-    });
-  }
 });
 
 app.use("/api/auth", authRouter);

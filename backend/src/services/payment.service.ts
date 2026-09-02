@@ -56,10 +56,11 @@ const COURSE_SAC_CODE = "999293";
 const COURSE_GST_RATE = 18;
 const taxableAmountFromInclusive = (amountPaid: number) => amountPaid / (1 + COURSE_GST_RATE / 100);
 
-// Fallback seller-state code used only if a payment somehow has no buyer
-// state on file (should not happen once the checkout form is in place).
-// Mirrors the template's own seller state (Delhi), the safest default for
-// a predominantly India-wide but Delhi-anchored customer base.
+// Fallback state code used only if a payment's buyer has no Registration
+// record on file, or its state name doesn't match the lookup table (should
+// be rare — every checkout requires registering first). Mirrors the
+// template's own seller state (Delhi), the safest default for a
+// predominantly India-wide but Delhi-anchored customer base.
 const FALLBACK_STATE_CODE = "07";
 
 // Matches ADVANCE payments created either after paymentType existed, or
@@ -1001,25 +1002,23 @@ export const reconcilePendingPayments = async () => {
     checked += 1;
 
     try {
-      const before = payment.paymentStatus;
-      let currentStatus = before;
+      const isPastExpiryWindow = (payment.createdAt as Date) <= expireBefore;
+      let currentStatus = payment.paymentStatus;
 
       // Skip asking a gateway that's had ten-plus minutes and still
       // hasn't resolved it — go straight to expiring instead of paying
       // for (and waiting on) another status call that's unlikely to
       // suddenly return something new.
-      if ((payment.createdAt as Date) > expireBefore) {
+      if (!isPastExpiryWindow) {
         const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
-        currentStatus = result.paymentStatus as typeof before;
+        currentStatus = result.paymentStatus as typeof currentStatus;
 
-        if (currentStatus !== before) {
+        if (currentStatus !== payment.paymentStatus) {
           resolved += 1;
         }
       }
 
-      const stillUnresolved = !TERMINAL_STATUSES.includes(currentStatus) && currentStatus !== "EXPIRED";
-
-      if (stillUnresolved && (payment.createdAt as Date) <= expireBefore) {
+      if (isPastExpiryWindow && !TERMINAL_STATUSES.includes(currentStatus)) {
         const expiredPayment = await applyStatus(
           payment.merchantTxnNo,
           "EXPIRED",

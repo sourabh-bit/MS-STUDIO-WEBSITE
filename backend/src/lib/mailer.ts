@@ -17,6 +17,7 @@ const getResendClient = () => {
 export const sendOtpEmail = async (to: string, code: string) => {
   const { error } = await getResendClient().emails.send({
     from: env.resendFrom,
+    replyTo: env.resendReplyTo,
     to,
     subject: `${code} is your Meera Sakhrani login code`,
     text: `Your login code is ${code}. It expires in 5 minutes. Do not share this code with anyone.`,
@@ -38,6 +39,8 @@ const escapeHtml = (value: string) =>
 const formatInr = (amount: number) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const BRAND_COLOR = "#a8768a";
+
 export const sendInvoiceEmail = async (
   to: string,
   params: {
@@ -55,28 +58,89 @@ export const sendInvoiceEmail = async (
   const amountLabel = formatInr(params.amount);
   const name = escapeHtml(params.customerName);
   const course = escapeHtml(params.courseName);
+  const invoiceNo = escapeHtml(params.invoiceNo);
 
   const hasDue = params.remainingAmount !== undefined && params.payRemainingUrl;
   const dueLabel = hasDue ? formatInr(params.remainingAmount as number) : "";
 
   const dueTextBlock = hasDue
-    ? `\n\nRemaining balance for ${params.courseName}: Rs. ${dueLabel}.\nPay it here: ${params.payRemainingUrl}`
+    ? `\n\nBalance remaining for ${params.courseName}: Rs. ${dueLabel}\nYou can pay it here: ${params.payRemainingUrl}`
     : "";
 
   const dueHtmlBlock = hasDue
-    ? `<div style="margin-top:16px;padding:16px;border:1px solid #e5d9cf;border-radius:8px;background:#faf6f1;">
-         <p style="margin:0 0 8px;">Remaining balance for <strong>${course}</strong>:</p>
-         <p style="margin:0 0 12px;font-size:1.3em;font-weight:bold;">&#8377;${dueLabel}</p>
-         <a href="${params.payRemainingUrl}" style="display:inline-block;padding:10px 20px;background:#a8768a;color:#fff;text-decoration:none;border-radius:999px;font-size:0.9em;">Pay Remaining Balance</a>
-       </div>`
+    ? `<tr>
+         <td style="padding:0 32px 28px;">
+           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf6f1;border:1px solid #ecdfe3;border-radius:10px;">
+             <tr>
+               <td style="padding:20px 24px;">
+                 <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#8a7a83;">Balance Remaining</p>
+                 <p style="margin:0 0 16px;font-size:15px;color:#3a3235;">for <strong>${course}</strong></p>
+                 <p style="margin:0 0 18px;font-size:26px;font-weight:700;color:#3a3235;">&#8377;${dueLabel}</p>
+                 <a href="${params.payRemainingUrl}" style="display:inline-block;padding:12px 28px;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;border-radius:999px;font-size:13px;letter-spacing:0.04em;font-weight:600;">Pay Remaining Balance</a>
+               </td>
+             </tr>
+           </table>
+         </td>
+       </tr>`
     : "";
+
+  const html = `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4efe9;padding:32px 0;font-family:Georgia,'Times New Roman',serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(60,40,50,0.06);">
+        <tr>
+          <td style="padding:32px 32px 8px;text-align:center;">
+            <p style="margin:0;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:${BRAND_COLOR};font-family:Arial,Helvetica,sans-serif;">Meera Sakhrani Beauty</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 32px 24px;text-align:center;border-bottom:1px solid #f0e6ea;">
+            <h1 style="margin:0;font-size:22px;font-weight:400;color:#3a3235;">Payment Confirmed</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 8px;font-family:Arial,Helvetica,sans-serif;font-size:14.5px;line-height:1.65;color:#3a3235;">
+            <p style="margin:0 0 16px;">Dear ${name},</p>
+            <p style="margin:0 0 16px;">Thank you for choosing Meera Sakhrani Beauty. We're pleased to confirm that we've received your payment of <strong>&#8377;${amountLabel}</strong> towards <strong>${course}</strong>.</p>
+            <p style="margin:0 0 8px;">Your GST invoice (No. <strong>${invoiceNo}</strong>) is attached to this email as a PDF for your records.</p>
+          </td>
+        </tr>
+        ${dueHtmlBlock}
+        <tr>
+          <td style="padding:4px 32px 8px;font-family:Arial,Helvetica,sans-serif;font-size:14.5px;line-height:1.65;color:#3a3235;">
+            <p style="margin:0 0 16px;">If you have any questions about this invoice or your enrollment, simply reply to this email — we're happy to help.</p>
+            <p style="margin:24px 0 0;">Warm regards,<br><strong>Team Meera Sakhrani Beauty</strong></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px 28px;border-top:1px solid #f0e6ea;margin-top:16px;">
+            <p style="margin:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#a99aa1;text-align:center;">This is a payment confirmation for your records. Please retain it for your files.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+  const text = `Dear ${params.customerName},
+
+Thank you for choosing Meera Sakhrani Beauty. We're pleased to confirm that we've received your payment of Rs. ${amountLabel} towards ${params.courseName}.
+
+Your GST invoice (No. ${params.invoiceNo}) is attached to this email as a PDF for your records.${dueTextBlock}
+
+If you have any questions about this invoice or your enrollment, simply reply to this email — we're happy to help.
+
+Warm regards,
+Team Meera Sakhrani Beauty`;
 
   const { error } = await getResendClient().emails.send({
     from: env.resendFrom,
+    replyTo: env.resendReplyTo,
     to,
-    subject: `Your invoice ${params.invoiceNo} — Meera Sakhrani Beauty`,
-    text: `Dear ${params.customerName},\n\nThank you for your payment of Rs. ${amountLabel} towards ${params.courseName}. Please find your invoice attached.${dueTextBlock}\n\nRegards,\nMeera Sakhrani Beauty`,
-    html: `<p>Dear ${name},</p><p>Thank you for your payment of <strong>&#8377;${amountLabel}</strong> towards <strong>${course}</strong>. Please find your invoice attached.</p>${dueHtmlBlock}<p style="margin-top:16px;">Regards,<br>Meera Sakhrani Beauty</p>`,
+    subject: `Your Invoice ${params.invoiceNo} — Meera Sakhrani Beauty`,
+    text,
+    html,
     attachments: [
       {
         filename: `${params.invoiceNo.replace(/\//g, "-")}.pdf`,

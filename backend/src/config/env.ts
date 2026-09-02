@@ -32,7 +32,10 @@ export const env = {
   smtpPass: readOptional("SMTP_PASS"),
   smtpFrom: readOptional("SMTP_FROM") || "Meera Sakhrani <no-reply@meerasakhrani.in>",
   resendApiKey: readOptional("RESEND_API_KEY"),
-  resendFrom: readOptional("RESEND_FROM") || "Meera Sakhrani <no-reply@meerasakhrani.in>",
+  resendFrom: readOptional("RESEND_FROM") || "Meera Sakhrani Beauty <press@meerasakhrani.in>",
+  // Resend can only send FROM a verified domain (meerasakhrani.in), never a
+  // Gmail address — this is where replies actually land instead.
+  resendReplyTo: readOptional("RESEND_REPLY_TO") || "meerasakhranipress@gmail.com",
   msg91AuthKey: readOptional("MSG91_AUTH_KEY"),
   msg91OtpTemplateId: readOptional("MSG91_OTP_TEMPLATE_ID"),
   msg91Sender: readOptional("MSG91_SENDER") || "MEERAS",
