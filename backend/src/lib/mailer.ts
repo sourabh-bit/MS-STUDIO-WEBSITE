@@ -17,7 +17,6 @@ const getResendClient = () => {
 export const sendOtpEmail = async (to: string, code: string) => {
   const { error } = await getResendClient().emails.send({
     from: env.resendFrom,
-    replyTo: env.resendReplyTo,
     to,
     subject: `${code} is your Meera Sakhrani login code`,
     text: `Your login code is ${code}. It expires in 5 minutes. Do not share this code with anyone.`,
@@ -109,8 +108,7 @@ export const sendInvoiceEmail = async (
         ${dueHtmlBlock}
         <tr>
           <td style="padding:4px 32px 8px;font-family:Arial,Helvetica,sans-serif;font-size:14.5px;line-height:1.65;color:#3a3235;">
-            <p style="margin:0 0 16px;">If you have any questions about this invoice or your enrollment, simply reply to this email — we're happy to help.</p>
-            <p style="margin:24px 0 0;">Warm regards,<br><strong>Team Meera Sakhrani Beauty</strong></p>
+            <p style="margin:0;">Warm regards,<br><strong>Team Meera Sakhrani Beauty</strong></p>
           </td>
         </tr>
         <tr>
@@ -129,14 +127,11 @@ Thank you for choosing Meera Sakhrani Beauty. We're pleased to confirm that we'v
 
 Your GST invoice (No. ${params.invoiceNo}) is attached to this email as a PDF for your records.${dueTextBlock}
 
-If you have any questions about this invoice or your enrollment, simply reply to this email — we're happy to help.
-
 Warm regards,
 Team Meera Sakhrani Beauty`;
 
   const { error } = await getResendClient().emails.send({
     from: env.resendFrom,
-    replyTo: env.resendReplyTo,
     to,
     subject: `Your Invoice ${params.invoiceNo} — Meera Sakhrani Beauty`,
     text,
