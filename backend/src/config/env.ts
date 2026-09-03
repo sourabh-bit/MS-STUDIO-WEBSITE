@@ -56,10 +56,20 @@ export const env = {
   adminApiKey: readOptional("ADMIN_API_KEY"),
   reconcileIntervalMs: Number(readOptional("RECONCILE_INTERVAL_MS") || 5 * 60 * 1000),
   reconcileStaleAfterMs: Number(readOptional("RECONCILE_STALE_AFTER_MS") || 2 * 60 * 1000),
-  // Hard cutoff: a payment stuck non-terminal this long (with the gateway
-  // itself unable to resolve it) is force-expired rather than re-checked
-  // forever. Mirrors the frontend's own pending-page deadline.
-  pendingExpiryMs: Number(readOptional("PENDING_EXPIRY_MS") || 10 * 60 * 1000),
+  // Soft cutoff: past this, the sweep stops actively re-asking ICICI every
+  // 5 minutes and marks the payment EXPIRED so the customer isn't left on
+  // an indefinite pending page. Raised from the original 10 minutes after
+  // a real transaction was still showing "Awaiting user action" at ICICI
+  // well past that point — 10 minutes was cutting it off too eagerly.
+  // Mirrors the frontend's own pending-page deadline.
+  pendingExpiryMs: Number(readOptional("PENDING_EXPIRY_MS") || 15 * 60 * 1000),
+  // EXPIRED isn't the end of the story: ICICI can still resolve a
+  // transaction after we've stopped actively polling it, and a late ADVICE
+  // webhook isn't guaranteed to arrive. The sweep keeps re-checking expired
+  // payments (at the normal sweep cadence) for this long afterward, so a
+  // late SUCCESS still gets caught and the customer still gets their
+  // invoice automatically instead of silently falling through the cracks.
+  expiredRecheckWindowMs: Number(readOptional("EXPIRED_RECHECK_WINDOW_MS") || 24 * 60 * 60 * 1000),
 
   // Google Sheets sync — optional. Left blank, the sheet-write calls just
   // no-op (see lib/sheets.ts), so registrations/payments still work fine

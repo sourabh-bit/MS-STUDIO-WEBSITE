@@ -52,19 +52,33 @@ export const sendInvoiceEmail = async (
     // customer straight to their next (second-installment) payment.
     remainingAmount?: number;
     payRemainingUrl?: string;
+    // True only for the specific payment that brings the balance to zero
+    // (always a second-installment payment — the advance alone never
+    // covers the full course fee). Shows a congratulatory note instead of
+    // the due-balance block.
+    isFullyPaid?: boolean;
+    // The real total across every payment (advance + all installments) —
+    // shown alongside isFullyPaid so "Congratulations, fully paid" doesn't
+    // sit next to just this one transaction's (possibly much smaller)
+    // amount, which reads as contradictory on its own.
+    totalCoursePaid?: number;
   },
 ) => {
   const amountLabel = formatInr(params.amount);
   const name = escapeHtml(params.customerName);
   const course = escapeHtml(params.courseName);
   const invoiceNo = escapeHtml(params.invoiceNo);
+  const totalPaidLabel =
+    params.totalCoursePaid !== undefined ? formatInr(params.totalCoursePaid) : "";
 
   const hasDue = params.remainingAmount !== undefined && params.payRemainingUrl;
   const dueLabel = hasDue ? formatInr(params.remainingAmount as number) : "";
 
   const dueTextBlock = hasDue
     ? `\n\nBalance remaining for ${params.courseName}: Rs. ${dueLabel}\nYou can pay it here: ${params.payRemainingUrl}`
-    : "";
+    : params.isFullyPaid
+      ? `\n\nCongratulations — with this payment, you've now paid the full course fee for ${params.courseName} in full: Rs. ${totalPaidLabel} total. We look forward to welcoming you!`
+      : "";
 
   const dueHtmlBlock = hasDue
     ? `<tr>
@@ -81,7 +95,22 @@ export const sendInvoiceEmail = async (
            </table>
          </td>
        </tr>`
-    : "";
+    : params.isFullyPaid
+      ? `<tr>
+           <td style="padding:0 32px 28px;">
+             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf6f1;border:1px solid #ecdfe3;border-radius:10px;">
+               <tr>
+                 <td style="padding:20px 24px;text-align:center;">
+                   <p style="margin:0 0 6px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND_COLOR};">Congratulations</p>
+                   <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3a3235;">Your course fee for <strong>${course}</strong> is now fully paid. We look forward to welcoming you!</p>
+                   <p style="margin:0;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:#8a7a83;">Total Paid</p>
+                   <p style="margin:2px 0 0;font-size:22px;font-weight:700;color:#3a3235;">&#8377;${totalPaidLabel}</p>
+                 </td>
+               </tr>
+             </table>
+           </td>
+         </tr>`
+      : "";
 
   const html = `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4efe9;padding:32px 0;font-family:Georgia,'Times New Roman',serif;">

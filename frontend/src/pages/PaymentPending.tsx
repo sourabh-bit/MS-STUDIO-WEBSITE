@@ -21,8 +21,12 @@ const SLOW_POLL_INTERVAL_MS = 20000;
 // Hard cutoff — mirrors PENDING_EXPIRY_MS on the backend's reconcile sweep,
 // so the customer is never left watching a spinner indefinitely. Past this,
 // they're handed the normal Payment Failed screen (with its own Try Again),
-// instead of this page staying open forever.
-const DEADLINE_MS = 10 * 60 * 1000;
+// instead of this page staying open forever. Raised from 10 to 15 minutes
+// after a real transaction was still unresolved past the old cutoff — the
+// backend keeps rechecking well beyond this point regardless (see
+// EXPIRED_RECHECK_WINDOW_MS), this deadline only controls when the
+// customer's own browser stops waiting and hands them a retry option.
+const DEADLINE_MS = 15 * 60 * 1000;
 
 const PaymentPending = () => {
   const navigate = useNavigate();

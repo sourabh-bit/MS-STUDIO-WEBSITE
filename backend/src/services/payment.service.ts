@@ -292,7 +292,11 @@ const appendLog = async (
 // awaited by the caller, so a slow PDF render/email never delays the
 // customer's redirect or the bank's webhook acknowledgement. Any failure is
 // caught by the caller and logged; it does not affect the payment record.
-const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: PaymentSummary) => {
+// Exported (not just used internally by applyStatus) so a manual recovery
+// script can properly await it for a payment that resolved to SUCCESS
+// outside the normal flow — e.g. a corrected status where the original
+// fire-and-forget call never got the chance to finish.
+export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: PaymentSummary) => {
   if (payment.invoiceNo) {
     return;
   }
@@ -353,6 +357,20 @@ const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: PaymentS
     payRemainingUrl = `${env.frontendBaseUrl}/classes/checkout?${params.toString()}`;
   }
 
+  // Only a second-installment payment can ever actually clear the balance
+  // to zero — the advance is a fixed booking amount, never the full course
+  // fee, so there's always still a balance left right after it.
+  const isFullyPaid = payment.paymentType === "SECOND_INSTALLMENT" && !hasRemainingBalance;
+
+  // This specific transaction's amount (e.g. a final ₹86,000 top-up) can
+  // look contradictory sitting right next to "fully paid" if that's all
+  // the email shows — the customer paid in several pieces, not one. The
+  // congratulations message needs the real total: advance + every
+  // successful second-installment payment combined.
+  const totalCoursePaid = isFullyPaid
+    ? (ledger.advance.status === "PAID" ? ledger.advance.amount : 0) + ledger.secondInstallment.amountPaid
+    : undefined;
+
   await sendInvoiceEmail(payment.email, {
     invoiceNo,
     customerName: payment.customerName,
@@ -361,6 +379,8 @@ const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: PaymentS
     pdfBuffer,
     remainingAmount: hasRemainingBalance ? remainingAmount : undefined,
     payRemainingUrl,
+    isFullyPaid,
+    totalCoursePaid,
   });
 
   await Payment.updateOne(
@@ -575,6 +595,20 @@ const buildFailureRedirectUrl = (payload: Record<string, unknown>, fallbackMessa
   return redirectUrl.toString();
 };
 
+// Real incident this guards against: a customer's card payment (with OTP)
+// took longer than INITIATED_REUSE_WINDOW_MS to complete. This function
+// used to expire the stale attempt purely off the local clock — no check
+// with ICICI at all — right as her payment was actually succeeding on
+// their end. Because that old code also bypassed applyStatus entirely
+// (direct payment.save()), the mistake was invisible everywhere: no
+// invoice email, no spreadsheet update, nothing — until manually
+// investigated days later. Every stale attempt now gets one live status
+// check first; a genuine SUCCESS/FAILED found this way goes through the
+// normal applyStatus path (correct sheet sync, correct invoice trigger)
+// exactly like any other resolution. Only a still-unresolved one gets
+// expired, and that expiry now also goes through applyStatus instead of a
+// separate write path, specifically so it can never again fall outside
+// the sheet-sync/invoice logic that every other status change gets.
 const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput, paymentType: PaymentType) => {
   const now = new Date();
   const staleInitiatedPayments = await Payment.find({
@@ -594,16 +628,30 @@ const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput, pay
   }).sort({ createdAt: -1 });
 
   for (const payment of staleInitiatedPayments) {
-    payment.paymentStatus = "EXPIRED";
-    payment.transactionExpiresAt = now;
-    await payment.save();
+    try {
+      const result = await fetchVerifiedGatewayStatus(
+        payment.merchantTxnNo,
+        "STATUS_REQUEST",
+        "stale-transaction-check",
+      );
 
-    await appendLog(
-      payment.merchantTxnNo,
-      "TRANSACTION_EXPIRED",
-      "Marked stale initiated transaction as expired before creating a new one.",
-      { expiredAt: now.toISOString() },
-    );
+      // Resolved one way or another — applyStatus (called inside
+      // fetchVerifiedGatewayStatus) already updated everything correctly.
+      // Nothing left to do for this one.
+      if (result.paymentStatus !== "INITIATED" && result.paymentStatus !== "PENDING") {
+        continue;
+      }
+    } catch (error) {
+      logger.error("Failed to verify a stale transaction with ICICI before expiring it.", {
+        merchantTxnNo: payment.merchantTxnNo,
+        message: error instanceof Error ? error.message : "unknown error",
+      });
+      // Fall through to expiring it anyway — it can still be corrected
+      // later by the reconcile sweep's own recheck window, which is
+      // strictly better than blocking the customer's fresh attempt here.
+    }
+
+    await applyStatus(payment.merchantTxnNo, "EXPIRED", {}, "TRANSACTION_EXPIRED", "stale-transaction-check");
   }
 };
 
@@ -973,23 +1021,29 @@ export const checkPaymentStatus = async (merchantTxnNo: string) => {
 // return callback never arrived (tab closed mid-payment) and the advice
 // webhook isn't registered yet or was missed.
 //
-// A payment ICICI itself still can't resolve (genuinely abandoned by the
-// customer) would otherwise be re-checked here forever — every sweep,
-// indefinitely — with the customer's own pending page stuck watching a
-// spinner the whole time. Past PENDING_EXPIRY_MS this forces it to EXPIRED
-// instead of re-asking ICICI again. That's still safe to reverse later: a
-// late ADVICE webhook confirming SUCCESS overwrites EXPIRED just fine,
-// since EXPIRED isn't a terminal status — this sweep just stops being the
-// one holding the door open.
+// Past PENDING_EXPIRY_MS a still-unresolved payment gets marked EXPIRED so
+// the customer's pending page isn't left spinning forever — but that is
+// NOT the end of the line for it. A real incident showed why: a payment
+// ICICI reported "awaiting user action" got expired here, and because the
+// old version of this sweep only ever re-checked INITIATED/PENDING
+// payments, an EXPIRED one was simply never asked about again — leaving it
+// stuck wrong indefinitely unless the ADVICE webhook happened to fire
+// (which isn't guaranteed). Recently-expired payments are now included in
+// every sweep too, for EXPIRED_RECHECK_WINDOW_MS, specifically so a late
+// resolution from ICICI still gets caught and still corrects the customer's
+// invoice/payment status automatically.
 export const reconcilePendingPayments = async () => {
   await connectToDatabase();
 
   const staleBefore = new Date(Date.now() - env.reconcileStaleAfterMs);
   const expireBefore = new Date(Date.now() - env.pendingExpiryMs);
+  const expiredRecheckAfter = new Date(Date.now() - env.expiredRecheckWindowMs);
 
   const stalePayments = await Payment.find({
-    paymentStatus: { $in: ["INITIATED", "PENDING"] },
-    createdAt: { $lte: staleBefore },
+    $or: [
+      { paymentStatus: { $in: ["INITIATED", "PENDING"] }, createdAt: { $lte: staleBefore } },
+      { paymentStatus: "EXPIRED", createdAt: { $gte: expiredRecheckAfter } },
+    ],
   })
     .sort({ createdAt: 1 })
     .limit(50);
@@ -1002,23 +1056,21 @@ export const reconcilePendingPayments = async () => {
     checked += 1;
 
     try {
-      const isPastExpiryWindow = (payment.createdAt as Date) <= expireBefore;
-      let currentStatus = payment.paymentStatus;
+      const before = payment.paymentStatus;
 
-      // Skip asking a gateway that's had ten-plus minutes and still
-      // hasn't resolved it — go straight to expiring instead of paying
-      // for (and waiting on) another status call that's unlikely to
-      // suddenly return something new.
-      if (!isPastExpiryWindow) {
-        const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
-        currentStatus = result.paymentStatus as typeof currentStatus;
+      // Always ask, regardless of how long it's been stuck — the whole
+      // point of rechecking is to catch ICICI resolving it late. Never
+      // skip this call just because a lot of time has passed.
+      const result = await fetchVerifiedGatewayStatus(payment.merchantTxnNo, "RECONCILE_CHECK", "reconcile-sweep");
+      const currentStatus = result.paymentStatus as PaymentLifecycleStatus;
 
-        if (currentStatus !== payment.paymentStatus) {
-          resolved += 1;
-        }
+      if (currentStatus !== before) {
+        resolved += 1;
       }
 
-      if (isPastExpiryWindow && !TERMINAL_STATUSES.includes(currentStatus)) {
+      const isPastExpiryWindow = (payment.createdAt as Date) <= expireBefore;
+
+      if (before !== "EXPIRED" && isPastExpiryWindow && !TERMINAL_STATUSES.includes(currentStatus)) {
         const expiredPayment = await applyStatus(
           payment.merchantTxnNo,
           "EXPIRED",
