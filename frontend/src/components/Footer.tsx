@@ -59,10 +59,10 @@ const Footer = () => {
               <a href="mailto:hello@meeramakeupstudio.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
                 <Mail size={16} /> hello@meeramakeupstudio.com
               </a>
-              <a href="tel:+918448229694" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
+              <a href="https://wa.me/918448229694" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
                 <Phone size={16} /> +91 84482 29694 (Booking)
               </a>
-              <a href="tel:+919818793850" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
+              <a href="https://wa.me/919818793850" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
                 <Phone size={16} /> +91 98187 93850 (MS Art School)
               </a>
               <a 

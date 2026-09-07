@@ -144,7 +144,7 @@ const Navbar = () => {
           <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="mailto:meerasakhranibeauty@gmail.com">
             <Mail className="w-4 h-4" />
           </a>
-          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="tel:+918448229694">
+          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="https://wa.me/918448229694" target="_blank" rel="noopener noreferrer">
             <Phone className="w-4 h-4" />
           </a>
         </div>

@@ -68,7 +68,9 @@ const OnlineHeroBanner = ({ waitlistHref }: OnlineHeroBannerProps) => {
               
               
               <a
-                href="tel:+919818793850"
+                href="https://wa.me/919818793850"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-block font-sans text-xs tracking-[0.12em] text-foreground/70 uppercase transition-colors duration-300 hover:text-dusty-rose"
               >
                 Need assistance? +91 98187 93850

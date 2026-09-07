@@ -77,7 +77,9 @@ const OnlinePaymentSection = ({ waitlistHref }: OnlinePaymentSectionProps) => {
               Have questions about the next batch?
             </p>
             <a
-              href="tel:+919818793850"
+              href="https://wa.me/919818793850"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-3 font-serif text-xl text-foreground hover:text-dusty-rose transition-colors duration-300"
             >
               <Phone className="w-5 h-5" />

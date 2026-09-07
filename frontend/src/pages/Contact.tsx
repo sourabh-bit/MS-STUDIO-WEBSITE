@@ -63,7 +63,7 @@ const Contact = () => {
           </h1>
           <p className="font-body text-lg text-muted-foreground max-w-2xl mx-auto">
             Your dream look begins with a conversation.
-            Whether it’s a bridal celebration, a creative concept, or a personal makeover, 
+            Whether itï¿½s a bridal celebration, a creative concept, or a personal makeover, 
             Meera would love to hear your ideas and bring your vision to life.
           </p>
         </div>
@@ -205,7 +205,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">For Booking</p>
-                    <a href="tel:+91 84482 29694" className="font-body text-foreground hover:text-primary transition-elegant">
+                    <a href="https://wa.me/918448229694" target="_blank" rel="noopener noreferrer" className="font-body text-foreground hover:text-primary transition-elegant">
                       +91 84482 29694
                     </a>
                   </div>
@@ -217,7 +217,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="font-body text-sm text-muted-foreground mb-1">For MS Art School</p>
-                    <a href="tel:+91 98187 93850" className="font-body text-foreground hover:text-primary transition-elegant">
+                    <a href="https://wa.me/919818793850" target="_blank" rel="noopener noreferrer" className="font-body text-foreground hover:text-primary transition-elegant">
                       +91 98187 93850
                     </a>
                   </div>
