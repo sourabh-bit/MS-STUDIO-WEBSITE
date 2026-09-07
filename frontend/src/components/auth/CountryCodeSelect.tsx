@@ -41,7 +41,7 @@ const CountryCodeSelect = ({ value, onChange }: CountryCodeSelectProps) => {
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0">
+      <PopoverContent className="z-[1001] w-[280px] p-0">
         <Command
           filter={(itemValue, search) => (itemValue.includes(search.toLowerCase()) ? 1 : 0)}
         >
