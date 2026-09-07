@@ -7,6 +7,8 @@ export const isSmsConfigured = () =>
   Boolean(env.msg91AuthKey && env.msg91OtpTemplateId);
 
 // MSG91 OTP API — https://docs.msg91.com/reference/send-otp
+// `phone` is expected already normalised to E.164 (e.g. "+919876543210"),
+// as produced by otp.ts's normaliseContact — MSG91 wants the digits only.
 export const sendOtpSms = async (phone: string, code: string) => {
   try {
     await axios.post(
@@ -15,7 +17,7 @@ export const sendOtpSms = async (phone: string, code: string) => {
       {
         params: {
           template_id: env.msg91OtpTemplateId,
-          mobile: `91${phone}`,
+          mobile: phone.replace(/\D/g, ""),
           authkey: env.msg91AuthKey,
           otp: code,
           sender: env.msg91Sender,

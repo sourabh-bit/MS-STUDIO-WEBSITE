@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { formatPhoneNumberIntl, getCountryCallingCode, isValidPhoneNumber, type CountryCode } from "libphonenumber-js";
 
 import { useAuth } from "@/context/AuthContext";
 import { verifyWidgetLogin } from "@/lib/auth";
 import { initMsg91Widget, retryWidgetOtp, sendWidgetOtp, verifyWidgetOtp } from "@/lib/msg91Widget";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_COUNTRY } from "@/lib/countries";
 
 import {
   Dialog,
@@ -21,6 +23,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import CountryCodeSelect from "@/components/auth/CountryCodeSelect";
 
 type Step = "details" | "otp";
 
@@ -30,9 +33,11 @@ const LoginModal = () => {
 
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
+  const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [sentMobileDisplay, setSentMobileDisplay] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resendTimerRef = useRef<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -46,9 +51,11 @@ const LoginModal = () => {
     } else {
       setStep("details");
       setName("");
+      setCountry(DEFAULT_COUNTRY);
       setMobile("");
       setEmail("");
       setCode("");
+      setSentMobileDisplay("");
       setResendCooldown(0);
       if (resendTimerRef.current) {
         window.clearInterval(resendTimerRef.current);
@@ -80,7 +87,7 @@ const LoginModal = () => {
       return;
     }
 
-    if (mobile.replace(/\D/g, "").length < 10) {
+    if (!isValidPhoneNumber(mobile, country)) {
       toast({ title: "Enter a valid mobile number", variant: "destructive" });
       return;
     }
@@ -92,12 +99,15 @@ const LoginModal = () => {
 
     setIsSubmitting(true);
     try {
-      await sendWidgetOtp(mobile.replace(/\D/g, "").slice(-10));
+      const fullMobile = `${getCountryCallingCode(country)}${mobile.replace(/\D/g, "")}`;
+      const formattedMobile = formatPhoneNumberIntl(`+${fullMobile}`);
+      await sendWidgetOtp(fullMobile);
       setStep("otp");
+      setSentMobileDisplay(formattedMobile);
       startResendCooldown();
       toast({
         title: "Code sent via SMS",
-        description: `We texted a 6-digit code to ${mobile}.`,
+        description: `We texted a 6-digit code to ${formattedMobile}.`,
       });
     } catch (error) {
       toast({
@@ -174,7 +184,7 @@ const LoginModal = () => {
           <DialogDescription className="text-center">
             {step === "details"
               ? "Share your details so we can confirm your booking and send you a login code."
-              : `We sent a 6-digit code to ${mobile}.`}
+              : `We sent a 6-digit code to ${sentMobileDisplay}.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -193,13 +203,17 @@ const LoginModal = () => {
 
             <div className="space-y-2">
               <Label htmlFor="login-mobile">Mobile number</Label>
-              <Input
-                id="login-mobile"
-                type="tel"
-                placeholder="98765 43210"
-                value={mobile}
-                onChange={(event) => setMobile(event.target.value)}
-              />
+              <div className="flex gap-2">
+                <CountryCodeSelect value={country} onChange={setCountry} />
+                <Input
+                  id="login-mobile"
+                  type="tel"
+                  placeholder="98765 43210"
+                  value={mobile}
+                  onChange={(event) => setMobile(event.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

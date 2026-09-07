@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export const OTP_LENGTH = 6;
 export const OTP_TTL_SECONDS = 5 * 60;
@@ -20,6 +21,26 @@ export const isValidEmail = (value: string) => EMAIL_PATTERN.test(value.trim());
 
 export type OtpChannel = "phone" | "email";
 
+// Accepts digits that already include a country code (e.g. MSG91's widget
+// identifiers, or "919876543210") and, as a fallback for any caller that
+// still sends a bare national number with no country code (the legacy
+// non-widget OTP path), assumes India — its historical-only behavior.
+const parsePhoneContact = (rawContact: string) => {
+  const digits = rawContact.replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  const withCountryCode = parsePhoneNumberFromString(`+${digits}`);
+  if (withCountryCode?.isValid()) {
+    return withCountryCode;
+  }
+
+  const indiaFallback = parsePhoneNumberFromString(digits, "IN");
+  return indiaFallback?.isValid() ? indiaFallback : null;
+};
+
 export const detectContactChannel = (rawContact: string): OtpChannel | null => {
   const contact = rawContact.trim();
 
@@ -27,12 +48,7 @@ export const detectContactChannel = (rawContact: string): OtpChannel | null => {
     return "email";
   }
 
-  const digits = contact.replace(/\D/g, "");
-  if (/^(91)?[6-9]\d{9}$/.test(digits)) {
-    return "phone";
-  }
-
-  return null;
+  return parsePhoneContact(contact) ? "phone" : null;
 };
 
 export const normaliseContact = (rawContact: string, channel: OtpChannel) => {
@@ -42,6 +58,6 @@ export const normaliseContact = (rawContact: string, channel: OtpChannel) => {
     return contact.toLowerCase();
   }
 
-  const digits = contact.replace(/\D/g, "");
-  return digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  const phoneNumber = parsePhoneContact(contact);
+  return phoneNumber ? phoneNumber.number : contact.replace(/\D/g, "");
 };

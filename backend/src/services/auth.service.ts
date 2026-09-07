@@ -38,7 +38,7 @@ const normaliseMobileOrThrow = (rawMobile: string) => {
   const channel = detectContactChannel(rawMobile);
 
   if (channel !== "phone") {
-    throw new HttpError(400, "Enter a valid 10-digit mobile number.");
+    throw new HttpError(400, "Enter a valid mobile number.");
   }
 
   return normaliseContact(rawMobile, "phone");

@@ -101,7 +101,9 @@ const extractMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
-export const sendWidgetOtp = async (mobile: string) => {
+// fullMobile must already include the country's dial code (e.g. "919876543210"
+// for India, "254712345678" for Kenya) — digits only, no leading "+".
+export const sendWidgetOtp = async (fullMobile: string) => {
   await initMsg91Widget();
 
   return new Promise<void>((resolve, reject) => {
@@ -111,7 +113,7 @@ export const sendWidgetOtp = async (mobile: string) => {
     }
 
     window.sendOtp(
-      `91${mobile}`,
+      fullMobile,
       () => resolve(),
       (error) => reject(new Error(extractMessage(error, "Unable to send the code. Please try again."))),
     );
