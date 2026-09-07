@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { formatPhoneNumberIntl, getCountryCallingCode, isValidPhoneNumber, type CountryCode } from "libphonenumber-js";
+import { getCountryCallingCode, isValidPhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
 import { useAuth } from "@/context/AuthContext";
 import { verifyWidgetLogin } from "@/lib/auth";
@@ -100,7 +100,7 @@ const LoginModal = () => {
     setIsSubmitting(true);
     try {
       const fullMobile = `${getCountryCallingCode(country)}${mobile.replace(/\D/g, "")}`;
-      const formattedMobile = formatPhoneNumberIntl(`+${fullMobile}`);
+      const formattedMobile = parsePhoneNumberFromString(`+${fullMobile}`)?.formatInternational() ?? `+${fullMobile}`;
       await sendWidgetOtp(fullMobile);
       setStep("otp");
       setSentMobileDisplay(formattedMobile);
