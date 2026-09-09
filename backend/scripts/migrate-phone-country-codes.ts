@@ -1,16 +1,22 @@
-// One-time backfill: existing phone/mobile values predate country-code
-// support and are stored as bare digits (implicitly Indian, since the OTP
-// widget and SMS sending were both hardcoded to India-only until now).
-// Prefixes them with "+91" so they match the new E.164 normalisation in
-// otp.ts and returning Indian customers keep matching their existing
-// User/Registration/Payment records on login.
+// One-time backfill: existing phone values predate country-code support
+// and are stored as bare digits (implicitly Indian, since the OTP widget
+// and SMS sending were both hardcoded to India-only until now). Prefixes
+// them with "+91" so they match the new E.164 normalisation in otp.ts and
+// returning Indian customers keep matching their existing User/Registration
+// records on login.
+//
+// Deliberately does NOT touch Payment.mobile: payment.controller.ts still
+// computes that field fresh as bare 10 digits on every request (for the
+// ICICI gateway's customerMobileNo field) and does exact-match lookups
+// against existing Payment docs for duplicate/stale/installment checks.
+// Migrating it breaks those internal matches — this was tried once and
+// reverted; see git history if this ever needs revisiting.
 //
 // Dry-run by default — prints what WOULD change with no writes. Pass
 // --apply to actually write.
 //   npx tsx scripts/migrate-phone-country-codes.ts          (dry run)
 //   npx tsx scripts/migrate-phone-country-codes.ts --apply  (writes)
 import { connectToDatabase } from "../src/db/connect.js";
-import { Payment } from "../src/models/Payment.js";
 import { Registration } from "../src/models/Registration.js";
 import { User } from "../src/models/User.js";
 
@@ -19,14 +25,13 @@ const SAMPLE_SIZE = 5;
 
 type Target = {
   label: string;
-  model: typeof User | typeof Registration | typeof Payment;
-  field: "phone" | "mobile";
+  model: typeof User | typeof Registration;
+  field: "phone";
 };
 
 const TARGETS: Target[] = [
   { label: "User.phone", model: User, field: "phone" },
   { label: "Registration.phone", model: Registration, field: "phone" },
-  { label: "Payment.mobile", model: Payment, field: "mobile" },
 ];
 
 const migrateTarget = async ({ label, model, field }: Target) => {
