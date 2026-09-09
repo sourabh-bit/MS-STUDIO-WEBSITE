@@ -37,6 +37,14 @@ export const SHEET_HEADERS = [
   "UpdatedAt",
 ];
 
+// Registration.phone and Payment.mobile are no longer guaranteed to be the
+// same string (Payment.mobile is stripped to a bare 10-digit number for the
+// ICICI gateway field, while Registration.phone is the full "+91..." E.164
+// value — and Google Sheets itself silently drops a leading "+" when it
+// auto-detects the cell as numeric). Comparing the last 10 digits is a
+// stable way to recognise "same phone number" across all of those shapes.
+const lastTenDigits = (value: string) => value.replace(/\D/g, "").slice(-10);
+
 const isConfigured = () =>
   Boolean(env.googleSheetsClientEmail && env.googleSheetsPrivateKey && env.googleSheetId);
 
@@ -154,7 +162,9 @@ export const upsertFullRegistrationRow = async (row: {
     const tab = await getSheet();
     const rows = await tab.getRows();
     const alreadyExists = rows.some(
-      (existing) => existing.get("Phone") === row.phone && existing.get("Course") === row.courseName,
+      (existing) =>
+        lastTenDigits(existing.get("Phone") ?? "") === lastTenDigits(row.phone) &&
+        existing.get("Course") === row.courseName,
     );
 
     if (alreadyExists) {
@@ -208,7 +218,9 @@ export const upsertPaymentStatusRow = async (input: {
     const tab = await getSheet();
     const rows = await tab.getRows();
     const match = rows.find(
-      (row) => row.get("Phone") === input.mobile && row.get("Course") === input.courseName,
+      (row) =>
+        lastTenDigits(row.get("Phone") ?? "") === lastTenDigits(input.mobile) &&
+        row.get("Course") === input.courseName,
     );
 
     const updatedAt = new Date().toISOString();
