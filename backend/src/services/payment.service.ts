@@ -37,6 +37,8 @@ import {
 const ICICI_HTTP_TIMEOUT_MS = 30000;
 const INITIATED_REUSE_WINDOW_MS = 90 * 1000;
 
+const lastTenDigits = (value: string) => value.replace(/\D/g, "").slice(-10);
+
 // Terminal states. Once a payment lands here, none of the three redundant
 // confirmation paths (return callback, advice webhook, reconcile sweep) are
 // allowed to move it — whichever one arrives first wins, the rest are no-ops.
@@ -304,8 +306,13 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
   // Buyer/billing details live on the Registration record (collected once,
   // before payment, via the "Tell Us About Yourself" form) rather than on
   // the Payment document itself — Payment only tracks the transaction.
+  //
+  // payment.mobile is deliberately kept bare 10-digit (for the ICICI gateway
+  // field), while Registration.phone is stored as full "+91..." E.164 —
+  // match on the last 10 digits rather than an exact string so this still
+  // finds the right registration regardless of that formatting difference.
   const registration = await Registration.findOne({
-    phone: payment.mobile,
+    phone: new RegExp(`${lastTenDigits(payment.mobile)}$`),
     courseName: payment.courseName,
     variant: payment.variant,
   }).sort({ createdAt: -1 });
