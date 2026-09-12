@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { NextFunction, Request, Response } from "express";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { env } from "../config/env.js";
 import { isHttpError } from "../lib/http-error.js";
@@ -49,9 +50,30 @@ const extractGatewayPayload = (request: ParsedGatewayRequest): Record<string, un
   return {};
 };
 
-const normalizeMobileNumber = (value: unknown) => {
-  const digits = String(value ?? "").replace(/\D/g, "");
+// user.phone is stored as a full E.164 number since the international-login
+// feature shipped (e.g. "+9779841234567" for Nepal, "+919876543210" for
+// India) — this used to assume India specifically (stripping only a
+// leading "0" or "91"), which silently rejected every other country's
+// students with a misleading "log in again" error, since their number
+// could never come out to exactly 10 digits that way. Parsing properly
+// and taking the national number keeps the exact same output as before
+// for Indian numbers (bare 10 digits, what Payment.mobile/ICICI expect),
+// while correctly handling every other country too.
+const normalizeMobileNumber = (value: unknown): string | null => {
+  const raw = String(value ?? "").trim();
 
+  if (!raw) {
+    return null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  const parsed = parsePhoneNumberFromString(raw.startsWith("+") ? raw : `+${digits}`);
+
+  if (parsed?.isValid()) {
+    return parsed.nationalNumber;
+  }
+
+  // Fallback for any legacy/bare-digits value that predates E.164 storage.
   if (digits.length === 10) {
     return digits;
   }
@@ -64,7 +86,7 @@ const normalizeMobileNumber = (value: unknown) => {
     return digits.slice(2);
   }
 
-  return digits;
+  return null;
 };
 
 const extractAxiosErrorMessage = (data: unknown) => {
@@ -137,7 +159,7 @@ export const initiatePaymentHandler = async (
 
     const normalizedMobile = normalizeMobileNumber(user.phone);
 
-    if (normalizedMobile.length !== 10) {
+    if (!normalizedMobile) {
       response.status(400).json({
         message: "Your account is missing a valid mobile number. Please log in again.",
       });
@@ -233,7 +255,7 @@ export const paymentSummaryHandler = async (
 
     const normalizedMobile = normalizeMobileNumber(user.phone);
 
-    if (normalizedMobile.length !== 10) {
+    if (!normalizedMobile) {
       response.status(400).json({
         message: "Your account is missing a valid mobile number. Please log in again.",
       });

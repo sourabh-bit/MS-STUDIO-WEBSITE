@@ -40,10 +40,34 @@ export const SHEET_HEADERS = [
 // Registration.phone and Payment.mobile are no longer guaranteed to be the
 // same string (Payment.mobile is stripped to a bare 10-digit number for the
 // ICICI gateway field, while Registration.phone is the full "+91..." E.164
-// value — and Google Sheets itself silently drops a leading "+" when it
-// auto-detects the cell as numeric). Comparing the last 10 digits is a
-// stable way to recognise "same phone number" across all of those shapes.
-const lastTenDigits = (value: string) => value.replace(/\D/g, "").slice(-10);
+// value). Comparing the last 10 digits is a stable way to recognise "same
+// phone number" across both shapes.
+//
+// Real incident this guards against: writes here go through the Sheets API
+// as USER_ENTERED, which means a plain-digit phone string gets
+// auto-detected and stored as a NUMBER cell, not text — Google Sheets can
+// then display it in scientific notation (a display/format decision that
+// can change over time based on column width), and getRows() reads back
+// that FORMATTED value, not the underlying number. A phone written and
+// read back as "9.19789996841E+11" loses real digits, not just cosmetic
+// formatting — comparing last-10-digits on a truncated scientific-notation
+// string silently fails to match a row that's actually correct. Detecting
+// and reversing that here means matching stays correct even for any
+// pre-existing cell still stored as a number.
+const lastTenDigits = (value: string) => {
+  const trimmed = (value || "").trim();
+  const scientific = /^-?\d(?:\.\d+)?e\+?\d+$/i.test(trimmed) ? Number(trimmed) : null;
+  const normalised = scientific !== null && Number.isFinite(scientific) ? scientific.toFixed(0) : trimmed;
+
+  return normalised.replace(/\D/g, "").slice(-10);
+};
+
+// Forces Sheets to store this as plain text instead of auto-detecting an
+// all-digit string as a number — a leading apostrophe is Sheets' own
+// documented "treat as text" signal under USER_ENTERED input, and never
+// appears in the value itself once read back. This is the actual fix, at
+// the point data is written, rather than only working around it on read.
+const asPlainText = (value: string) => (value ? `'${value}` : value);
 
 const isConfigured = () =>
   Boolean(env.googleSheetsClientEmail && env.googleSheetsPrivateKey && env.googleSheetId);
@@ -108,7 +132,7 @@ export const appendRegistrationRow = async (row: {
     await tab.addRow({
       Timestamp: new Date().toISOString(),
       Name: row.name,
-      Phone: row.phone,
+      Phone: asPlainText(row.phone),
       Email: row.email,
       City: row.city,
       State: row.state,
@@ -174,7 +198,7 @@ export const upsertFullRegistrationRow = async (row: {
     await tab.addRow({
       Timestamp: row.createdAt,
       Name: row.name,
-      Phone: row.phone,
+      Phone: asPlainText(row.phone),
       Email: row.email,
       City: row.city,
       State: row.state || "",
@@ -246,7 +270,7 @@ export const upsertPaymentStatusRow = async (input: {
     // Add a partial row rather than silently dropping the update.
     await tab.addRow({
       Timestamp: updatedAt,
-      Phone: input.mobile,
+      Phone: asPlainText(input.mobile),
       Course: input.courseName,
       MerchantTxnNo: input.advanceMerchantTxnNo || "",
       AdvanceAmount: input.advanceAmount ?? "",
