@@ -16,14 +16,16 @@ import SecondInstallmentSection from "./sections/Offline classes/SecondInstallme
 import PortfolioSection from "./sections/Offline classes/PortfolioSection.tsx";
 import StickyPaymentBar from "./sections/Offline classes/StickyPaymentBar.tsx";
 import RegistrationDialog from "./RegistrationDialog";
+import RegistrationClosedDialog from "./RegistrationClosedDialog";
 
-import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
+import { IS_OFFLINE_REGISTRATION_OPEN, OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
 
 const OfflineClasses = () => {
   const navigate = useNavigate();
   const { requireAuth } = useAuth();
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+  const [isRegistrationClosedOpen, setIsRegistrationClosedOpen] = useState(false);
 
   const goToCheckout = () => {
     const params = new URLSearchParams({
@@ -56,6 +58,13 @@ const OfflineClasses = () => {
   // ₹1,00,000 checkout a second time — the backend is the source of truth
   // here, not just this in-memory check.
   const openCheckout = () => {
+    // Checked before requireAuth, deliberately — no reason to make someone
+    // log in first just to be told registrations are closed.
+    if (!IS_OFFLINE_REGISTRATION_OPEN) {
+      setIsRegistrationClosedOpen(true);
+      return;
+    }
+
     requireAuth(async () => {
       const alreadyRegistered = await checkRegistration(
         OFFLINE_MASTERCLASS_DETAILS.courseName,
@@ -78,6 +87,19 @@ const OfflineClasses = () => {
 
       goToCheckout();
     });
+  };
+
+  // SecondInstallmentSection's own "needs registration" fallback — reached
+  // by someone without a registration on file trying to pay a second
+  // installment. Same closed-registration gate applies here too, rather
+  // than letting this one path slip a new sign-up through regardless.
+  const handleNeedsRegistration = () => {
+    if (!IS_OFFLINE_REGISTRATION_OPEN) {
+      setIsRegistrationClosedOpen(true);
+      return;
+    }
+
+    setIsRegistrationOpen(true);
   };
 
   // Runs after the registration form is saved. This only takes the
@@ -120,7 +142,7 @@ const OfflineClasses = () => {
         <VenueSection />
         <TimingSection />
         <PaymentSection onOpenCheckout={openCheckout} />
-        <SecondInstallmentSection onNeedsRegistration={() => setIsRegistrationOpen(true)} />
+        <SecondInstallmentSection onNeedsRegistration={handleNeedsRegistration} />
         <PortfolioSection />
       </div>
       <StickyPaymentBar onOpenCheckout={openCheckout} />
@@ -132,6 +154,11 @@ const OfflineClasses = () => {
         variant="offline"
         amount={OFFLINE_MASTERCLASS_DETAILS.fee}
         onSuccess={handleRegistrationSuccess}
+      />
+
+      <RegistrationClosedDialog
+        open={isRegistrationClosedOpen}
+        onOpenChange={setIsRegistrationClosedOpen}
       />
     </>
   );

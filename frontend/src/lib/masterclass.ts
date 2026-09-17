@@ -6,6 +6,12 @@ export const MASTERCLASS_DETAILS = {
   trustLine: "Secure payment via ICICI Bank",
 } as const;
 
+// Manual on/off switch for new offline-masterclass registrations — flip to
+// true once the next batch's dates are finalised. Doesn't affect anyone
+// who already registered: they can still pay their second installment as
+// normal, this only blocks brand-new sign-ups.
+export const IS_OFFLINE_REGISTRATION_OPEN = false;
+
 export const OFFLINE_MASTERCLASS_DETAILS = {
   courseName: "Meera Sakhrani Offline Masterclass",
   fee: 100000,
