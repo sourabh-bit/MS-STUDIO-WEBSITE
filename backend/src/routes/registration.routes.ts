@@ -14,5 +14,5 @@ const registrationLimiter = rateLimit({
 
 export const registrationRouter = Router();
 
-registrationRouter.post("/", registrationLimiter, createRegistrationHandler);
+registrationRouter.post("/", requireAuth, registrationLimiter, createRegistrationHandler);
 registrationRouter.get("/check", requireAuth, checkRegistrationHandler);

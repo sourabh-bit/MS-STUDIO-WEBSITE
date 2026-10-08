@@ -1,11 +1,12 @@
-﻿import heroImage from "@/assets/classes/online-hero.png";
+import { CalendarDays, Loader2, MonitorPlay } from "lucide-react";
+
+import heroImage from "@/assets/classes/online-hero.png";
 import Logo from "@/assets/logo.png";
+import { MASTERCLASS_DETAILS, formatInrSymbol } from "@/lib/masterclass";
 
-type OnlineHeroBannerProps = {
-  waitlistHref: string;
-};
+import type { OnlineCtaProps } from "./types";
 
-const OnlineHeroBanner = ({ waitlistHref }: OnlineHeroBannerProps) => {
+const OnlineHeroBanner = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps) => {
   return (
     <section className="relative flex min-h-[90vh] items-center overflow-hidden bg-warm-cream md:min-h-screen">
       <div className="container mx-auto px-4 py-16 md:py-24">
@@ -37,9 +38,16 @@ const OnlineHeroBanner = ({ waitlistHref }: OnlineHeroBannerProps) => {
               An Online Masterclass
             </h2>
 
-            <span className="mb-6 inline-block rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-xs tracking-[0.15em] text-dusty-rose uppercase md:mb-8">
-              Next Batch Announcing Soon
-            </span>
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-2 md:mb-8 lg:justify-start">
+              <span className="inline-flex items-center gap-2 rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-[11px] tracking-[0.15em] text-dusty-rose uppercase">
+                <MonitorPlay className="h-3.5 w-3.5" />
+                {MASTERCLASS_DETAILS.modeLabel}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-[11px] tracking-[0.15em] text-dusty-rose uppercase">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {MASTERCLASS_DETAILS.dateLabel}
+              </span>
+            </div>
 
             <p className="text-elegant mx-auto mb-8 max-w-md text-muted-foreground lg:mx-0 md:mb-10">
               A 4-hour intensive live masterclass by Meera Sakhrani. Transform
@@ -47,14 +55,27 @@ const OnlineHeroBanner = ({ waitlistHref }: OnlineHeroBannerProps) => {
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-              <a
-                href={waitlistHref}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full border border-primary/10 bg-primary px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
+              <button
+                type="button"
+                onClick={onOpenCheckout}
+                disabled={isBusy}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose disabled:cursor-wait disabled:opacity-80"
               >
-                Join the Waitlist
-              </a>
+                {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isEnrolled ? (
+                  "You're Enrolled"
+                ) : (
+                  <>
+                    Enrol Now
+                    {/* Price hidden on the narrowest phones so the button
+                        never forces the hero wider than the screen — the
+                        sticky bar shows it there instead. */}
+                    <span className="hidden min-[400px]:inline">
+                      {" "}· {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)} + GST
+                    </span>
+                  </>
+                )}
+              </button>
 
               <a
                 href="#enroll-online"

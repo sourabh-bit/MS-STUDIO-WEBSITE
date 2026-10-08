@@ -12,9 +12,14 @@ import { Button } from "@/components/ui/button";
 type RegistrationClosedDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  courseLabel?: string;
 };
 
-const RegistrationClosedDialog = ({ open, onOpenChange }: RegistrationClosedDialogProps) => (
+const RegistrationClosedDialog = ({
+  open,
+  onOpenChange,
+  courseLabel = "Offline Masterclass",
+}: RegistrationClosedDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
@@ -22,7 +27,7 @@ const RegistrationClosedDialog = ({ open, onOpenChange }: RegistrationClosedDial
           <CalendarClock className="h-7 w-7 text-dusty-rose" />
         </div>
         <p className="text-center font-sans text-xs tracking-[0.32em] text-dusty-rose uppercase">
-          Offline Masterclass
+          {courseLabel}
         </p>
         <DialogTitle className="mt-1 text-center font-serif text-2xl font-light tracking-[0.02em] text-foreground">
           Registrations Are Currently Closed

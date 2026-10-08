@@ -1,10 +1,31 @@
+// Online masterclass: ₹15,000 + 18% GST. `fee` is the GST-inclusive
+// amount actually charged and must match COURSE_ADVANCE_FEES in
+// backend/src/config/courses.ts — the backend rejects any other amount at
+// payment time. `baseFee` is the pre-GST price shown on the brochure.
 export const MASTERCLASS_DETAILS = {
-  courseName: "Meera Sakhrani Masterclass",
-  fee: 15000,
+  courseName: "Meera Sakhrani Online Masterclass",
+  baseFee: 15000,
+  fee: 17700,
   feeLabel: "One-time Masterclass Fee",
-  summaryLabel: "Premium hands-on masterclass",
+  summaryLabel: "4-hour live online masterclass",
   trustLine: "Secure payment via ICICI Bank",
+  // Shown on the brochure — update once the next batch is scheduled.
+  dateLabel: "To Be Announced",
+  timeLabel: "12:00 PM – 4:00 PM IST",
+  modeLabel: "Online (Live)",
 } as const;
+
+// Manual on/off switch for new online-masterclass registrations. While
+// false, every enrol button opens the "registrations closed" dialog
+// instead of the sign-up flow.
+export const IS_ONLINE_REGISTRATION_OPEN = true;
+
+// Price before 18% GST, for "₹X + GST" breakdowns. Every course fee is
+// charged GST-inclusive, and the invoice backs the tax out the same way.
+export const preGstAmount = (inclusiveAmount: number) => Math.round(inclusiveAmount / 1.18);
+
+export const formatInrSymbol = (amount: number) =>
+  `₹${new Intl.NumberFormat("en-IN").format(amount)}`;
 
 // Manual on/off switch for new offline-masterclass registrations — flip to
 // true once the next batch's dates are finalised. Doesn't affect anyone
@@ -42,7 +63,7 @@ const getPositiveAmount = (value: string | null, fallback: number) => {
   return Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : fallback;
 };
 
-const getVariant = (value: string | null) =>
+const getVariant = (value: string | null): "online" | "offline" =>
   value === "offline" ? "offline" : "online";
 
 export const getMasterclassPaymentDetails = (params: URLSearchParams) => {

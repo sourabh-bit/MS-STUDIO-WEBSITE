@@ -136,6 +136,12 @@ export const widgetConfigHandler = (_request: Request, response: Response) => {
   response.status(200).json({ tokenAuth: env.msg91WidgetTokenAuth });
 };
 
+// Lets the frontend decide whether to show the developer OTP tools. Purely
+// a UI hint — the bypass itself is enforced server-side in requestOtp.
+export const devModeHandler = (_request: Request, response: Response) => {
+  response.status(200).json({ otpDevMode: env.otpDevMode });
+};
+
 export const meHandler = async (
   request: Request,
   response: Response,

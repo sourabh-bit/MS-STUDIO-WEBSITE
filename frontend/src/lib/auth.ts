@@ -88,3 +88,22 @@ export const fetchCurrentUser = async () => {
 export const logout = async () => {
   await authApi.post("/auth/logout");
 };
+
+let devModePromise: Promise<boolean> | null = null;
+
+// Whether the backend has the developer OTP bypass switched on (see
+// OTP_DEV_MODE in backend/src/config/env.ts). Asked once per page load; any
+// failure counts as "off", so the real MSG91 login is always the fallback.
+export const fetchOtpDevMode = () => {
+  devModePromise ??= authApi
+    .get<{ otpDevMode: boolean }>("/auth/dev-mode")
+    .then((response) => response.data.otpDevMode === true)
+    .catch(() => {
+      // Don't remember a failed check (e.g. backend still starting) for the
+      // rest of the page's life — ask again next time.
+      devModePromise = null;
+      return false;
+    });
+
+  return devModePromise;
+};

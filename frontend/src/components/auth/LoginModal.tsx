@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Wrench } from "lucide-react";
 import { getCountryCallingCode, isValidPhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
 import { useAuth } from "@/context/AuthContext";
-import { verifyWidgetLogin } from "@/lib/auth";
+import { fetchOtpDevMode, requestOtp, verifyOtp, verifyWidgetLogin } from "@/lib/auth";
 import { initMsg91Widget, retryWidgetOtp, sendWidgetOtp, verifyWidgetOtp } from "@/lib/msg91Widget";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_COUNTRY } from "@/lib/countries";
@@ -41,9 +41,22 @@ const LoginModal = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resendTimerRef = useRef<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  // Developer OTP bypass — only ever true when the backend says so (see
+  // OTP_DEV_MODE). Codes then come from our own backend instead of MSG91,
+  // no SMS goes out, and the code is shown right here in the popup.
+  const [isDevMode, setIsDevMode] = useState(false);
+  const [devCode, setDevCode] = useState("");
+  const [sentMobileE164, setSentMobileE164] = useState("");
+
+  useEffect(() => {
+    fetchOtpDevMode().then(setIsDevMode);
+  }, []);
 
   useEffect(() => {
     if (isModalOpen) {
+      if (isDevMode) {
+        return;
+      }
       // Pre-warm the widget script so the first "Send code" click isn't
       // waiting on it to load. Errors here just surface again naturally
       // when the user actually tries to send/verify.
@@ -56,12 +69,14 @@ const LoginModal = () => {
       setEmail("");
       setCode("");
       setSentMobileDisplay("");
+      setSentMobileE164("");
+      setDevCode("");
       setResendCooldown(0);
       if (resendTimerRef.current) {
         window.clearInterval(resendTimerRef.current);
       }
     }
-  }, [isModalOpen]);
+  }, [isModalOpen, isDevMode]);
 
   const startResendCooldown = () => {
     setResendCooldown(60);
@@ -101,13 +116,25 @@ const LoginModal = () => {
     try {
       const fullMobile = `${getCountryCallingCode(country)}${mobile.replace(/\D/g, "")}`;
       const formattedMobile = parsePhoneNumberFromString(`+${fullMobile}`)?.formatInternational() ?? `+${fullMobile}`;
-      await sendWidgetOtp(fullMobile);
+      if (isDevMode) {
+        const result = await requestOtp({
+          name: name.trim(),
+          mobile: `+${fullMobile}`,
+          email: email.trim(),
+        });
+        setDevCode(result.devCode ?? "");
+        setSentMobileE164(`+${fullMobile}`);
+      } else {
+        await sendWidgetOtp(fullMobile);
+      }
       setStep("otp");
       setSentMobileDisplay(formattedMobile);
       startResendCooldown();
       toast({
-        title: "Code sent via SMS",
-        description: `We texted a 6-digit code to ${formattedMobile}.`,
+        title: isDevMode ? "Dev code generated" : "Code sent via SMS",
+        description: isDevMode
+          ? "No SMS was sent — the code is shown in the popup."
+          : `We texted a 6-digit code to ${formattedMobile}.`,
       });
     } catch (error) {
       toast({
@@ -128,12 +155,13 @@ const LoginModal = () => {
 
     setIsSubmitting(true);
     try {
-      const accessToken = await verifyWidgetOtp(code);
-      const { user } = await verifyWidgetLogin({
-        accessToken,
-        name: name.trim(),
-        email: email.trim(),
-      });
+      const { user } = isDevMode
+        ? await verifyOtp(sentMobileE164, code)
+        : await verifyWidgetLogin({
+            accessToken: await verifyWidgetOtp(code),
+            name: name.trim(),
+            email: email.trim(),
+          });
       handleAuthenticated(user);
       toast({ title: user.name ? `Welcome, ${user.name}` : "Welcome" });
     } catch (error) {
@@ -150,7 +178,13 @@ const LoginModal = () => {
   const handleResendCode = async () => {
     setIsSubmitting(true);
     try {
-      await retryWidgetOtp();
+      if (isDevMode) {
+        const result = await requestOtp({ name: name.trim(), mobile: sentMobileE164, email: email.trim() });
+        setDevCode(result.devCode ?? "");
+        setCode("");
+      } else {
+        await retryWidgetOtp();
+      }
       startResendCooldown();
       toast({ title: "Code resent" });
     } catch (error) {
@@ -190,6 +224,12 @@ const LoginModal = () => {
 
         {step === "details" ? (
           <div className="space-y-4 pt-2">
+            {isDevMode && (
+              <p className="flex items-center gap-2 rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <Wrench className="h-3.5 w-3.5 shrink-0" />
+                Dev mode — no SMS will be sent; the code appears on the next step.
+              </p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="login-name">Full name</Label>
               <Input
@@ -243,6 +283,26 @@ const LoginModal = () => {
           </div>
         ) : (
           <div className="space-y-4 pt-2">
+            {isDevMode && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-2.5 text-amber-900">
+                <div className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-[0.15em] uppercase">Dev mode code</p>
+                    <p className="font-mono text-lg tracking-[0.3em]">{devCode || "——————"}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md bg-amber-900 px-3 py-1.5 text-xs font-medium text-amber-50 hover:bg-amber-800 disabled:opacity-50"
+                  onClick={() => setCode(devCode)}
+                  disabled={!devCode}
+                >
+                  Autofill
+                </button>
+              </div>
+            )}
+
             <div className="flex justify-center">
               <InputOTP maxLength={6} value={code} onChange={setCode}>
                 <InputOTPGroup>

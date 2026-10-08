@@ -59,9 +59,9 @@ export const requestOtp = async (input: RequestOtpInput) => {
     throw new HttpError(400, "Enter a valid email address.");
   }
 
-  const recentChallenge = await OtpChallenge.findOne({ contact: mobile }).sort({
-    createdAt: -1,
-  });
+  const recentChallenge = env.otpDevMode
+    ? null
+    : await OtpChallenge.findOne({ contact: mobile }).sort({ createdAt: -1 });
 
   if (recentChallenge) {
     const secondsSinceLast =
@@ -81,7 +81,9 @@ export const requestOtp = async (input: RequestOtpInput) => {
     createdAt: { $gte: hourAgo },
   });
 
-  if (requestsInLastHour >= OTP_HOURLY_LIMIT) {
+  // Dev mode skips both throttles — they exist to protect SMS credits and
+  // real phones, neither of which is involved when testing locally.
+  if (!env.otpDevMode && requestsInLastHour >= OTP_HOURLY_LIMIT) {
     throw new HttpError(
       429,
       "Too many code requests. Please try again in an hour.",
@@ -103,7 +105,12 @@ export const requestOtp = async (input: RequestOtpInput) => {
 
   const smsConfigured = isSmsConfigured();
 
-  if (smsConfigured) {
+  if (env.otpDevMode) {
+    logger.warn("[OTP DEV MODE] Not sending SMS — code returned to the browser instead.", {
+      mobile,
+      code,
+    });
+  } else if (smsConfigured) {
     await sendOtpSms(mobile, code);
   } else {
     logger.warn("MSG91 is not configured — logging OTP instead of sending it.", {
@@ -115,7 +122,7 @@ export const requestOtp = async (input: RequestOtpInput) => {
   return {
     mobile,
     expiresInSeconds: OTP_TTL_SECONDS,
-    devCode: env.nodeEnv !== "production" && !smsConfigured ? code : undefined,
+    devCode: env.otpDevMode || (env.nodeEnv !== "production" && !smsConfigured) ? code : undefined,
   };
 };
 

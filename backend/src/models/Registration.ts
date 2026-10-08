@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 import type { RegistrationVariant } from "../types/registration.js";
 
-const registrationSchema = new Schema(
+export const registrationSchema = new Schema(
   {
     name: {
       type: String,

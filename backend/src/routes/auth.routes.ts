@@ -2,6 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 
 import {
+  devModeHandler,
   logoutHandler,
   meHandler,
   requestOtpHandler,
@@ -40,5 +41,6 @@ authRouter.post("/otp/request", otpRequestLimiter, requestOtpHandler);
 authRouter.post("/otp/verify", otpVerifyLimiter, verifyOtpHandler);
 authRouter.post("/widget/verify", otpVerifyLimiter, verifyWidgetHandler);
 authRouter.get("/widget/config", widgetConfigLimiter, widgetConfigHandler);
+authRouter.get("/dev-mode", devModeHandler);
 authRouter.get("/me", meHandler);
 authRouter.post("/logout", logoutHandler);

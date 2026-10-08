@@ -1,53 +1,148 @@
-import { FileText } from "lucide-react";
-import Logo from "@/assets/logo.png";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const MASTERCLASS_INTEREST_FORM_URL = "https://forms.gle/ZLgaduULWF7hEAYt7";
+import { useAuth } from "@/context/AuthContext";
+import { checkRegistration } from "@/lib/registration";
+import { getPaymentSummary } from "@/lib/payment";
+import { IS_ONLINE_REGISTRATION_OPEN, MASTERCLASS_DETAILS } from "@/lib/masterclass";
+
+import OnlineHeroBanner from "./sections/Online classes/OnlineHeroBanner";
+import CourseOverview from "./sections/Online classes/CourseOverview";
+import BonusTakeaways from "./sections/Online classes/BonusTakeaways";
+import MasterclassFlow from "./sections/Online classes/MasterclassFlow";
+import WhoShouldAttend from "./sections/Online classes/WhoShouldAttend";
+import OnlinePaymentSection from "./sections/Online classes/OnlinePaymentSection";
+import StickyPaymentBar from "./sections/Online classes/StickyPaymentBar";
+import RegistrationDialog from "./RegistrationDialog";
+import RegistrationClosedDialog from "./RegistrationClosedDialog";
 
 const OnlineClasses = () => {
+  const navigate = useNavigate();
+  const { user, requireAuth } = useAuth();
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+  const [isRegistrationClosedOpen, setIsRegistrationClosedOpen] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  // Guards against a double tap firing two checks (and two dialogs) before
+  // the first one has even set isChecking.
+  const checkInFlightRef = useRef(false);
+
+  // A returning student who has already paid sees "You're Enrolled" right
+  // away instead of a pay button. Backend state only — nothing cached.
+  useEffect(() => {
+    if (!user) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    getPaymentSummary(MASTERCLASS_DETAILS.courseName, "online")
+      .then((summary) => {
+        if (!cancelled) {
+          setIsEnrolled(summary.advance.status === "PAID");
+        }
+      })
+      .catch(() => {
+        // Non-critical — the click-time check below is the real gate.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const goToCheckout = () => {
+    const params = new URLSearchParams({
+      variant: "online",
+      course: MASTERCLASS_DETAILS.courseName,
+      amount: String(MASTERCLASS_DETAILS.fee),
+      feeLabel: MASTERCLASS_DETAILS.feeLabel,
+      summaryLabel: MASTERCLASS_DETAILS.summaryLabel,
+      trustLine: MASTERCLASS_DETAILS.trustLine,
+    });
+
+    navigate(`/classes/checkout?${params.toString()}`);
+  };
+
+  // Same journey as the offline masterclass: OTP login → registration form
+  // (skipped if already on file) → review page → ICICI payment. Someone who
+  // has already paid lands on the checkout page's "You're enrolled" view
+  // rather than being able to pay a second time.
+  const openCheckout = () => {
+    // Checked before requireAuth, deliberately — no reason to make someone
+    // log in first just to be told registrations are closed.
+    if (!IS_ONLINE_REGISTRATION_OPEN && !isEnrolled) {
+      setIsRegistrationClosedOpen(true);
+      return;
+    }
+
+    requireAuth(async () => {
+      if (checkInFlightRef.current) {
+        return;
+      }
+
+      checkInFlightRef.current = true;
+      setIsChecking(true);
+
+      try {
+        const alreadyRegistered = await checkRegistration(MASTERCLASS_DETAILS.courseName, "online");
+
+        if (!alreadyRegistered) {
+          if (!IS_ONLINE_REGISTRATION_OPEN) {
+            setIsRegistrationClosedOpen(true);
+            return;
+          }
+
+          setIsRegistrationOpen(true);
+          return;
+        }
+
+        goToCheckout();
+      } finally {
+        checkInFlightRef.current = false;
+        setIsChecking(false);
+      }
+    });
+  };
+
+  // Runs after the registration form is saved. This only takes the
+  // customer to the review page — the actual ICICI payment only starts
+  // when they click Pay Now there.
+  const handleRegistrationSuccess = () => {
+    setIsRegistrationOpen(false);
+    goToCheckout();
+  };
+
+  const ctaProps = { onOpenCheckout: openCheckout, isEnrolled, isBusy: isChecking };
+
   return (
-    <section className="flex min-h-[65vh] items-center justify-center bg-warm-cream px-4 py-16 md:py-24">
-      <div className="mx-auto max-w-xl text-center">
-        <img src={Logo} alt="M Logo" className="mx-auto mb-6 w-14 md:w-16" />
-
-        <span className="mb-4 inline-block font-sans text-xs tracking-[0.4em] text-dusty-rose uppercase md:text-sm">
-          The Meera Sakhrani School
-        </span>
-
-        <h1 className="mb-4 font-serif text-2xl tracking-wide text-foreground md:text-3xl">
-          Online Masterclass
-        </h1>
-
-        <div className="my-6 md:my-8">
-          <div className="divider-elegant mx-auto w-32" />
-        </div>
-
-        <h2 className="mb-4 font-display text-4xl font-light text-primary md:text-5xl">
-          Next Batch Announcing Soon
-        </h2>
-
-        <p className="text-elegant mx-auto mb-10 max-w-md text-muted-foreground">
-          We're preparing something special for our next live online
-          masterclass. Register your interest and be the first to know when
-          applications open.
-        </p>
-
-        <div className="flex flex-col items-center justify-center gap-4">
-          <a
-            href={MASTERCLASS_INTEREST_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose"
-          >
-            <FileText className="h-4 w-4" />
-            Register Your Interest
-          </a>
-
-          <p className="font-sans text-xs text-muted-foreground">
-            Share your details and we'll notify you when applications open.
-          </p>
-        </div>
+    <>
+      <div className="space-y-0 pb-28 md:pb-32 lg:pb-0">
+        <OnlineHeroBanner {...ctaProps} />
+        <CourseOverview />
+        <BonusTakeaways />
+        <MasterclassFlow />
+        <WhoShouldAttend />
+        <OnlinePaymentSection {...ctaProps} />
       </div>
-    </section>
+      <StickyPaymentBar {...ctaProps} />
+
+      <RegistrationDialog
+        open={isRegistrationOpen}
+        onOpenChange={setIsRegistrationOpen}
+        courseName={MASTERCLASS_DETAILS.courseName}
+        variant="online"
+        amount={MASTERCLASS_DETAILS.fee}
+        onSuccess={handleRegistrationSuccess}
+      />
+
+      <RegistrationClosedDialog
+        open={isRegistrationClosedOpen}
+        onOpenChange={setIsRegistrationClosedOpen}
+        courseLabel="Online Masterclass"
+      />
+    </>
   );
 };
 

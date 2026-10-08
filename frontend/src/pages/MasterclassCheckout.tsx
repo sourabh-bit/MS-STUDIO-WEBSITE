@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 
 import heroMasterclass from "@/assets/classes/hero-masterclass.jpg";
+import onlineHero from "@/assets/classes/online-hero.png";
 import PinnedEditorialTag from "@/components/classes/PinnedEditorialTag";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getPaymentSummary, initiatePayment } from "@/lib/payment";
-import { formatInr, getMasterclassPaymentDetails } from "@/lib/masterclass";
+import { formatInr, getMasterclassPaymentDetails, preGstAmount } from "@/lib/masterclass";
 import type { PaymentSummaryResponse } from "@/types/payment";
 
 const MasterclassCheckout = () => {
@@ -19,6 +20,7 @@ const MasterclassCheckout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isOffline = paymentDetails.variant === "offline";
+  const cartImage = isOffline ? heroMasterclass : onlineHero;
   const wantsInstallmentView = searchParams.get("installment") === "second";
   const wantsAdvanceConfirmation = searchParams.get("showAdvanceConfirmation") === "1";
   const wantsAdvanceNotice = searchParams.get("notice") === "advance-required";
@@ -69,14 +71,16 @@ const MasterclassCheckout = () => {
   };
 
   const { lineTotal, baseTotal, gstTotal } = useMemo(() => {
+    // Every course fee is GST-inclusive — the invoice backs the 18% out of
+    // the amount paid, so the breakdown here has to match it for both.
     const total = paymentDetails.fee;
-    const base = isOffline ? Math.round(total / 1.18) : total;
+    const base = preGstAmount(total);
     return {
       lineTotal: total,
       baseTotal: base,
       gstTotal: total - base,
     };
-  }, [paymentDetails.fee, isOffline]);
+  }, [paymentDetails.fee]);
 
   const formatInrSymbol = (value: number) => `₹${new Intl.NumberFormat("en-IN").format(value)}`;
 
@@ -173,10 +177,16 @@ const MasterclassCheckout = () => {
   const handlePayInstallmentClick = () => requireAuth(handlePayInstallment);
 
   const advancePaid = summary?.advance.status === "PAID";
+  // The online masterclass is a single payment — there's no second
+  // installment, so once it's paid the student is simply enrolled.
+  const isOnlineEnrolled = !isOffline && advancePaid;
   const installmentFullyPaid = summary?.secondInstallment.status === "PAID";
   const showInstallmentForm =
-    advancePaid && !installmentFullyPaid && (hasDismissedConfirmation || (wantsInstallmentView && !wantsAdvanceConfirmation));
-  const showAdvanceConfirmation = advancePaid && !installmentFullyPaid && !showInstallmentForm;
+    isOffline &&
+    advancePaid &&
+    !installmentFullyPaid &&
+    (hasDismissedConfirmation || (wantsInstallmentView && !wantsAdvanceConfirmation));
+  const showAdvanceConfirmation = isOffline && advancePaid && !installmentFullyPaid && !showInstallmentForm;
 
   if (isSummaryLoading) {
     return (
@@ -199,7 +209,30 @@ const MasterclassCheckout = () => {
             Back to Classes
           </button>
 
-          {advancePaid && installmentFullyPaid && (
+          {isOnlineEnrolled && summary && (
+            <div className="mx-auto max-w-md py-8 text-center sm:py-12">
+              <p className="mb-6 font-display text-3xl tracking-wide text-dusty-rose uppercase sm:text-4xl md:text-5xl">
+                You're Enrolled
+              </p>
+              <PinnedEditorialTag label="Seat Confirmed">
+                <p className="font-display text-3xl text-foreground sm:text-4xl">
+                  {summary.advance.status === "PAID" && formatInrSymbol(summary.advance.amount)} Paid
+                </p>
+                <p className="mt-3 font-sans text-sm leading-relaxed text-muted-foreground">
+                  Your seat for the {paymentDetails.courseName} is confirmed. Your GST invoice
+                  and class details are sent to your email.
+                </p>
+                <Link
+                  to="/classes"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground transition-all duration-300 hover:bg-dusty-rose"
+                >
+                  Back to Classes
+                </Link>
+              </PinnedEditorialTag>
+            </div>
+          )}
+
+          {isOffline && advancePaid && installmentFullyPaid && (
             <div className="mx-auto max-w-md py-8 text-center sm:py-12">
               <p className="mb-6 font-display text-3xl tracking-wide text-dusty-rose uppercase sm:text-4xl md:text-5xl">
                 Congratulations
@@ -375,9 +408,9 @@ const MasterclassCheckout = () => {
                 <div className="overflow-hidden rounded-[1.75rem] border border-border/30 bg-background/90 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
                   <div className="flex flex-row gap-4 p-4 sm:gap-5 sm:p-6">
                     <img
-                      src={heroMasterclass}
+                      src={cartImage}
                       alt={paymentDetails.courseName}
-                      className="h-20 w-20 shrink-0 rounded-xl object-cover sm:h-28 sm:w-28 sm:rounded-2xl"
+                      className="h-20 w-20 shrink-0 rounded-xl object-cover object-top sm:h-28 sm:w-28 sm:rounded-2xl"
                     />
 
                     <div className="flex flex-1 flex-col gap-1">
@@ -412,17 +445,15 @@ const MasterclassCheckout = () => {
                         <span>{formatInrSymbol(baseTotal)}</span>
                       </div>
 
-                      {isOffline && (
-                        <div className="flex items-center justify-between font-sans text-sm text-foreground/90">
-                          <span>GST (18%)</span>
-                          <span>{formatInrSymbol(gstTotal)}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between font-sans text-sm text-foreground/90">
+                        <span>GST (18%)</span>
+                        <span>{formatInrSymbol(gstTotal)}</span>
+                      </div>
 
                       <div className="border-t border-dashed border-border/40 pt-3">
                         <div className="flex items-center justify-between">
                           <span className="font-sans text-sm font-semibold uppercase tracking-[0.08em] text-foreground">
-                            Advance to pay
+                            {isOffline ? "Advance to pay" : "Total to pay"}
                           </span>
                           <span className="font-serif text-2xl text-foreground">
                             {formatInrSymbol(lineTotal)}

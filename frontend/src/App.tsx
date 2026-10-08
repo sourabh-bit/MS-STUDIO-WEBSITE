@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import LoginModal from "@/components/auth/LoginModal";
+import DevToolbar from "@/components/auth/DevToolbar";
+import StagingBanner from "@/components/StagingBanner";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -33,6 +35,8 @@ const App = () => (
       <BrowserRouter>
       <AuthProvider>
       <LoginModal />
+      <DevToolbar />
+      <StagingBanner />
 
   <ScrollToTop />
 

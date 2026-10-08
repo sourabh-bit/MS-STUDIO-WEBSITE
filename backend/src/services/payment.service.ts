@@ -2,6 +2,7 @@ import axios, { AxiosError } from "axios";
 import crypto from "node:crypto";
 
 import { env } from "../config/env.js";
+import { getCourseAdvanceFee } from "../config/courses.js";
 import { getSecondInstallmentTotal, SECOND_INSTALLMENT_MIN_AMOUNT } from "../config/installment.js";
 import { connectToDatabase } from "../db/connect.js";
 import { getStateCode } from "../lib/indian-states.js";
@@ -11,7 +12,8 @@ import { sendInvoiceEmail } from "../lib/mailer.js";
 import { upsertPaymentStatusRow } from "../lib/sheets.js";
 import { nextInvoiceNumber, renderInvoicePdf } from "./invoice.service.js";
 import { Payment, type PaymentDocument } from "../models/Payment.js";
-import { Registration } from "../models/Registration.js";
+import { OnlineRegistration } from "../models/OnlineRegistration.js";
+import { registrationModelFor } from "./registration.service.js";
 import type {
   GatewayPayload,
   InitiatePaymentInput,
@@ -311,17 +313,25 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
   // field), while Registration.phone is stored as full "+91..." E.164 —
   // match on the last 10 digits rather than an exact string so this still
   // finds the right registration regardless of that formatting difference.
-  const registration = await Registration.findOne({
-    phone: new RegExp(`${lastTenDigits(payment.mobile)}$`),
-    courseName: payment.courseName,
-    variant: payment.variant,
-  }).sort({ createdAt: -1 });
+  const isOnline = payment.variant === "online";
+  const registration = await registrationModelFor(isOnline ? "online" : "offline")
+    .findOne({
+      phone: new RegExp(`${lastTenDigits(payment.mobile)}$`),
+      courseName: payment.courseName,
+      variant: payment.variant,
+    })
+    .sort({ createdAt: -1 });
 
   const invoiceNo = await nextInvoiceNumber();
 
-  const paymentTypeLabel =
-    payment.paymentType === "SECOND_INSTALLMENT" ? "Second Installment" : "Advance Payment";
-  const variantLabel = payment.variant === "offline" ? "Offline" : "Online";
+  // The online masterclass is paid in one go, so its single payment is the
+  // full course fee, never an "advance".
+  const paymentTypeLabel = isOnline
+    ? "Course Fee"
+    : payment.paymentType === "SECOND_INSTALLMENT"
+      ? "Second Installment"
+      : "Advance Payment";
+  const variantLabel = isOnline ? "Online" : "Offline";
 
   const buyerName =
     (registration?.hasGstin && registration.billerName) || registration?.name || payment.customerName;
@@ -394,6 +404,70 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
     { _id: payment._id },
     { $set: { invoiceNo, invoiceSentAt: new Date() } },
   );
+
+  if (isOnline) {
+    await OnlineRegistration.updateOne(
+      { phone: new RegExp(`${lastTenDigits(payment.mobile)}$`), courseName: payment.courseName },
+      { $set: { invoiceNo } },
+    ).catch((error: unknown) => {
+      logger.error("Failed to record invoice number on the online registration.", {
+        merchantTxnNo: payment.merchantTxnNo,
+        message: error instanceof Error ? error.message : "unknown error",
+      });
+    });
+  }
+};
+
+// Mirrors a payment's progress onto the student's record in the online
+// database, so that collection always shows who has actually paid. Called
+// from applyStatus on every status change for an online payment. Best
+// effort, like the sheet sync — the Payment document stays the source of
+// truth and a failure here never affects the payment itself.
+export const syncOnlineRegistrationPayment = async (
+  payment: PaymentDocument,
+  status: PaymentLifecycleStatus,
+  ledger: PaymentSummary,
+) => {
+  if (payment.variant !== "online") {
+    return;
+  }
+
+  const match = {
+    phone: new RegExp(`${lastTenDigits(payment.mobile)}$`),
+    courseName: payment.courseName,
+  };
+
+  try {
+    if (status === "SUCCESS" || status === "REFUNDED") {
+      await OnlineRegistration.updateOne(match, {
+        $set: {
+          paymentStatus: status === "SUCCESS" ? "PAID" : "REFUNDED",
+          amountPaid: status === "SUCCESS" ? payment.amount : 0,
+          merchantTxnNo: payment.merchantTxnNo,
+          bankTxnId: payment.txnID || "",
+          ...(status === "SUCCESS" ? { paidAt: new Date() } : {}),
+        },
+      });
+      return;
+    }
+
+    // Any other update (a retry that failed, expired or is still pending)
+    // must never downgrade someone who has already paid — hence both the
+    // ledger check and the paymentStatus filter on the write itself.
+    if (ledger.advance.status === "PAID") {
+      return;
+    }
+
+    await OnlineRegistration.updateOne(
+      { ...match, paymentStatus: { $ne: "PAID" } },
+      { $set: { paymentStatus: status, merchantTxnNo: payment.merchantTxnNo } },
+    );
+  } catch (error) {
+    logger.error("Failed to sync payment status onto the online registration.", {
+      merchantTxnNo: payment.merchantTxnNo,
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  }
 };
 
 // Single source of truth for moving a payment out of a non-terminal state.
@@ -440,6 +514,9 @@ const applyStatus = async (
     await upsertPaymentStatusRow({
       mobile: updated.mobile,
       courseName: updated.courseName,
+      variant: updated.variant === "online" ? "online" : "offline",
+      paymentStatus: status,
+      txnID: updated.txnID || "",
       advanceMerchantTxnNo: updatedPaymentType === "ADVANCE" ? updated.merchantTxnNo : undefined,
       advanceAmount: ledger.advance.status === "PAID" ? ledger.advance.amount : undefined,
       advanceStatusText,
@@ -447,6 +524,8 @@ const applyStatus = async (
       secondInstallmentPaid: ledger.secondInstallment.amountPaid,
       secondInstallmentRemaining: ledger.secondInstallment.remainingAmount,
     });
+
+    await syncOnlineRegistrationPayment(updated, status, ledger);
 
     if (status === "SUCCESS") {
       void issueInvoiceForPayment(updated, ledger).catch((error) => {
@@ -701,7 +780,26 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
     });
 
     if (existingAdvance) {
-      throw new HttpError(409, "Advance payment has already been completed.");
+      throw new HttpError(
+        409,
+        input.variant === "online"
+          ? "You're already enrolled in this masterclass — no further payment is needed."
+          : "Advance payment has already been completed.",
+      );
+    }
+
+    // The price is decided here, never by the request body — see
+    // config/courses.ts. A mismatch almost always means a stale tab open
+    // from before a price change, so ask for a refresh instead of quietly
+    // charging a different figure than the one the customer was shown.
+    const expectedFee = getCourseAdvanceFee(input.courseName);
+
+    if (expectedFee === undefined) {
+      throw new HttpError(400, "Unknown course. Please refresh the page and try again.");
+    }
+
+    if (requestedAmount !== expectedFee) {
+      throw new HttpError(409, "The course fee has been updated. Please refresh the page and try again.");
     }
   } else {
     const advancePayment = await Payment.findOne({
@@ -1158,7 +1256,16 @@ export const refundPayment = async (merchantTxnNo: string, amount?: number, addl
     throw new HttpError(502, payload.respDescription || "Refund request was not confirmed by the gateway.");
   }
 
-  await Payment.updateOne({ merchantTxnNo }, { paymentStatus: "REFUNDED", gatewayResponse: payload });
+  const refunded = await Payment.findOneAndUpdate(
+    { merchantTxnNo },
+    { paymentStatus: "REFUNDED", gatewayResponse: payload },
+    { new: true },
+  );
+
+  if (refunded?.variant === "online") {
+    const ledger = await getPaymentSummary(refunded.mobile, refunded.courseName, "online");
+    await syncOnlineRegistrationPayment(refunded, "REFUNDED", ledger);
+  }
 
   return { merchantTxnNo, refundMerchantTxnNo, payload };
 };

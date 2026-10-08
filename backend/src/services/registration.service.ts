@@ -5,8 +5,17 @@ import { isValidPan } from "../lib/pan.js";
 import { detectContactChannel, isValidEmail, normaliseContact } from "../lib/otp.js";
 import { appendRegistrationRow } from "../lib/sheets.js";
 import { getSecondInstallmentTotal } from "../config/installment.js";
+import { OnlineRegistration } from "../models/OnlineRegistration.js";
 import { Registration } from "../models/Registration.js";
 import type { CreateRegistrationInput, RegistrationVariant } from "../types/registration.js";
+
+// Online registrations live in their own database (see OnlineRegistration);
+// offline ones stay where they've always been.
+export const registrationModelFor = (variant: RegistrationVariant): typeof Registration =>
+  variant === "online" ? OnlineRegistration : Registration;
+
+const isDuplicateKeyError = (error: unknown) =>
+  Boolean(error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === 11000);
 
 export const createRegistration = async (input: CreateRegistrationInput) => {
   await connectToDatabase();
@@ -82,7 +91,10 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Missing course details.");
   }
 
-  const registration = await Registration.create({
+  const courseName = input.courseName.trim();
+  const variant: RegistrationVariant = input.variant === "online" ? "online" : "offline";
+
+  const details = {
     name,
     phone,
     email,
@@ -95,13 +107,54 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     gstin,
     billerName,
     address,
-    courseName: input.courseName.trim(),
-    variant: input.variant === "online" ? "online" : "offline",
+    courseName,
+    variant,
     amount: input.amount,
-  });
+  };
+
+  // One registration per person per course. A double-submit or a second
+  // tab shouldn't create a duplicate record (or a duplicate sheet row) —
+  // re-submitting just refreshes the details already on file.
+  const Model = registrationModelFor(variant);
+
+  const updateExisting = async () => {
+    const existing = await Model.findOne({ phone, courseName, variant });
+
+    if (!existing) {
+      return null;
+    }
+
+    existing.set(details);
+    await existing.save();
+    return { id: String(existing._id) };
+  };
+
+  const updated = await updateExisting();
+
+  if (updated) {
+    return updated;
+  }
+
+  let registration;
+
+  try {
+    registration = await Model.create(details);
+  } catch (error) {
+    // Lost a race against a simultaneous submission for the same person
+    // (the online collection's unique index caught it) — the other one
+    // already created the record and its sheet row, so just update it.
+    if (isDuplicateKeyError(error)) {
+      const raced = await updateExisting();
+
+      if (raced) {
+        return raced;
+      }
+    }
+
+    throw error;
+  }
 
   // Best-effort — never let a Sheets outage block a registration.
-  const courseName = input.courseName.trim();
   await appendRegistrationRow({
     name,
     phone,
@@ -110,11 +163,14 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     state,
     billerName,
     courseName,
-    variant: input.variant === "online" ? "online" : "offline",
+    variant,
     advanceAmount: input.amount,
     pan,
     gstin,
     secondInstallmentTotal: getSecondInstallmentTotal(courseName),
+    instagramHandle,
+    experienceMonths,
+    billingAddress: address,
   });
 
   return { id: String(registration._id) };
@@ -136,7 +192,7 @@ export const hasRegistered = async (
 
   const normalisedPhone = normaliseContact(phone, "phone");
 
-  const existing = await Registration.findOne({
+  const existing = await registrationModelFor(variant).findOne({
     phone: normalisedPhone,
     courseName: courseName.trim(),
     variant,

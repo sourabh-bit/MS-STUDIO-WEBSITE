@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+
+import { MASTERCLASS_DETAILS, formatInrSymbol } from "@/lib/masterclass";
 import { cn } from "@/lib/utils";
 
-type StickyPaymentBarProps = {
-  waitlistHref: string;
-};
+import type { OnlineCtaProps } from "./types";
 
-const StickyPaymentBar = ({ waitlistHref }: StickyPaymentBarProps) => {
+const StickyPaymentBar = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -28,23 +29,30 @@ const StickyPaymentBar = ({ waitlistHref }: StickyPaymentBarProps) => {
         isVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0",
       )}
     >
-      <div className="border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md">
+      <div className="border-t border-border/60 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-serif text-lg text-foreground">Next Batch</p>
-            <p className="font-sans text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
-              Announcing Soon
+            <p className="font-display text-2xl text-foreground">
+              {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}{" "}
+              <span className="text-sm">+ GST</span>
+            </p>
+            <p className="truncate font-sans text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+              {isEnrolled ? "Seat confirmed" : `Total ${formatInrSymbol(MASTERCLASS_DETAILS.fee)} · Live online`}
             </p>
           </div>
 
-          <a
-            href={waitlistHref}
-            target="_blank"
-            rel="noreferrer"
-            className="shrink-0 rounded-full bg-primary px-6 py-3 font-sans text-xs tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose"
+          <button
+            type="button"
+            onClick={onOpenCheckout}
+            disabled={isBusy}
+            data-course={MASTERCLASS_DETAILS.courseName}
+            data-price={String(MASTERCLASS_DETAILS.fee)}
+            data-payment-trigger="sticky-bar"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-primary px-6 py-3 font-sans text-xs tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose disabled:cursor-wait disabled:opacity-80"
           >
-            Join Waitlist
-          </a>
+            {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isEnrolled ? "Enrolled" : "Enrol Now"}
+          </button>
         </div>
       </div>
     </div>

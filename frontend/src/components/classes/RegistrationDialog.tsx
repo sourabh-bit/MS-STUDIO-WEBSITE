@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Info, Loader2 } from "lucide-react";
+import { BadgeCheck, Info, Loader2, Lock } from "lucide-react";
 
 import {
   Dialog,
@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES } from "@/lib/indian-states";
+import { formatInrSymbol } from "@/lib/masterclass";
 import { submitRegistration } from "@/lib/registration";
 
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -86,7 +87,16 @@ const RegistrationDialog = ({
     }
   }, [open, user]);
 
+  // The registration is always saved against the OTP-verified login number
+  // (the backend ignores any other), so show that number locked rather
+  // than an editable field that would quietly be overridden.
+  const isPhoneVerified = Boolean(user?.phone);
+
   const handleSubmit = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     if (name.trim().length < 2) {
       toast({ title: "Name is mandatory", variant: "destructive" });
       return;
@@ -175,11 +185,24 @@ const RegistrationDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="space-y-1">
+          <p className="font-sans text-[10px] tracking-[0.3em] text-dusty-rose uppercase">
+            Step 2 of 3 · Your Details
+          </p>
           <DialogTitle className="font-serif text-xl">Tell Us About Yourself</DialogTitle>
           <DialogDescription className="text-xs">
             A few quick details before you're taken to the secure payment page.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-dusty-rose/25 bg-primary/[0.04] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate font-serif text-sm text-foreground">{courseName}</p>
+            <p className="font-sans text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+              {variant === "online" ? "Live Online" : "In-person · New Delhi"}
+            </p>
+          </div>
+          <p className="shrink-0 font-serif text-base text-foreground">{formatInrSymbol(amount)}</p>
+        </div>
 
         <div className="max-h-[70vh] space-y-2.5 overflow-y-auto pr-1">
           <div className="space-y-1">
@@ -200,14 +223,24 @@ const RegistrationDialog = ({
             <Label htmlFor="reg-phone" className="text-xs">
               Mobile number <RequiredMark />
             </Label>
-            <Input
-              id="reg-phone"
-              className="h-9"
-              type="tel"
-              placeholder="98765 43210"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id="reg-phone"
+                className={isPhoneVerified ? "h-9 bg-muted/40 pr-24 text-foreground/80" : "h-9"}
+                type="tel"
+                placeholder="98765 43210"
+                value={phone}
+                readOnly={isPhoneVerified}
+                aria-readonly={isPhoneVerified}
+                onChange={(event) => setPhone(event.target.value)}
+              />
+              {isPhoneVerified && (
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-1 font-sans text-[11px] text-emerald-700">
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                  Verified
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -376,8 +409,12 @@ const RegistrationDialog = ({
 
           <Button className="h-10 w-full" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Continue to Payment
+            {isSubmitting ? "Saving…" : "Continue to Payment"}
           </Button>
+          <p className="flex items-center justify-center gap-1.5 pb-1 font-sans text-[11px] text-muted-foreground">
+            <Lock className="h-3 w-3" />
+            Your details are only used for your enrolment and GST invoice.
+          </p>
         </div>
       </DialogContent>
     </Dialog>

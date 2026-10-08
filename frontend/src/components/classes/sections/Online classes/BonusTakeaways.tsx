@@ -51,7 +51,7 @@ const BonusTakeaways = () => {
             Worth {formatInr(BONUS_VALUE)}+
           </h2>
           <p className="font-display text-sm md:text-base italic text-white/70">
-            (Included in your {formatInr(MASTERCLASS_DETAILS.fee)} Masterclass)
+            (Included in your {formatInr(MASTERCLASS_DETAILS.baseFee)} Masterclass)
           </p>
         </div>
 

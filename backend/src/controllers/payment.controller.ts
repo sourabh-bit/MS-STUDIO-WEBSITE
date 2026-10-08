@@ -115,6 +115,17 @@ const respondWithPaymentError = (error: unknown, response: Response): boolean =>
     return false;
   }
 
+  // No response at all — the gateway couldn't be reached or timed out.
+  // The raw network error ("connect ETIMEDOUT 203.0.113.5:443") means
+  // nothing to a customer, so log it and say something they can act on.
+  if (!error.response) {
+    logger.error("Payment gateway unreachable.", { code: error.code, message: error.message });
+    response.status(503).json({
+      message: "The bank's payment page isn't responding right now. Please try again in a few minutes.",
+    });
+    return true;
+  }
+
   const message =
     extractAxiosErrorMessage(error.response?.data) ||
     error.message ||

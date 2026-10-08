@@ -69,40 +69,106 @@ const lastTenDigits = (value: string) => {
 // the point data is written, rather than only working around it on read.
 const asPlainText = (value: string) => (value ? `'${value}` : value);
 
-const isConfigured = () =>
-  Boolean(env.googleSheetsClientEmail && env.googleSheetsPrivateKey && env.googleSheetId);
+// Column layout for the online-masterclass sheet. Online is a single
+// one-time payment, so there's no advance/installment ledger here — just
+// the registration details plus where that one payment stands. The tab is
+// created with exactly this header row on first write if it doesn't exist
+// yet, so a fresh cohort needs no manual sheet setup.
+export const ONLINE_SHEET_HEADERS = [
+  "Timestamp",
+  "Name",
+  "Phone",
+  "Email",
+  "City",
+  "State",
+  "Instagram",
+  "ExperienceMonths",
+  "Course",
+  "PAN",
+  "GSTIN",
+  "BillingName",
+  "BillingAddress",
+  "Amount",
+  "PaymentStatus",
+  "MerchantTxnNo",
+  "BankTxnID",
+  "PaidAt",
+  "UpdatedAt",
+];
 
-let sheetPromise: Promise<GoogleSpreadsheetWorksheet> | null = null;
+type SheetTarget = {
+  sheetId: string;
+  tabName: string;
+  // Only the online tab is ever auto-created. The offline tab predates
+  // this and is renamed by hand each cohort — silently creating a blank
+  // one there on a typo'd tab name would hide the misconfiguration.
+  createWithHeaders?: string[];
+};
 
-const loadSheet = async () => {
+const offlineTarget = (): SheetTarget => ({
+  sheetId: env.googleSheetId,
+  tabName: env.googleSheetsTabName,
+});
+
+const onlineTarget = (): SheetTarget => ({
+  sheetId: env.googleSheetsOnlineSheetId,
+  tabName: env.googleSheetsOnlineTabName,
+  createWithHeaders: ONLINE_SHEET_HEADERS,
+});
+
+const isConfigured = (target: SheetTarget) =>
+  Boolean(env.googleSheetsClientEmail && env.googleSheetsPrivateKey && target.sheetId);
+
+const sheetPromises = new Map<string, Promise<GoogleSpreadsheetWorksheet>>();
+
+const loadSheet = async (target: SheetTarget) => {
   const jwt = new JWT({
     email: env.googleSheetsClientEmail,
     key: env.googleSheetsPrivateKey.replace(/\\n/g, "\n"),
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
-  const doc = new GoogleSpreadsheet(env.googleSheetId, jwt);
+  const doc = new GoogleSpreadsheet(target.sheetId, jwt);
   await doc.loadInfo();
 
-  const tab = doc.sheetsByTitle[env.googleSheetsTabName];
+  const tab = doc.sheetsByTitle[target.tabName];
 
-  if (!tab) {
-    throw new Error(`Sheet tab "${env.googleSheetsTabName}" not found in spreadsheet ${env.googleSheetId}.`);
+  if (tab) {
+    return tab;
   }
 
-  return tab;
+  if (target.createWithHeaders) {
+    logger.info("Creating missing Google Sheets tab.", { tabName: target.tabName });
+    return doc.addSheet({
+      title: target.tabName,
+      headerValues: target.createWithHeaders,
+      gridProperties: {
+        rowCount: 1000,
+        columnCount: target.createWithHeaders.length,
+        frozenRowCount: 1,
+      },
+    });
+  }
+
+  throw new Error(`Sheet tab "${target.tabName}" not found in spreadsheet ${target.sheetId}.`);
 };
 
-const getSheet = () => {
-  sheetPromise ??= loadSheet().catch((error) => {
-    // Let the next call retry from scratch instead of caching a rejected
-    // promise forever (e.g. the sheet wasn't shared with the service
-    // account yet at boot time).
-    sheetPromise = null;
-    throw error;
-  });
+const getSheet = (target: SheetTarget) => {
+  const key = `${target.sheetId}::${target.tabName}`;
+  let promise = sheetPromises.get(key);
 
-  return sheetPromise;
+  if (!promise) {
+    promise = loadSheet(target).catch((error) => {
+      // Let the next call retry from scratch instead of caching a rejected
+      // promise forever (e.g. the sheet wasn't shared with the service
+      // account yet at boot time).
+      sheetPromises.delete(key);
+      throw error;
+    });
+    sheetPromises.set(key, promise);
+  }
+
+  return promise;
 };
 
 // Never lets a Sheets outage or misconfiguration break registration/payment
@@ -122,13 +188,24 @@ export const appendRegistrationRow = async (row: {
   // registrant's own name when no GST invoice was requested.
   billerName: string;
   secondInstallmentTotal: number;
+  // Only written to the online sheet, which has columns for them.
+  instagramHandle?: string;
+  experienceMonths?: number | null;
+  billingAddress?: string;
 }) => {
-  if (!isConfigured()) {
+  if (row.variant === "online") {
+    await appendOnlineRegistrationRow(row);
+    return;
+  }
+
+  const target = offlineTarget();
+
+  if (!isConfigured(target)) {
     return;
   }
 
   try {
-    const tab = await getSheet();
+    const tab = await getSheet(target);
     await tab.addRow({
       Timestamp: new Date().toISOString(),
       Name: row.name,
@@ -178,12 +255,14 @@ export const upsertFullRegistrationRow = async (row: {
   secondInstallmentPaid: number;
   secondInstallmentRemaining: number;
 }): Promise<{ added: boolean; reason?: string }> => {
-  if (!isConfigured()) {
+  const target = offlineTarget();
+
+  if (!isConfigured(target)) {
     return { added: false, reason: "Google Sheets is not configured." };
   }
 
   try {
-    const tab = await getSheet();
+    const tab = await getSheet(target);
     const rows = await tab.getRows();
     const alreadyExists = rows.some(
       (existing) =>
@@ -227,6 +306,11 @@ export const upsertFullRegistrationRow = async (row: {
 export const upsertPaymentStatusRow = async (input: {
   mobile: string;
   courseName: string;
+  variant: "online" | "offline";
+  // This transaction's own status and bank reference — only the online
+  // sheet records them directly; the offline sheet keeps its ledger form.
+  paymentStatus: string;
+  txnID?: string;
   advanceMerchantTxnNo?: string;
   advanceAmount?: number;
   advanceStatusText: string;
@@ -234,12 +318,19 @@ export const upsertPaymentStatusRow = async (input: {
   secondInstallmentPaid: number;
   secondInstallmentRemaining: number;
 }) => {
-  if (!isConfigured()) {
+  if (input.variant === "online") {
+    await upsertOnlinePaymentRow(input);
+    return;
+  }
+
+  const target = offlineTarget();
+
+  if (!isConfigured(target)) {
     return;
   }
 
   try {
-    const tab = await getSheet();
+    const tab = await getSheet(target);
     const rows = await tab.getRows();
     const match = rows.find(
       (row) =>
@@ -282,6 +373,133 @@ export const upsertPaymentStatusRow = async (input: {
     });
   } catch (error) {
     logger.error("Failed to update payment status in Google Sheets.", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  }
+};
+
+const appendOnlineRegistrationRow = async (row: {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  state: string;
+  courseName: string;
+  advanceAmount: number;
+  pan: string;
+  gstin: string;
+  billerName: string;
+  instagramHandle?: string;
+  experienceMonths?: number | null;
+  billingAddress?: string;
+}) => {
+  const target = onlineTarget();
+
+  if (!isConfigured(target)) {
+    return;
+  }
+
+  try {
+    const tab = await getSheet(target);
+    await tab.addRow({
+      Timestamp: new Date().toISOString(),
+      Name: row.name,
+      Phone: asPlainText(row.phone),
+      Email: row.email,
+      City: row.city,
+      State: row.state,
+      Instagram: row.instagramHandle || "",
+      ExperienceMonths: row.experienceMonths ?? "",
+      Course: row.courseName,
+      PAN: row.pan,
+      GSTIN: row.gstin,
+      BillingName: row.billerName || row.name,
+      BillingAddress: row.billingAddress || "",
+      Amount: row.advanceAmount,
+      PaymentStatus: "REGISTERED",
+      MerchantTxnNo: "",
+      BankTxnID: "",
+      PaidAt: "",
+      UpdatedAt: "",
+    });
+  } catch (error) {
+    logger.error("Failed to append online registration row to Google Sheets.", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  }
+};
+
+const upsertOnlinePaymentRow = async (input: {
+  mobile: string;
+  courseName: string;
+  paymentStatus: string;
+  txnID?: string;
+  advanceMerchantTxnNo?: string;
+  advanceAmount?: number;
+  advanceStatusText: string;
+}) => {
+  const target = onlineTarget();
+
+  if (!isConfigured(target)) {
+    return;
+  }
+
+  try {
+    const tab = await getSheet(target);
+    const rows = await tab.getRows();
+    const match = rows.find(
+      (row) =>
+        lastTenDigits(row.get("Phone") ?? "") === lastTenDigits(input.mobile) &&
+        row.get("Course") === input.courseName,
+    );
+
+    const now = new Date().toISOString();
+    const isPaid = input.advanceStatusText === "PAID";
+    const isThisAttemptTheSuccess = input.paymentStatus === "SUCCESS";
+    const alreadyPaid = match?.get("PaymentStatus") === "PAID";
+
+    // A later abandoned/failed retry must never overwrite the row of the
+    // attempt that actually paid — once a row says PAID, only the paying
+    // transaction itself may touch it again.
+    if (alreadyPaid && !isThisAttemptTheSuccess) {
+      return;
+    }
+
+    const fields: Record<string, string | number> = {
+      PaymentStatus: isPaid ? "PAID" : input.paymentStatus,
+      UpdatedAt: now,
+    };
+
+    if (input.advanceMerchantTxnNo) {
+      fields.MerchantTxnNo = input.advanceMerchantTxnNo;
+      fields.BankTxnID = input.txnID || "";
+    }
+
+    if (input.advanceAmount !== undefined) {
+      fields.Amount = input.advanceAmount;
+    }
+
+    if (isThisAttemptTheSuccess) {
+      fields.PaidAt = now;
+    }
+
+    if (match) {
+      match.assign(fields);
+      await match.save();
+      return;
+    }
+
+    // Payment arrived without a registration row (shouldn't happen — the
+    // registration form is required first). Keep the update rather than
+    // dropping it, so nothing paid is ever missing from the sheet.
+    await tab.addRow({
+      Timestamp: now,
+      Phone: asPlainText(input.mobile),
+      Course: input.courseName,
+      ...fields,
+    });
+  } catch (error) {
+    logger.error("Failed to update online payment status in Google Sheets.", {
       message: error instanceof Error ? error.message : "unknown error",
     });
   }

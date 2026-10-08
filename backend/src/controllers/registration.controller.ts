@@ -1,18 +1,24 @@
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Response } from "express";
 
 import { isHttpError } from "../lib/http-error.js";
 import type { AuthenticatedRequest } from "../middleware/require-auth.js";
 import { createRegistration, hasRegistered } from "../services/registration.service.js";
 
 export const createRegistrationHandler = async (
-  request: Request,
+  request: AuthenticatedRequest,
   response: Response,
   next: NextFunction,
 ) => {
   try {
+    const user = request.user;
+
+    if (!user) {
+      response.status(401).json({ message: "Please log in to continue." });
+      return;
+    }
+
     const {
       name,
-      phone,
       email,
       city,
       state,
@@ -27,7 +33,20 @@ export const createRegistrationHandler = async (
       amount,
     } = request.body as Record<string, unknown>;
 
-    if (!name || !phone || !email || !city || !state || !pan || !courseName || !amount) {
+    // The phone on a registration is always the OTP-verified login number,
+    // never a free-typed one: it's the key that links this registration to
+    // the person's payments, invoice and sheet row. A different number here
+    // used to leave orphaned rows nothing would ever match.
+    const phone = user.phone;
+
+    if (!phone) {
+      response.status(400).json({
+        message: "Your account is missing a verified mobile number. Please log in again.",
+      });
+      return;
+    }
+
+    if (!name || !email || !city || !state || !pan || !courseName || !amount) {
       response.status(400).json({ message: "Missing required fields." });
       return;
     }

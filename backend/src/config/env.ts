@@ -19,13 +19,43 @@ const readRequired = (key: string) => {
 
 const readOptional = (key: string) => process.env[key]?.trim() || "";
 
+const nodeEnv = readOptional("NODE_ENV") || "development";
+
+// Which deployment this is: "production" (the live site), "staging" (the
+// separate test deployment on Render/Vercel) or "development" (local).
+// Separate from NODE_ENV on purpose: staging must run with
+// NODE_ENV=production so cross-site cookies work between vercel.app and
+// onrender.com, yet still be allowed test-only tools like the OTP bypass.
+const appEnv = readOptional("APP_ENV") || (nodeEnv === "production" ? "production" : "development");
+
 export const env = {
-  nodeEnv: readOptional("NODE_ENV") || "development",
+  nodeEnv,
+  appEnv,
+  // Extra browser origins allowed to call the API (comma-separated), on
+  // top of FRONTEND_BASE_URL and the built-in list in server.ts — e.g. a
+  // staging Vercel URL.
+  extraAllowedOrigins: readOptional("ALLOWED_ORIGINS")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean),
   port: Number(readOptional("PORT") || 4000),
   mongodbUri: readRequired("MONGODB_URI"),
+  mongodbDbName: readOptional("MONGODB_DB_NAME") || "meera_sakhrani",
+  // Online-masterclass registrations live in their own database (shown as
+  // a separate "folder" in MongoDB Atlas). Users, OTP challenges and the
+  // payments ledger stay shared in the main database — one login works for
+  // every class, and every ICICI transaction is looked up in one place.
+  mongodbOnlineDbName: readOptional("MONGODB_ONLINE_DB_NAME") || "online_masterclass",
   authJwtSecret: readOptional("AUTH_JWT_SECRET"),
   authCookieName: readOptional("AUTH_COOKIE_NAME") || "ms_session",
-  otpDevMode: (readOptional("OTP_DEV_MODE") || "").toLowerCase() === "true",
+  // Developer OTP bypass (see auth.service requestOtp): no SMS is sent and
+  // the code is handed straight back to the login popup. Needs BOTH
+  // OTP_DEV_MODE=true AND a non-live deployment (local, or APP_ENV=staging)
+  // — either one alone keeps it off, so it can never switch on for real
+  // customers by a single stray variable.
+  otpDevMode:
+    (readOptional("OTP_DEV_MODE") || "").toLowerCase() === "true" &&
+    (nodeEnv !== "production" || appEnv === "staging"),
   smtpHost: readOptional("SMTP_HOST"),
   smtpPort: Number(readOptional("SMTP_PORT") || 587),
   smtpUser: readOptional("SMTP_USER"),
@@ -80,4 +110,12 @@ export const env = {
   // The tab name changes every cohort (e.g. "September_2026") — configurable
   // rather than hardcoded so a new month doesn't need a code change.
   googleSheetsTabName: readOptional("GOOGLE_SHEETS_TAB_NAME") || "Registrations",
+  // Online-masterclass registrations get their own sheet, with columns
+  // built for a single one-time payment rather than the offline
+  // advance + installment ledger. Defaults to a separate tab inside the
+  // same spreadsheet (created automatically on first write); point
+  // GOOGLE_SHEETS_ONLINE_SHEET_ID at a different spreadsheet to keep them
+  // in a completely separate file instead.
+  googleSheetsOnlineSheetId: readOptional("GOOGLE_SHEETS_ONLINE_SHEET_ID") || readOptional("GOOGLE_SHEET_ID"),
+  googleSheetsOnlineTabName: readOptional("GOOGLE_SHEETS_ONLINE_TAB_NAME") || "Online_Masterclass",
 };

@@ -101,12 +101,37 @@ const extractMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+// The widget's callbacks are the only way its calls ever settle — if its
+// request stalls (blocked script, flaky network, widget misconfigured) it
+// may call neither, which used to leave the button spinning forever. Give
+// up after this long with an error the customer can act on.
+const WIDGET_CALL_TIMEOUT_MS = 25000;
+
+const withTimeout = <T,>(promise: Promise<T>) =>
+  new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error("The OTP service is taking too long to respond. Please try again.")),
+      WIDGET_CALL_TIMEOUT_MS,
+    );
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+
 // fullMobile must already include the country's dial code (e.g. "919876543210"
 // for India, "254712345678" for Kenya) — digits only, no leading "+".
 export const sendWidgetOtp = async (fullMobile: string) => {
-  await initMsg91Widget();
+  await withTimeout(initMsg91Widget());
 
-  return new Promise<void>((resolve, reject) => {
+  return withTimeout(new Promise<void>((resolve, reject) => {
     if (typeof window.sendOtp !== "function") {
       reject(new Error("OTP widget is not ready yet. Please try again."));
       return;
@@ -117,15 +142,15 @@ export const sendWidgetOtp = async (fullMobile: string) => {
       () => resolve(),
       (error) => reject(new Error(extractMessage(error, "Unable to send the code. Please try again."))),
     );
-  });
+  }));
 };
 
 // Resolves with the MSG91 access token, which must be sent to our backend
 // to be verified server-side before it's trusted as a real login.
 export const verifyWidgetOtp = async (otp: string) => {
-  await initMsg91Widget();
+  await withTimeout(initMsg91Widget());
 
-  return new Promise<string>((resolve, reject) => {
+  return withTimeout(new Promise<string>((resolve, reject) => {
     if (typeof window.verifyOtp !== "function") {
       reject(new Error("OTP widget is not ready yet. Please try again."));
       return;
@@ -148,13 +173,13 @@ export const verifyWidgetOtp = async (otp: string) => {
       },
       (error) => reject(new Error(extractMessage(error, "Incorrect code. Please try again."))),
     );
-  });
+  }));
 };
 
 export const retryWidgetOtp = async () => {
-  await initMsg91Widget();
+  await withTimeout(initMsg91Widget());
 
-  return new Promise<void>((resolve, reject) => {
+  return withTimeout(new Promise<void>((resolve, reject) => {
     if (typeof window.retryOtp !== "function") {
       reject(new Error("OTP widget is not ready yet. Please try again."));
       return;
@@ -165,5 +190,5 @@ export const retryWidgetOtp = async () => {
       () => resolve(),
       (error) => reject(new Error(extractMessage(error, "Unable to resend the code. Please try again."))),
     );
-  });
+  }));
 };

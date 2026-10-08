@@ -32,6 +32,10 @@ const allowedOrigins = new Set([
   "https://www.meerasakhrani.com",
   "https://meerasakhrani.in",
   "https://www.meerasakhrani.in",
+  // Whatever site this deployment serves (e.g. the staging Vercel URL),
+  // plus any extras from ALLOWED_ORIGINS.
+  env.frontendBaseUrl.replace(/\/$/, ""),
+  ...env.extraAllowedOrigins,
 ]);
 
 const isTrustedBrowserOrigin = (origin?: string | null) => {
@@ -115,7 +119,10 @@ app.use(
 );
 
 app.listen(env.port, () => {
-  logger.info(`Backend listening on port ${env.port}.`);
+  logger.info(`Backend listening on port ${env.port} (${env.appEnv}).`);
+  if (env.otpDevMode) {
+    logger.warn("OTP DEV MODE IS ON — login codes are shown in the browser and no SMS is sent. Never enable this on the live site.");
+  }
   startReconciliationScheduler();
   backfillPaymentTypes().catch((error) => {
     logger.error("Failed to backfill legacy payment types.", {
