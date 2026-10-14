@@ -48,30 +48,29 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
           <div className="overflow-hidden border border-dusty-rose/30 bg-background shadow-elegant">
             {/* Price + enrol */}
             <div className="flex flex-col justify-center bg-primary/5 px-5 py-6 text-center sm:p-8 md:p-10">
-              <p className="mb-2 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
+              <p className="mb-4 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
                 {MASTERCLASS_DETAILS.feeLabel}
               </p>
-              <span className="mx-auto mb-4 inline-flex items-center gap-2 border border-dusty-rose/40 px-3 py-1 font-sans text-[10px] tracking-[0.25em] font-medium text-dusty-rose uppercase sm:text-[11px]">
-                <span className="h-1 w-1 rounded-full bg-dusty-rose" />
-                Save {ONLINE_DISCOUNT_PERCENT}%
-              </span>
-              <p className="mb-2 whitespace-nowrap font-display text-4xl text-foreground min-[400px]:text-5xl md:text-6xl">
+              {/* List price first, then the offer price, so the eye reads 20k → 15k */}
+              <p className="mb-1 whitespace-nowrap font-display text-3xl text-foreground/45 min-[400px]:text-4xl md:text-[2.75rem]">
+                <span className="line-through decoration-dusty-rose decoration-2">
+                  {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee)}
+                </span>{" "}
+                <span className="text-lg min-[400px]:text-xl md:text-2xl">+ GST</span>
+              </p>
+              <p className="mb-4 whitespace-nowrap font-display text-4xl text-foreground min-[400px]:text-5xl md:text-6xl">
                 {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}{" "}
                 <span className="align-middle text-xl min-[400px]:text-2xl md:text-3xl">+ GST</span>
               </p>
-              <p className="mb-3 font-sans text-xs tracking-[0.04em] text-muted-foreground sm:text-sm">
-                <span className="line-through decoration-muted-foreground/60">
-                  {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee)} + GST
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+                <span className="inline-flex items-center gap-2 border border-dusty-rose/40 px-3 py-1 font-sans text-[10px] font-medium tracking-[0.25em] text-dusty-rose uppercase sm:text-[11px]">
+                  <span className="h-1 w-1 rounded-full bg-dusty-rose" />
+                  Save {ONLINE_DISCOUNT_PERCENT}%
                 </span>
-                <span className="mx-2 text-dusty-rose/50">|</span>
-                <span className="font-medium text-dusty-rose">
+                <span className="font-sans text-xs font-medium tracking-[0.04em] text-dusty-rose sm:text-sm">
                   You save {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee - MASTERCLASS_DETAILS.baseFee)}
                 </span>
-              </p>
-              <p className="whitespace-nowrap font-sans text-xs font-semibold tracking-[0.02em] text-[#8B6D5C] sm:text-sm">
-                *{formatInrSymbol(MASTERCLASS_DETAILS.baseFee)} + 18% GST ={" "}
-                {formatInrSymbol(MASTERCLASS_DETAILS.fee)}
-              </p>
+              </div>
 
               <div className="mt-6 border-t border-dusty-rose/20 pt-5 md:mt-8 md:pt-6">
                 <button
