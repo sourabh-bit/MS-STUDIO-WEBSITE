@@ -429,7 +429,9 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
 
   await sendInvoiceEmail(payment.email, {
     invoiceNo,
-    customerName: payment.customerName,
+    // The registration form's name, not the login account's — the account
+    // name is whatever was typed at first OTP sign-up and can be stale.
+    customerName: registration?.name || payment.customerName,
     courseName: payment.courseName,
     amount: payment.amount,
     pdfBuffer,
@@ -900,10 +902,20 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
     return { merchantTxnNo: existingPayment.merchantTxnNo, redirectUrl, reused: true };
   }
 
+  // Prefer the name from the registration form over the login account's
+  // name, so the success page, ICICI and the confirmation email all match
+  // the invoice (see issueInvoiceForPayment).
+  const registration = await registrationModelFor(input.variant).findOne({
+    phone: new RegExp(`${lastTenDigits(input.mobile)}$`),
+    courseName: input.courseName,
+    variant: input.variant,
+  });
+  const customerName = registration?.name?.trim() || input.customerName;
+
   const payment = await Payment.create({
     merchantTxnNo: createMerchantTxnNo(input.variant),
     userId: input.userId,
-    customerName: input.customerName,
+    customerName,
     email: input.email.toLowerCase(),
     mobile: input.mobile,
     amount: requestedAmount,
@@ -928,7 +940,7 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
     customerEmailID: input.email.toLowerCase(),
     returnURL: env.iciciReturnUrl,
     customerMobileNo: input.mobile,
-    customerName: input.customerName,
+    customerName,
   });
 
   const signedRequest = attachSecureHash(initiateRequest, env.iciciSecretKey);
