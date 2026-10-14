@@ -67,7 +67,7 @@ const MasterclassCheckout = () => {
       return;
     }
 
-    navigate("/classes");
+    navigate(`/classes?type=${paymentDetails.variant}`);
   };
 
   const { lineTotal, baseTotal, gstTotal } = useMemo(() => {
@@ -223,7 +223,7 @@ const MasterclassCheckout = () => {
                   and class details are sent to your email.
                 </p>
                 <Link
-                  to="/classes"
+                  to={`/classes?type=${paymentDetails.variant}`}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground transition-all duration-300 hover:bg-dusty-rose"
                 >
                   Back to Classes

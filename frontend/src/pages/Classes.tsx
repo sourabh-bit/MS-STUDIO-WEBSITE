@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MapPin, Video } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OfflineClasses from "@/components/classes/OfflineClasses";
@@ -6,7 +6,16 @@ import OnlineClasses from "@/components/classes/OnlineClasses";
 // import ClassesHeader from "@/components/classes/ClassesHeader";
 
 const Classes = () => {
-  const [activeTab, setActiveTab] = useState("offline");
+  // The tab lives in the URL (?type=online) so going back from checkout,
+  // payment or login returns to the class the visitor was looking at.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("type") === "online" ? "online" : "offline";
+
+  const setActiveTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("type", tab);
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <main className="min-h-screen overflow-x-clip bg-background">

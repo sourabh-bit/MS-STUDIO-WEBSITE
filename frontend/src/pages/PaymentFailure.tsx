@@ -48,7 +48,7 @@ const PaymentFailure = () => {
       return;
     }
 
-    navigate("/classes");
+    navigate(`/classes?type=${paymentDetails.variant}`);
   };
 
   const infoText = paymentDetails.transactionId
