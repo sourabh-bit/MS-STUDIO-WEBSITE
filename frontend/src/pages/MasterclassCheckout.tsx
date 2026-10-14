@@ -8,7 +8,13 @@ import PinnedEditorialTag from "@/components/classes/PinnedEditorialTag";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getPaymentSummary, initiatePayment } from "@/lib/payment";
-import { formatInr, getMasterclassPaymentDetails, preGstAmount } from "@/lib/masterclass";
+import {
+  MASTERCLASS_DETAILS,
+  ONLINE_DISCOUNT_PERCENT,
+  formatInr,
+  getMasterclassPaymentDetails,
+  preGstAmount,
+} from "@/lib/masterclass";
 import type { PaymentSummaryResponse } from "@/types/payment";
 
 const MasterclassCheckout = () => {
@@ -70,17 +76,36 @@ const MasterclassCheckout = () => {
     navigate(`/classes?type=${paymentDetails.variant}`);
   };
 
-  const { lineTotal, baseTotal, gstTotal } = useMemo(() => {
+  const { lineTotal, baseTotal, gstTotal, discountTotal, listTotal } = useMemo(() => {
+    const total = paymentDetails.fee;
+
+    // Online offer: break the price down from the list price, then take the
+    // discount off, so the customer sees what they're saving. Only at the
+    // real offer price — anything else (e.g. a ₹1 gateway test) falls
+    // through to the plain breakdown below.
+    if (paymentDetails.variant === "online" && total === MASTERCLASS_DETAILS.fee) {
+      const listBase = MASTERCLASS_DETAILS.originalBaseFee;
+      const listGst = Math.round(listBase * 0.18);
+      return {
+        lineTotal: total,
+        baseTotal: listBase,
+        gstTotal: listGst,
+        listTotal: listBase + listGst,
+        discountTotal: listBase + listGst - total,
+      };
+    }
+
     // Every course fee is GST-inclusive — the invoice backs the 18% out of
     // the amount paid, so the breakdown here has to match it for both.
-    const total = paymentDetails.fee;
     const base = preGstAmount(total);
     return {
       lineTotal: total,
       baseTotal: base,
       gstTotal: total - base,
+      listTotal: total,
+      discountTotal: 0,
     };
-  }, [paymentDetails.fee]);
+  }, [paymentDetails.fee, paymentDetails.variant]);
 
   const formatInrSymbol = (value: number) => `₹${new Intl.NumberFormat("en-IN").format(value)}`;
 
@@ -423,8 +448,18 @@ const MasterclassCheckout = () => {
                       <p className="mt-1 hidden max-w-sm font-sans text-sm leading-relaxed text-muted-foreground sm:block">
                         {paymentDetails.summaryLabel}
                       </p>
-                      <p className="mt-2 font-serif text-lg text-foreground sm:text-xl">
+                      <p className="mt-2 flex flex-wrap items-baseline gap-x-2 font-serif text-lg text-foreground sm:text-xl">
                         {formatInrSymbol(lineTotal)}
+                        {discountTotal > 0 && (
+                          <>
+                            <span className="font-sans text-sm text-muted-foreground line-through">
+                              {formatInrSymbol(listTotal)}
+                            </span>
+                            <span className="font-sans text-xs font-semibold tracking-[0.08em] text-dusty-rose uppercase">
+                              {ONLINE_DISCOUNT_PERCENT}% off
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -450,6 +485,13 @@ const MasterclassCheckout = () => {
                         <span>{formatInrSymbol(gstTotal)}</span>
                       </div>
 
+                      {discountTotal > 0 && (
+                        <div className="flex items-center justify-between font-sans text-sm text-emerald-700">
+                          <span>Discount ({ONLINE_DISCOUNT_PERCENT}% off)</span>
+                          <span>−{formatInrSymbol(discountTotal)}</span>
+                        </div>
+                      )}
+
                       <div className="border-t border-dashed border-border/40 pt-3">
                         <div className="flex items-center justify-between">
                           <span className="font-sans text-sm font-semibold uppercase tracking-[0.08em] text-foreground">
@@ -460,6 +502,12 @@ const MasterclassCheckout = () => {
                           </span>
                         </div>
                       </div>
+
+                      {discountTotal > 0 && (
+                        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-center font-sans text-xs font-semibold text-emerald-700">
+                          You're saving {formatInrSymbol(discountTotal)} on this order
+                        </p>
+                      )}
 
                       {isOffline && (
                         <p className="font-sans text-xs leading-relaxed text-muted-foreground">

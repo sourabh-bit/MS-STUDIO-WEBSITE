@@ -3,7 +3,7 @@ import { CalendarDays, Clock, Loader2, Lock, Monitor } from "lucide-react";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
-import { MASTERCLASS_DETAILS, formatInrSymbol } from "@/lib/masterclass";
+import { MASTERCLASS_DETAILS, ONLINE_DISCOUNT_PERCENT, formatInrSymbol } from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";
 
@@ -51,6 +51,14 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
               <p className="mb-2 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
                 {MASTERCLASS_DETAILS.feeLabel}
               </p>
+              <div className="mb-1 flex items-center justify-center gap-3">
+                <span className="font-display text-xl text-muted-foreground line-through decoration-dusty-rose/70 decoration-1 min-[400px]:text-2xl">
+                  {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee)} + GST
+                </span>
+                <span className="rounded-full bg-dusty-rose px-2.5 py-1 font-sans text-[10px] font-semibold tracking-[0.15em] text-white uppercase sm:text-[11px]">
+                  {ONLINE_DISCOUNT_PERCENT}% Off
+                </span>
+              </div>
               <p className="mb-2 whitespace-nowrap font-display text-4xl text-foreground min-[400px]:text-5xl md:text-6xl">
                 {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}{" "}
                 <span className="align-middle text-xl min-[400px]:text-2xl md:text-3xl">+ GST</span>

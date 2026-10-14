@@ -4,6 +4,9 @@
 // payment time. `baseFee` is the pre-GST price shown on the brochure.
 export const MASTERCLASS_DETAILS = {
   courseName: "Meera Sakhrani Online Masterclass",
+  // Pre-GST list price shown crossed out next to baseFee. Display only —
+  // the amount charged is always `fee`.
+  originalBaseFee: 20000,
   baseFee: 15000,
   fee: 17700,
   feeLabel: "One-time Masterclass Fee",
@@ -32,6 +35,12 @@ export const IS_ONLINE_REGISTRATION_OPEN = true;
 // Price before 18% GST, for "₹X + GST" breakdowns. Every course fee is
 // charged GST-inclusive, and the invoice backs the tax out the same way.
 export const preGstAmount = (inclusiveAmount: number) => Math.round(inclusiveAmount / 1.18);
+
+// Online masterclass offer: list price vs. offer price, both before GST.
+// GST is the same 18% on both, so the percentage is identical either way.
+export const ONLINE_DISCOUNT_PERCENT = Math.round(
+  (1 - MASTERCLASS_DETAILS.baseFee / MASTERCLASS_DETAILS.originalBaseFee) * 100,
+);
 
 export const formatInrSymbol = (amount: number) =>
   `₹${new Intl.NumberFormat("en-IN").format(amount)}`;
