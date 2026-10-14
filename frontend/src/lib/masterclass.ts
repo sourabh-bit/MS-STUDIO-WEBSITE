@@ -11,7 +11,7 @@ export const MASTERCLASS_DETAILS = {
   trustLine: "Secure payment via ICICI Bank",
   // Shown on the brochure — update once the next batch is scheduled.
   dateLabel: "4 November 2026",
-  timeLabel: "12:00 PM – 5:30 PM IST",
+  timeLabel: "12:00 PM – 6:00 PM IST",
   modeLabel: "Online (Live)",
 } as const;
 

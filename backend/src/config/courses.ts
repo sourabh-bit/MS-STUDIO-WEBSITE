@@ -26,7 +26,7 @@ export const getCourseAdvanceFee = (courseName: string) => COURSE_ADVANCE_FEES[c
 // whenever the next batch is scheduled.
 export const ONLINE_CLASS_DETAILS = {
   dateLabel: "4 November 2026",
-  timeLabel: "12:00 PM – 5:30 PM IST",
+  timeLabel: "12:00 PM – 6:00 PM IST",
   modeLabel: "Online (Live)",
   joiningNote: "Your link to join the live session will be shared with you before the class begins.",
   supportWhatsApp: "919818793850",

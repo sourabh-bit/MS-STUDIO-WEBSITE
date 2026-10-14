@@ -71,7 +71,7 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
                   className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap min-h-[48px] rounded-full border border-primary/10 bg-primary px-6 py-3.5 font-sans text-[13px] tracking-[0.2em] text-primary-foreground uppercase shadow-[-4px_6px_14px_-3px_rgba(0,0,0,0.22),-1px_2px_4px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-dusty-rose active:brightness-95 md:py-4 md:text-sm disabled:cursor-wait disabled:opacity-80"
                 >
                   {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isEnrolled ? "You're Enrolled" : "Enrol Securely"}
+                  {isEnrolled ? "You're Enrolled" : "Enrol Now"}
                 </button>
 
                 {isEnrolled ? (

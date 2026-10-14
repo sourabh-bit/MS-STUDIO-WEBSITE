@@ -23,7 +23,7 @@ const MasterclassFlow = () => {
       description: "The AI tools and editing tips Meera uses to showcase your work and attract clients."
     },
     {
-      time: "5:00 PM – 5:30 PM",
+      time: "5:00 PM – 6:00 PM",
       title: "QnA Session",
       description: "Ask Meera your questions on technique, products, branding, and growing your career."
     },
