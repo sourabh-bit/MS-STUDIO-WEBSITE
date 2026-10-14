@@ -1,4 +1,4 @@
-import bridalImage from "@/assets/classes/online-bridal.png";
+import bridalImage from "@/assets/classes/online-bridal.webp";
 
 const CourseOverview = () => {
   const highlights = [

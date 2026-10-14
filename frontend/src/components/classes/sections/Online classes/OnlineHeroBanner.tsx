@@ -4,7 +4,7 @@ import { CalendarDays, Loader2, MonitorPlay, Play, Volume2, VolumeX } from "luci
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
-import heroBackground from "@/assets/classes/online-hero-bg.png";
+import heroBackground from "@/assets/classes/online-hero-bg.webp";
 import { MASTERCLASS_DETAILS, MASTERCLASS_PREVIEW_VIDEO, formatInrSymbol } from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";

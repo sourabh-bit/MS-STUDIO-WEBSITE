@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 
 import heroMasterclass from "@/assets/classes/hero-masterclass.jpg";
-import onlineHero from "@/assets/classes/online-hero.png";
+import onlineHero from "@/assets/classes/online-hero.webp";
 import PinnedEditorialTag from "@/components/classes/PinnedEditorialTag";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
