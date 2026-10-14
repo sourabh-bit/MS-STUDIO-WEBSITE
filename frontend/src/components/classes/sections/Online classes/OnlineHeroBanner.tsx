@@ -5,7 +5,7 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
 import heroBackground from "@/assets/classes/online-hero-bg.webp";
-import { MASTERCLASS_DETAILS, MASTERCLASS_PREVIEW_VIDEO, formatInrSymbol } from "@/lib/masterclass";
+import { MASTERCLASS_DETAILS, MASTERCLASS_PREVIEW_VIDEO } from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";
 
@@ -139,18 +139,6 @@ const OnlineHeroBanner = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps
                 >
                   Registration &amp; Fees
                 </a>
-
-                {/* Price, tied to the registration options above it */}
-                <div className="flex items-center justify-center gap-3 py-1">
-                  <span className="h-px w-6 bg-gradient-to-r from-transparent to-dusty-rose/60" />
-                  <p className="font-serif text-xl text-foreground md:text-2xl">
-                    {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}
-                    <span className="ml-1.5 font-sans text-[11px] tracking-[0.15em] text-muted-foreground uppercase">
-                      + GST
-                    </span>
-                  </p>
-                  <span className="h-px w-6 bg-gradient-to-l from-transparent to-dusty-rose/60" />
-                </div>
 
                 {/* Primary action */}
                 <button
