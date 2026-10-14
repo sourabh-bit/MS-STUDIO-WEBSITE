@@ -10,9 +10,18 @@ export const MASTERCLASS_DETAILS = {
   summaryLabel: "4-hour live online masterclass",
   trustLine: "Secure payment via ICICI Bank",
   // Shown on the brochure — update once the next batch is scheduled.
-  dateLabel: "To Be Announced",
-  timeLabel: "12:00 PM – 4:00 PM IST",
+  dateLabel: "4 November 2026",
+  timeLabel: "12:00 PM – 5:30 PM IST",
   modeLabel: "Online (Live)",
+} as const;
+
+// Hero preview clip, looped silently in the online class hero. A web
+// version (landscape 1280×720 H.264) of the original recording; the poster
+// is its opening frame, shown while the clip loads. If the file is missing
+// the hero shows a placeholder instead.
+export const MASTERCLASS_PREVIEW_VIDEO = {
+  src: "/assets/classes/online-preview.mp4",
+  poster: "/assets/classes/online-preview.jpg",
 } as const;
 
 // Manual on/off switch for new online-masterclass registrations. While

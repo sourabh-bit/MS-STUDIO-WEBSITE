@@ -1,6 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Calendar, Instagram, Mail, Phone, GraduationCap } from "lucide-react";
+import { Menu, X, Calendar, Instagram, Mail, GraduationCap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -144,15 +147,15 @@ const Navbar = () => {
           <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="mailto:meerasakhranibeauty@gmail.com">
             <Mail className="w-4 h-4" />
           </a>
-          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href="https://wa.me/918448229694" target="_blank" rel="noopener noreferrer">
-            <Phone className="w-4 h-4" />
+          <a className="text-[#4F3F40]/80 hover:text-[#7A5E5F] transition" href={whatsappUrl(WHATSAPP_NUMBERS.booking)} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+            <WhatsAppIcon className="w-4 h-4" />
           </a>
         </div>
       </div>
 
-      <div className="flex lg:hidden w-full items-center justify-between px-5 h-20">
+      <div className="flex lg:hidden w-full items-center justify-between px-5 h-16">
         <Link to="/" className="flex flex-col items-center justify-center leading-none text-center">
-          <span className="font-script text-4xl bg-gradient-to-b from-[#8A6A67] to-[#5A3F3F] text-transparent bg-clip-text">
+          <span className="font-script text-[32px] bg-gradient-to-b from-[#8A6A67] to-[#5A3F3F] text-transparent bg-clip-text">
             Meera Sakhrani
           </span>
           <span className="font-display text-[10px] tracking-[0.42em] text-[#6F5654] uppercase -mt-1">
@@ -160,8 +163,8 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <button className="text-[#4F3F40]" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
+        <button className="-mr-2 p-2 text-[#4F3F40]" onClick={() => setIsOpen(!isOpen)} aria-label={isOpen ? "Close menu" : "Open menu"}>
+          {isOpen ? <X size={26} /> : <Menu size={26} />}
         </button>
       </div>
 
@@ -194,9 +197,15 @@ const Navbar = () => {
           </div>
 
           <div className="flex justify-center gap-6 mt-8 text-[#4F3F40]">
-            <Instagram className="w-6 h-6" />
-            <Mail className="w-6 h-6" />
-            <Phone className="w-6 h-6" />
+            <a href="https://instagram.com/meerasakhrani" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <Instagram className="w-6 h-6" />
+            </a>
+            <a href="mailto:meerasakhranibeauty@gmail.com" aria-label="Email">
+              <Mail className="w-6 h-6" />
+            </a>
+            <a href={whatsappUrl(WHATSAPP_NUMBERS.booking)} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+              <WhatsAppIcon className="w-6 h-6" />
+            </a>
           </div>
         </div>
       )}

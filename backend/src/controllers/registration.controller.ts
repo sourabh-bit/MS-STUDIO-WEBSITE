@@ -2,6 +2,8 @@ import type { NextFunction, Response } from "express";
 
 import { isHttpError } from "../lib/http-error.js";
 import type { AuthenticatedRequest } from "../middleware/require-auth.js";
+import { toClassVariant } from "../db/class-databases.js";
+import { ensureUserInClass } from "../services/auth.service.js";
 import { createRegistration, hasRegistered } from "../services/registration.service.js";
 
 export const createRegistrationHandler = async (
@@ -58,6 +60,9 @@ export const createRegistrationHandler = async (
       return;
     }
 
+    const classVariant = toClassVariant(variant);
+    await ensureUserInClass(classVariant, user);
+
     const parsedExperienceMonths =
       experienceMonths === undefined || experienceMonths === null || experienceMonths === ""
         ? undefined
@@ -76,7 +81,7 @@ export const createRegistrationHandler = async (
       billerName: billerName ? String(billerName) : undefined,
       address: address ? String(address) : undefined,
       courseName: String(courseName),
-      variant: String(variant).trim().toLowerCase() === "online" ? "online" : "offline",
+      variant: classVariant,
       amount: parsedAmount,
     });
 

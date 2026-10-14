@@ -1,4 +1,4 @@
-import { CalendarClock, Phone } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 
 import {
   Dialog,
@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
 type RegistrationClosedDialogProps = {
   open: boolean;
@@ -45,11 +47,13 @@ const RegistrationClosedDialog = ({
           Want to be the first to know?
         </p>
         <a
-          href="tel:+919818793850"
+          href={whatsappUrl(WHATSAPP_NUMBERS.school)}
+          target="_blank"
+          rel="noopener noreferrer"
           className="mt-2 inline-flex items-center justify-center gap-2 font-serif text-lg text-foreground transition-colors duration-300 hover:text-dusty-rose"
         >
-          <Phone className="h-4 w-4" />
-          +91 98187 93850
+          <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+          Chat on WhatsApp
         </a>
       </div>
 

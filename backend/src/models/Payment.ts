@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
+import { classModel, type ClassVariant } from "../db/class-databases.js";
+
 import type { PaymentLifecycleStatus, PaymentLogStage } from "../types/payment.js";
 
 const PAYMENT_LOG_STAGES = [
@@ -194,3 +196,8 @@ export type PaymentDocument = mongoose.HydratedDocument<
 
 export const Payment =
   mongoose.models.Payment || mongoose.model("Payment", paymentSchema, "payments");
+
+// The payments of one class's database — see db/class-databases.ts.
+// `Payment` above is the offline class's, kept for the maintenance scripts.
+export const paymentModelFor = (variant: ClassVariant) =>
+  classModel(variant, "Payment", paymentSchema, "payments");

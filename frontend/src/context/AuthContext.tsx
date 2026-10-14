@@ -9,13 +9,15 @@ import {
 } from "react";
 
 import { fetchCurrentUser, logout as logoutRequest } from "@/lib/auth";
-import type { AuthUser } from "@/types/auth";
+import type { AuthUser, ClassVariant } from "@/types/auth";
 
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
   isModalOpen: boolean;
-  requireAuth: (action: () => void) => void;
+  // The class the pending login is for (see ClassVariant).
+  loginVariant: ClassVariant;
+  requireAuth: (action: () => void, variant?: ClassVariant) => void;
   closeLoginModal: () => void;
   handleAuthenticated: (user: AuthUser) => void;
   logout: () => Promise<void>;
@@ -27,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loginVariant, setLoginVariant] = useState<ClassVariant>("offline");
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -37,13 +40,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const requireAuth = useCallback(
-    (action: () => void) => {
+    (action: () => void, variant: ClassVariant = "offline") => {
       if (user) {
         action();
         return;
       }
 
       pendingActionRef.current = action;
+      setLoginVariant(variant);
       setIsModalOpen(true);
     },
     [user],
@@ -77,6 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         isLoading,
         isModalOpen,
+        loginVariant,
         requireAuth,
         closeLoginModal,
         handleAuthenticated,

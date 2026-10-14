@@ -1,15 +1,11 @@
-import { CalendarDays, Check, Clock, Loader2, Lock, Monitor, Phone } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Lock, Monitor } from "lucide-react";
+
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
 import { MASTERCLASS_DETAILS, formatInrSymbol } from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";
-
-const INCLUDED = [
-  "4-hour live masterclass with Meera Sakhrani",
-  "Lake Como destination bridal look, start to finish",
-  "7 bonus takeaways on business, branding & content",
-  "GST invoice emailed instantly after payment",
-];
 
 const STEPS = ["Verify mobile", "Your details", "Secure payment"];
 
@@ -21,56 +17,37 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
   ];
 
   return (
-    <section id="enroll-online" className="scroll-mt-24 bg-[#F8F3EB] py-16 md:py-24 lg:py-32">
-      <div className="container mx-auto px-4">
-        <div className="mb-12 text-center md:mb-16">
-          <span className="mb-4 block font-sans text-xs tracking-[0.4em] text-dusty-rose uppercase">
+    <section id="enroll-online" className="scroll-mt-20 bg-[#F8F3EB] py-10 md:scroll-mt-24 md:py-24 lg:py-32">
+      <div className="container mx-auto px-5 sm:px-4">
+        <div className="mb-8 text-center md:mb-16">
+          <span className="mb-3 block font-sans text-[11px] tracking-[0.3em] sm:text-xs sm:tracking-[0.4em] md:mb-4 text-dusty-rose uppercase">
             Investment
           </span>
-          <h2 className="heading-section mb-4 text-foreground">Class Details &amp; Enrolment</h2>
-          <p className="text-elegant mx-auto max-w-2xl text-muted-foreground">
+          <h2 className="heading-section-compact mb-3 text-foreground md:mb-4">Class Details &amp; Enrolment</h2>
+          <p className="text-elegant mx-auto max-w-2xl text-[15px] text-muted-foreground md:text-lg">
             Join live from anywhere in the world
           </p>
         </div>
 
-        <div className="mx-auto mb-12 grid max-w-4xl gap-4 sm:grid-cols-3 md:mb-16 md:gap-6">
+        <div className="mx-auto mb-6 grid max-w-md gap-2 sm:mb-12 sm:max-w-4xl sm:grid-cols-3 sm:gap-4 md:mb-16 md:gap-6">
           {classDetails.map((detail) => (
             <div
               key={detail.label}
-              className="border border-border/30 bg-background p-6 text-center md:p-8"
+              className="flex items-center gap-4 border border-border/30 bg-background px-4 py-3 text-left sm:block sm:p-6 sm:text-center md:p-8"
             >
-              <detail.icon className="mx-auto mb-4 h-7 w-7 text-dusty-rose" />
-              <p className="mb-2 font-sans text-xs tracking-[0.2em] text-muted-foreground uppercase">
+              <detail.icon className="h-5 w-5 shrink-0 text-dusty-rose sm:mx-auto sm:mb-4 sm:h-7 sm:w-7" />
+              <p className="mb-0.5 font-sans text-[10px] tracking-[0.2em] text-muted-foreground uppercase sm:mb-2 sm:text-xs">
                 {detail.label}
               </p>
-              <p className="font-serif text-lg text-foreground md:text-xl">{detail.value}</p>
+              <p className="font-serif text-base text-foreground sm:text-lg md:text-xl">{detail.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="mx-auto mb-12 max-w-4xl">
-          <div className="grid overflow-hidden border border-dusty-rose/30 bg-background shadow-elegant md:grid-cols-[1.1fr_1fr]">
-            {/* What's included */}
-            <div className="border-b border-dusty-rose/20 p-6 sm:p-8 md:border-b-0 md:border-r md:p-10">
-              <p className="mb-6 font-sans text-xs tracking-[0.3em] text-dusty-rose uppercase">
-                What's Included
-              </p>
-              <ul className="space-y-4">
-                {INCLUDED.map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#F3D7DE]">
-                      <Check className="h-3.5 w-3.5 text-dusty-rose" />
-                    </span>
-                    <span className="font-serif text-base leading-relaxed text-foreground/85 md:text-lg">
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
+        <div className="mx-auto mb-6 max-w-md md:mb-12">
+          <div className="overflow-hidden border border-dusty-rose/30 bg-background shadow-elegant">
             {/* Price + enrol */}
-            <div className="flex flex-col justify-center bg-primary/5 p-6 text-center sm:p-8 md:p-10">
+            <div className="flex flex-col justify-center bg-primary/5 px-5 py-6 text-center sm:p-8 md:p-10">
               <p className="mb-2 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
                 {MASTERCLASS_DETAILS.feeLabel}
               </p>
@@ -83,7 +60,7 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
                 {formatInrSymbol(MASTERCLASS_DETAILS.fee)}
               </p>
 
-              <div className="mt-8 border-t border-dusty-rose/20 pt-6">
+              <div className="mt-6 border-t border-dusty-rose/20 pt-5 md:mt-8 md:pt-6">
                 <button
                   type="button"
                   onClick={onOpenCheckout}
@@ -91,7 +68,7 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
                   data-course={MASTERCLASS_DETAILS.courseName}
                   data-price={String(MASTERCLASS_DETAILS.fee)}
                   data-payment-trigger="section"
-                  className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose disabled:cursor-wait disabled:opacity-80"
+                  className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap min-h-[48px] rounded-full border border-primary/10 bg-primary px-6 py-3.5 font-sans text-[13px] tracking-[0.2em] text-primary-foreground uppercase shadow-[-4px_6px_14px_-3px_rgba(0,0,0,0.22),-1px_2px_4px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-dusty-rose active:brightness-95 md:py-4 md:text-sm disabled:cursor-wait disabled:opacity-80"
                 >
                   {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isEnrolled ? "You're Enrolled" : "Enrol Securely"}
@@ -124,23 +101,23 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
           </div>
         </div>
 
-        <div className="mx-auto max-w-2xl">
-          <div className="border border-dusty-rose/20 bg-dusty-rose/10 p-6 text-center">
+        <div className="mx-auto max-w-md md:max-w-2xl">
+          <div className="border border-dusty-rose/20 bg-dusty-rose/10 px-5 py-5 text-center md:p-6">
             <p className="mb-3 font-sans text-sm text-muted-foreground">
               For queries and booking assistance
             </p>
             <a
-              href="https://wa.me/919818793850"
+              href={whatsappUrl(WHATSAPP_NUMBERS.school, ONLINE_CLASS_WHATSAPP_GREETING)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 font-serif text-xl text-foreground transition-colors duration-300 hover:text-dusty-rose"
+              className="inline-flex min-h-[44px] items-center gap-2.5 rounded-full border border-[#25D366]/40 bg-background px-5 py-2.5 font-sans text-xs tracking-[0.15em] text-foreground uppercase shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.12)] transition-all duration-300 hover:border-[#25D366]/70 hover:text-primary"
             >
-              <Phone className="h-5 w-5" />
-              +91 98187 93850
+              <WhatsAppIcon className="h-4 w-4 shrink-0 text-[#25D366]" />
+              Chat on WhatsApp
             </a>
           </div>
 
-          <p className="mt-6 text-center text-sm italic text-muted-foreground">
+          <p className="mt-5 text-center text-sm italic text-muted-foreground md:mt-6">
             Limited seats available. Secure your spot today.
           </p>
         </div>

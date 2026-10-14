@@ -19,3 +19,15 @@ export const COURSE_ADVANCE_FEES: Record<string, number> = {
 };
 
 export const getCourseAdvanceFee = (courseName: string) => COURSE_ADVANCE_FEES[courseName];
+
+// Session details printed in the online masterclass's payment confirmation
+// email. Must stay in sync with dateLabel / timeLabel / modeLabel in
+// MASTERCLASS_DETAILS (frontend/src/lib/masterclass.ts) — update both
+// whenever the next batch is scheduled.
+export const ONLINE_CLASS_DETAILS = {
+  dateLabel: "4 November 2026",
+  timeLabel: "12:00 PM – 5:30 PM IST",
+  modeLabel: "Online (Live)",
+  joiningNote: "Your link to join the live session will be shared with you before the class begins.",
+  supportWhatsApp: "919818793850",
+} as const;

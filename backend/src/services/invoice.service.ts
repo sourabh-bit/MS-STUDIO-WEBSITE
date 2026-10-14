@@ -85,13 +85,32 @@ export const renderInvoicePdf = async (data: InvoiceData): Promise<Buffer> => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
 
-    await page.evaluate((invoiceData) => {
+    // The template renders a demo invoice (a real-looking customer, address
+    // and PAN) on load, and renderInvoice only overwrites the fields it's
+    // given — so every optional buyer field is blanked here unless the
+    // caller supplies it, or the demo values would leak onto the PDF.
+    const invoiceData: InvoiceData = {
+      address: "",
+      city: "",
+      state: "",
+      stateCode: "",
+      gstin: "",
+      pan: "",
+      irn: "",
+      akcNo: "",
+      akcDate: "",
+      ...(Object.fromEntries(
+        Object.entries(data).filter(([, value]) => value !== undefined),
+      ) as InvoiceData),
+    };
+
+    await page.evaluate((filledData) => {
       // renderInvoice is defined by the template's own inline <script> —
       // it exists on window once setContent has loaded the page.
       (window as unknown as { renderInvoice: (data: unknown) => void }).renderInvoice(
-        invoiceData,
+        filledData,
       );
-    }, data);
+    }, invoiceData);
 
     // preferCSSPageSize honours the template's own `@page { size: A4 ... }`
     // rule instead of imposing separate margins here.

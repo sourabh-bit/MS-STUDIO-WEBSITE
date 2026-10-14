@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
+import { classModel, type ClassVariant } from "../db/class-databases.js";
+
 const userSchema = new Schema(
   {
     phone: {
@@ -36,3 +38,6 @@ export type UserDocument = mongoose.HydratedDocument<
 
 export const User =
   mongoose.models.User || mongoose.model("User", userSchema, "users");
+
+// The users of one class's database — see db/class-databases.ts.
+export const userModelFor = (variant: ClassVariant) => classModel(variant, "User", userSchema, "users");

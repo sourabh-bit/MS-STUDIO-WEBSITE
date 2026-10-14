@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import crypto from "node:crypto";
 
 import { env } from "../config/env.js";
-import { getCourseAdvanceFee } from "../config/courses.js";
+import { getCourseAdvanceFee, ONLINE_CLASS_DETAILS } from "../config/courses.js";
 import { getSecondInstallmentTotal, SECOND_INSTALLMENT_MIN_AMOUNT } from "../config/installment.js";
 import { connectToDatabase } from "../db/connect.js";
 import { getStateCode } from "../lib/indian-states.js";
@@ -11,7 +11,8 @@ import { HttpError } from "../lib/http-error.js";
 import { sendInvoiceEmail } from "../lib/mailer.js";
 import { upsertPaymentStatusRow } from "../lib/sheets.js";
 import { nextInvoiceNumber, renderInvoicePdf } from "./invoice.service.js";
-import { Payment, type PaymentDocument } from "../models/Payment.js";
+import { CLASS_VARIANTS, toClassVariant, type ClassVariant } from "../db/class-databases.js";
+import { paymentModelFor, type PaymentDocument } from "../models/Payment.js";
 import { OnlineRegistration } from "../models/OnlineRegistration.js";
 import { registrationModelFor } from "./registration.service.js";
 import type {
@@ -40,6 +41,33 @@ const ICICI_HTTP_TIMEOUT_MS = 30000;
 const INITIATED_REUSE_WINDOW_MS = 90 * 1000;
 
 const lastTenDigits = (value: string) => value.replace(/\D/g, "").slice(-10);
+
+// Each class keeps its payments in its own database (see
+// db/class-databases.ts). New transaction numbers carry their class —
+// "MSON…" online, "MSOF…" offline — so a bank callback that only knows the
+// number still goes straight to the right one.
+const variantFromTxnNo = (merchantTxnNo: string): ClassVariant | null =>
+  merchantTxnNo.startsWith("MSON") ? "online" : merchantTxnNo.startsWith("MSOF") ? "offline" : null;
+
+// Numbers issued before the split ("MS…" with no class marker) are looked
+// up in each class's database in turn.
+const paymentModelForTxn = async (merchantTxnNo: string) => {
+  const variant = variantFromTxnNo(merchantTxnNo);
+
+  if (variant) {
+    return paymentModelFor(variant);
+  }
+
+  for (const candidate of CLASS_VARIANTS) {
+    const Model = paymentModelFor(candidate);
+
+    if (await Model.exists({ merchantTxnNo })) {
+      return Model;
+    }
+  }
+
+  return paymentModelFor("offline");
+};
 
 // Terminal states. Once a payment lands here, none of the three redundant
 // confirmation paths (return callback, advice webhook, reconcile sweep) are
@@ -80,15 +108,18 @@ const ADVANCE_TYPE_FILTER = { $or: [{ paymentType: "ADVANCE" }, { paymentType: {
 export const backfillPaymentTypes = async () => {
   await connectToDatabase();
 
-  const result = await Payment.updateMany(
-    { paymentType: { $exists: false } },
-    { $set: { paymentType: "ADVANCE" } },
-  );
+  for (const variant of CLASS_VARIANTS) {
+    const result = await paymentModelFor(variant).updateMany(
+      { paymentType: { $exists: false } },
+      { $set: { paymentType: "ADVANCE" } },
+    );
 
-  if (result.modifiedCount > 0) {
-    logger.info("Backfilled paymentType on legacy payment records.", {
-      modifiedCount: result.modifiedCount,
-    });
+    if (result.modifiedCount > 0) {
+      logger.info("Backfilled paymentType on legacy payment records.", {
+        variant,
+        modifiedCount: result.modifiedCount,
+      });
+    }
   }
 };
 
@@ -98,6 +129,8 @@ export const getPaymentSummary = async (
   variant: "online" | "offline",
 ): Promise<PaymentSummary> => {
   await connectToDatabase();
+
+  const Payment = paymentModelFor(variant);
 
   const advancePayment = await Payment.findOne({
     mobile,
@@ -192,8 +225,10 @@ const serializeAxiosErrorData = (value: unknown) => {
 
 // merchantTxnNo must be alphanumeric only, max 20 chars — hyphens/slashes/
 // underscores are rejected outright by the gateway.
-const createMerchantTxnNo = () =>
-  `MS${Date.now().toString().slice(-10)}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+// 20 characters: "MS", the class marker (see variantFromTxnNo), 10 digits
+// of the timestamp and 6 random hex characters.
+const createMerchantTxnNo = (variant: ClassVariant) =>
+  `MS${variant === "online" ? "ON" : "OF"}${Date.now().toString().slice(-10)}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 
 const buildTransactionExpiry = () => new Date(Date.now() + INITIATED_REUSE_WINDOW_MS);
 
@@ -277,6 +312,8 @@ const appendLog = async (
   message: string,
   payload?: unknown,
 ) => {
+  const Payment = await paymentModelForTxn(merchantTxnNo);
+
   await Payment.updateOne(
     { merchantTxnNo },
     {
@@ -304,6 +341,8 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
   if (payment.invoiceNo) {
     return;
   }
+
+  const Payment = paymentModelFor(toClassVariant(payment.variant));
 
   // Buyer/billing details live on the Registration record (collected once,
   // before payment, via the "Tell Us About Yourself" form) rather than on
@@ -398,6 +437,7 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
     payRemainingUrl,
     isFullyPaid,
     totalCoursePaid,
+    classDetails: isOnline ? ONLINE_CLASS_DETAILS : undefined,
   });
 
   await Payment.updateOne(
@@ -482,6 +522,8 @@ const applyStatus = async (
   source: string,
 ): Promise<PaymentDocument | null> => {
   await connectToDatabase();
+
+  const Payment = await paymentModelForTxn(merchantTxnNo);
 
   const setFields: Record<string, unknown> = {
     paymentStatus: status,
@@ -696,6 +738,7 @@ const buildFailureRedirectUrl = (payload: Record<string, unknown>, fallbackMessa
 // separate write path, specifically so it can never again fall outside
 // the sheet-sync/invoice logic that every other status change gets.
 const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput, paymentType: PaymentType) => {
+  const Payment = paymentModelFor(input.variant);
   const now = new Date();
   const staleInitiatedPayments = await Payment.find({
     email: input.email.toLowerCase(),
@@ -742,6 +785,7 @@ const expireStaleInitiatedTransactions = async (input: InitiatePaymentInput, pay
 };
 
 const findReusableTransaction = async (input: InitiatePaymentInput, paymentType: PaymentType) => {
+  const Payment = paymentModelFor(input.variant);
   const now = new Date();
 
   return Payment.findOne({
@@ -761,6 +805,7 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
   assertGatewayConfigured();
   await connectToDatabase();
 
+  const Payment = paymentModelFor(input.variant);
   const paymentType: PaymentType = input.paymentType === "SECOND_INSTALLMENT" ? "SECOND_INSTALLMENT" : "ADVANCE";
 
   // Server-side source of truth, independent of whatever the frontend
@@ -856,7 +901,7 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
   }
 
   const payment = await Payment.create({
-    merchantTxnNo: createMerchantTxnNo(),
+    merchantTxnNo: createMerchantTxnNo(input.variant),
     userId: input.userId,
     customerName: input.customerName,
     email: input.email.toLowerCase(),
@@ -987,6 +1032,8 @@ export const processPaymentReturn = async (rawPayload: Record<string, unknown>) 
     throw new Error("Return payload is missing merchantTxnNo.");
   }
 
+  const Payment = await paymentModelForTxn(merchantTxnNo);
+
   let payment = await Payment.findOne({ merchantTxnNo });
 
   if (!payment) {
@@ -1049,6 +1096,8 @@ export const processPaymentAdvice = async (rawPayload: Record<string, unknown>) 
     return;
   }
 
+  const Payment = await paymentModelForTxn(merchantTxnNo);
+
   const payment = await Payment.findOne({ merchantTxnNo });
 
   if (!payment) {
@@ -1077,6 +1126,8 @@ export const processPaymentAdvice = async (rawPayload: Record<string, unknown>) 
 // Polled by the frontend pending page, and reused by the reconcile sweep.
 export const checkPaymentStatus = async (merchantTxnNo: string) => {
   await connectToDatabase();
+
+  const Payment = await paymentModelForTxn(merchantTxnNo);
 
   const payment = await Payment.findOne({ merchantTxnNo });
 
@@ -1144,14 +1195,21 @@ export const reconcilePendingPayments = async () => {
   const expireBefore = new Date(Date.now() - env.pendingExpiryMs);
   const expiredRecheckAfter = new Date(Date.now() - env.expiredRecheckWindowMs);
 
-  const stalePayments = await Payment.find({
-    $or: [
-      { paymentStatus: { $in: ["INITIATED", "PENDING"] }, createdAt: { $lte: staleBefore } },
-      { paymentStatus: "EXPIRED", createdAt: { $gte: expiredRecheckAfter } },
-    ],
-  })
-    .sort({ createdAt: 1 })
-    .limit(50);
+  const stalePayments = (
+    await Promise.all(
+      CLASS_VARIANTS.map((variant) =>
+        paymentModelFor(variant)
+          .find({
+            $or: [
+              { paymentStatus: { $in: ["INITIATED", "PENDING"] }, createdAt: { $lte: staleBefore } },
+              { paymentStatus: "EXPIRED", createdAt: { $gte: expiredRecheckAfter } },
+            ],
+          })
+          .sort({ createdAt: 1 })
+          .limit(50),
+      ),
+    )
+  ).flat();
 
   let checked = 0;
   let resolved = 0;
@@ -1207,6 +1265,8 @@ export const refundPayment = async (merchantTxnNo: string, amount?: number, addl
   assertGatewayConfigured();
   await connectToDatabase();
 
+  const Payment = await paymentModelForTxn(merchantTxnNo);
+
   const payment = await Payment.findOne({ merchantTxnNo });
 
   if (!payment) {
@@ -1228,7 +1288,7 @@ export const refundPayment = async (merchantTxnNo: string, amount?: number, addl
   // than our merchantTxnNo. Following the working sample here — confirm
   // against a real UAT transaction before relying on this in production.
   const originalTxnNo = payment.txnID || payment.merchantTxnNo;
-  const refundMerchantTxnNo = createMerchantTxnNo();
+  const refundMerchantTxnNo = createMerchantTxnNo(toClassVariant(payment.variant));
 
   const refundRequest = buildRefundRequest({
     merchantId: env.iciciMerchantId,

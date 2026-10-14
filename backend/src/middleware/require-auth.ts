@@ -29,7 +29,7 @@ export const requireAuth = async (
       return;
     }
 
-    const user = await getUserById(payload.userId);
+    const user = await getUserById(payload.userId, payload.variant ?? "offline");
 
     if (!user) {
       response.status(401).json({ message: "Please log in to continue." });

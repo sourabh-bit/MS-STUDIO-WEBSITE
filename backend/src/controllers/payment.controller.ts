@@ -3,7 +3,9 @@ import type { NextFunction, Request, Response } from "express";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { env } from "../config/env.js";
+import { toClassVariant } from "../db/class-databases.js";
 import { isHttpError } from "../lib/http-error.js";
+import { ensureUserInClass } from "../services/auth.service.js";
 import { logger } from "../lib/logger.js";
 import type { AuthenticatedRequest } from "../middleware/require-auth.js";
 import {
@@ -177,14 +179,19 @@ export const initiatePaymentHandler = async (
       return;
     }
 
+    const classVariant = toClassVariant(variant);
+    // The payment's userId points at this person in the class's own
+    // database, which may differ from the one their login session uses.
+    const classUserId = await ensureUserInClass(classVariant, user);
+
     const result = await initiatePayment({
-      userId: user.id,
+      userId: classUserId,
       customerName: user.name || "Guest",
       email: user.email,
       mobile: normalizedMobile,
       amount: parsedAmount,
       courseName: String(courseName).trim(),
-      variant: String(variant).trim().toLowerCase() === "offline" ? "offline" : "online",
+      variant: classVariant,
       feeLabel: String(feeLabel || "").trim(),
       summaryLabel: String(summaryLabel || "").trim(),
       paymentType: parsedPaymentType,

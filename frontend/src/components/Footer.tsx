@@ -1,5 +1,8 @@
-import { Instagram, Mail, Phone, FileText, Lock } from "lucide-react";
+import { Instagram, Mail, FileText, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
 const Footer = () => {
   return (
@@ -7,10 +10,10 @@ const Footer = () => {
       <div className="container mx-auto px-6 lg:px-12">
         
         {/* GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-8">
           
           {/* Brand */}
-          <div className="space-y-3">
+          <div className="col-span-2 space-y-3 md:col-span-1">
             <h3 className="font-display text-2xl text-primary">Meera Sakhrani</h3>
             <p className="font-body text-sm text-muted-foreground leading-relaxed max-w-xs">
               Where artistry meets elegance—delivering refined, timeless, and graceful beauty experiences.
@@ -41,36 +44,36 @@ const Footer = () => {
             <h4 className="font-display text-lg text-foreground">Consumer Policy</h4>
             <div className="flex flex-col space-y-2">
               <Link to="/terms-and-conditions" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <FileText size={16} /> Terms & Conditions
+                <FileText size={16} className="shrink-0" /> Terms & Conditions
               </Link>
               <Link to="/privacy-policy" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <Lock size={16} /> Privacy Policy
+                <Lock size={16} className="shrink-0" /> Privacy Policy
               </Link>
               <Link to="/refund-and-cancellation-policy" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <Lock size={16} /> Refund & Cancellation Policy
+                <Lock size={16} className="shrink-0" /> Refund & Cancellation Policy
               </Link>
             </div>
           </div>
 
           {/* Connect */}
-          <div className="space-y-3">
+          <div className="col-span-2 min-w-0 space-y-3 md:col-span-1">
             <h4 className="font-display text-lg text-foreground">Connect</h4>
             <div className="flex flex-col space-y-2">
               <a href="mailto:hello@meeramakeupstudio.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <Mail size={16} /> hello@meeramakeupstudio.com
+                <Mail size={16} className="shrink-0" /> <span className="min-w-0 break-all">hello@meeramakeupstudio.com</span>
               </a>
-              <a href="https://wa.me/918448229694" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <Phone size={16} /> +91 84482 29694 (Booking)
+              <a href={whatsappUrl(WHATSAPP_NUMBERS.booking)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
+                <WhatsAppIcon className="h-4 w-4 shrink-0" /> WhatsApp · Bookings
               </a>
-              <a href="https://wa.me/919818793850" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
-                <Phone size={16} /> +91 98187 93850 (MS Art School)
+              <a href={whatsappUrl(WHATSAPP_NUMBERS.school)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition">
+                <WhatsAppIcon className="h-4 w-4 shrink-0" /> WhatsApp · MS Art School
               </a>
               <a 
                 href="https://www.instagram.com/meerasakhrani"
                 target="_blank"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
               >
-                <Instagram size={16} /> @meerasakhrani
+                <Instagram size={16} className="shrink-0" /> @meerasakhrani
               </a>
             </div>
           </div>

@@ -15,8 +15,9 @@ import {
 } from "../lib/otp.js";
 import { isSmsConfigured, sendOtpSms } from "../lib/sms.js";
 import { verifyMsg91WidgetToken } from "../lib/msg91-widget.js";
-import { OtpChallenge } from "../models/OtpChallenge.js";
-import { User, type UserDocument } from "../models/User.js";
+import type { ClassVariant } from "../db/class-databases.js";
+import { otpChallengeModelFor } from "../models/OtpChallenge.js";
+import { userModelFor, type UserDocument } from "../models/User.js";
 import { env } from "../config/env.js";
 
 const OTP_HOURLY_LIMIT = 5;
@@ -25,6 +26,9 @@ export type RequestOtpInput = {
   name: string;
   mobile: string;
   email: string;
+  // The class the person is logging in for — their OTP challenge and user
+  // record are kept in that class's own database.
+  variant: ClassVariant;
 };
 
 const toPublicUser = (user: UserDocument) => ({
@@ -58,6 +62,8 @@ export const requestOtp = async (input: RequestOtpInput) => {
   if (!isValidEmail(email)) {
     throw new HttpError(400, "Enter a valid email address.");
   }
+
+  const OtpChallenge = otpChallengeModelFor(input.variant);
 
   const recentChallenge = env.otpDevMode
     ? null
@@ -126,8 +132,10 @@ export const requestOtp = async (input: RequestOtpInput) => {
   };
 };
 
-export const verifyOtp = async (rawMobile: string, rawCode: string) => {
+export const verifyOtp = async (rawMobile: string, rawCode: string, variant: ClassVariant) => {
   await connectToDatabase();
+
+  const OtpChallenge = otpChallengeModelFor(variant);
 
   const mobile = normaliseMobileOrThrow(rawMobile);
   const code = rawCode.trim();
@@ -173,7 +181,7 @@ export const verifyOtp = async (rawMobile: string, rawCode: string) => {
   challenge.consumedAt = new Date();
   await challenge.save();
 
-  const user = await User.findOneAndUpdate(
+  const user = await userModelFor(variant).findOneAndUpdate(
     { phone: mobile },
     {
       $set: {
@@ -186,7 +194,7 @@ export const verifyOtp = async (rawMobile: string, rawCode: string) => {
     { new: true, upsert: true },
   );
 
-  const token = signSessionToken({ userId: String(user._id) });
+  const token = signSessionToken({ userId: String(user._id), variant });
 
   return { token, user: toPublicUser(user) };
 };
@@ -200,6 +208,7 @@ export const verifyWidgetLogin = async (
   accessToken: string,
   rawName: string,
   rawEmail: string,
+  variant: ClassVariant,
 ) => {
   await connectToDatabase();
 
@@ -222,7 +231,7 @@ export const verifyWidgetLogin = async (
 
   const mobile = normaliseContact(verification.mobile, "phone");
 
-  const user = await User.findOneAndUpdate(
+  const user = await userModelFor(variant).findOneAndUpdate(
     { phone: mobile },
     {
       $set: { name, email, lastLoginAt: new Date() },
@@ -231,14 +240,33 @@ export const verifyWidgetLogin = async (
     { new: true, upsert: true },
   );
 
-  const token = signSessionToken({ userId: String(user._id) });
+  const token = signSessionToken({ userId: String(user._id), variant });
 
   return { token, user: toPublicUser(user) };
 };
 
-export const getUserById = async (userId: string) => {
+export const getUserById = async (userId: string, variant: ClassVariant = "offline") => {
   await connectToDatabase();
 
-  const user = await User.findById(userId);
+  const user = await userModelFor(variant).findById(userId);
   return user ? toPublicUser(user) : null;
+};
+
+// One login works for both classes, but each class's database keeps its own
+// copy of everyone who registers or pays for it — so someone who logged in
+// on the online page and then enrols offline still appears in the offline
+// database's users. Returns that class's user id for this person.
+export const ensureUserInClass = async (
+  variant: ClassVariant,
+  user: { phone: string; name: string; email: string },
+) => {
+  await connectToDatabase();
+
+  const classUser = await userModelFor(variant).findOneAndUpdate(
+    { phone: user.phone },
+    { $setOnInsert: { phone: user.phone, name: user.name, email: user.email } },
+    { new: true, upsert: true },
+  );
+
+  return String(classUser._id);
 };

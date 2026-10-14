@@ -10,6 +10,7 @@ import OnlineHeroBanner from "./sections/Online classes/OnlineHeroBanner";
 import CourseOverview from "./sections/Online classes/CourseOverview";
 import BonusTakeaways from "./sections/Online classes/BonusTakeaways";
 import MasterclassFlow from "./sections/Online classes/MasterclassFlow";
+import OnlineGallery from "./sections/Online classes/OnlineGallery";
 import WhoShouldAttend from "./sections/Online classes/WhoShouldAttend";
 import OnlinePaymentSection from "./sections/Online classes/OnlinePaymentSection";
 import StickyPaymentBar from "./sections/Online classes/StickyPaymentBar";
@@ -103,7 +104,7 @@ const OnlineClasses = () => {
         checkInFlightRef.current = false;
         setIsChecking(false);
       }
-    });
+    }, "online");
   };
 
   // Runs after the registration form is saved. This only takes the
@@ -118,11 +119,15 @@ const OnlineClasses = () => {
 
   return (
     <>
-      <div className="space-y-0 pb-28 md:pb-32 lg:pb-0">
+      {/* -mx-4 cancels the page container's padding on phones, so each
+          section's own padding is the only gutter and backgrounds run
+          edge to edge. */}
+      <div className="-mx-4 space-y-0 pb-6 sm:mx-0 md:pb-12 lg:pb-0">
         <OnlineHeroBanner {...ctaProps} />
         <CourseOverview />
         <BonusTakeaways />
         <MasterclassFlow />
+        <OnlineGallery />
         <WhoShouldAttend />
         <OnlinePaymentSection {...ctaProps} />
       </div>

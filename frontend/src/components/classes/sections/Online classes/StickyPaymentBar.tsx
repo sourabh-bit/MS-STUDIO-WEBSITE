@@ -10,8 +10,11 @@ const StickyPaymentBar = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Hidden near the very bottom so it never sits on top of the footer.
     const handleScroll = () => {
-      setIsVisible(window.scrollY > 220);
+      const distanceFromBottom =
+        document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+      setIsVisible(window.scrollY > 220 && distanceFromBottom > 240);
     };
 
     handleScroll();

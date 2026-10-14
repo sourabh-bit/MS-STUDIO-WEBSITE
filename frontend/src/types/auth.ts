@@ -5,10 +5,15 @@ export type AuthUser = {
   name: string;
 };
 
+// Which class someone is logging in for — the backend keeps each class's
+// users and OTP codes in that class's own database.
+export type ClassVariant = "online" | "offline";
+
 export type RequestOtpPayload = {
   name: string;
   mobile: string;
   email: string;
+  variant: ClassVariant;
 };
 
 export type RequestOtpResponse = {

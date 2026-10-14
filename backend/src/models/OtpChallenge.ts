@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
+import { classModel, type ClassVariant } from "../db/class-databases.js";
+
 const otpChallengeSchema = new Schema(
   {
     contact: {
@@ -58,3 +60,6 @@ export type OtpChallengeDocument = mongoose.HydratedDocument<
 export const OtpChallenge =
   mongoose.models.OtpChallenge ||
   mongoose.model("OtpChallenge", otpChallengeSchema, "otp_challenges");
+
+export const otpChallengeModelFor = (variant: ClassVariant) =>
+  classModel(variant, "OtpChallenge", otpChallengeSchema, "otp_challenges");

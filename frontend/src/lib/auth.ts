@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import type {
+  ClassVariant,
   MeResponse,
   RequestOtpPayload,
   RequestOtpResponse,
@@ -48,11 +49,12 @@ export const requestOtp = async (payload: RequestOtpPayload) => {
   }
 };
 
-export const verifyOtp = async (mobile: string, code: string) => {
+export const verifyOtp = async (mobile: string, code: string, variant: ClassVariant) => {
   try {
     const response = await authApi.post<VerifyOtpResponse>("/auth/otp/verify", {
       mobile,
       code,
+      variant,
     });
     return response.data;
   } catch (error) {
@@ -64,6 +66,7 @@ export const verifyWidgetLogin = async (payload: {
   accessToken: string;
   name: string;
   email: string;
+  variant: ClassVariant;
 }) => {
   try {
     const response = await authApi.post<VerifyOtpResponse>("/auth/widget/verify", payload);

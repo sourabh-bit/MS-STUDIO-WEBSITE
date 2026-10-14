@@ -112,7 +112,7 @@ const MasterclassCheckout = () => {
     }
   };
 
-  const handlePayClick = () => requireAuth(handlePayNow);
+  const handlePayClick = () => requireAuth(handlePayNow, paymentDetails.variant);
 
   const remainingAmount = summary?.secondInstallment.remainingAmount ?? 0;
   const minAmount = summary?.secondInstallment.minAmount ?? 0;
@@ -174,7 +174,7 @@ const MasterclassCheckout = () => {
     }
   };
 
-  const handlePayInstallmentClick = () => requireAuth(handlePayInstallment);
+  const handlePayInstallmentClick = () => requireAuth(handlePayInstallment, paymentDetails.variant);
 
   const advancePaid = summary?.advance.status === "PAID";
   // The online masterclass is a single payment — there's no second

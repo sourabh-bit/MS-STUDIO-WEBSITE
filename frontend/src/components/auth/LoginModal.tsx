@@ -28,7 +28,7 @@ import CountryCodeSelect from "@/components/auth/CountryCodeSelect";
 type Step = "details" | "otp";
 
 const LoginModal = () => {
-  const { isModalOpen, closeLoginModal, handleAuthenticated } = useAuth();
+  const { isModalOpen, loginVariant, closeLoginModal, handleAuthenticated } = useAuth();
   const { toast } = useToast();
 
   const [step, setStep] = useState<Step>("details");
@@ -121,6 +121,7 @@ const LoginModal = () => {
           name: name.trim(),
           mobile: `+${fullMobile}`,
           email: email.trim(),
+          variant: loginVariant,
         });
         setDevCode(result.devCode ?? "");
         setSentMobileE164(`+${fullMobile}`);
@@ -156,11 +157,12 @@ const LoginModal = () => {
     setIsSubmitting(true);
     try {
       const { user } = isDevMode
-        ? await verifyOtp(sentMobileE164, code)
+        ? await verifyOtp(sentMobileE164, code, loginVariant)
         : await verifyWidgetLogin({
             accessToken: await verifyWidgetOtp(code),
             name: name.trim(),
             email: email.trim(),
+            variant: loginVariant,
           });
       handleAuthenticated(user);
       toast({ title: user.name ? `Welcome, ${user.name}` : "Welcome" });
@@ -179,7 +181,12 @@ const LoginModal = () => {
     setIsSubmitting(true);
     try {
       if (isDevMode) {
-        const result = await requestOtp({ name: name.trim(), mobile: sentMobileE164, email: email.trim() });
+        const result = await requestOtp({
+          name: name.trim(),
+          mobile: sentMobileE164,
+          email: email.trim(),
+          variant: loginVariant,
+        });
         setDevCode(result.devCode ?? "");
         setCode("");
       } else {

@@ -1,6 +1,7 @@
 import type { CookieOptions, NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
+import { toClassVariant } from "../db/class-databases.js";
 import { isHttpError } from "../lib/http-error.js";
 import { SESSION_TTL_SECONDS, verifySessionToken } from "../lib/jwt.js";
 import { getUserById, requestOtp, verifyOtp, verifyWidgetLogin } from "../services/auth.service.js";
@@ -27,7 +28,7 @@ export const requestOtpHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, mobile, email } = request.body as Record<string, unknown>;
+    const { name, mobile, email, variant } = request.body as Record<string, unknown>;
 
     if (
       !name ||
@@ -43,7 +44,7 @@ export const requestOtpHandler = async (
       return;
     }
 
-    const result = await requestOtp({ name, mobile, email });
+    const result = await requestOtp({ name, mobile, email, variant: toClassVariant(variant) });
     response.status(200).json({
       sent: true,
       expiresInSeconds: result.expiresInSeconds,
@@ -64,14 +65,14 @@ export const verifyOtpHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { mobile, code } = request.body as Record<string, unknown>;
+    const { mobile, code, variant } = request.body as Record<string, unknown>;
 
     if (!mobile || typeof mobile !== "string" || !code || typeof code !== "string") {
       response.status(400).json({ message: "Enter the code sent to you." });
       return;
     }
 
-    const { token, user } = await verifyOtp(mobile, code);
+    const { token, user } = await verifyOtp(mobile, code, toClassVariant(variant));
 
     response.cookie(env.authCookieName, token, {
       ...getCookieOptions(),
@@ -93,7 +94,7 @@ export const verifyWidgetHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { accessToken, name, email } = request.body as Record<string, unknown>;
+    const { accessToken, name, email, variant } = request.body as Record<string, unknown>;
 
     if (!accessToken || typeof accessToken !== "string") {
       response.status(400).json({ message: "Missing OTP verification token." });
@@ -105,7 +106,7 @@ export const verifyWidgetHandler = async (
       return;
     }
 
-    const { token, user } = await verifyWidgetLogin(accessToken, name, email);
+    const { token, user } = await verifyWidgetLogin(accessToken, name, email, toClassVariant(variant));
 
     response.cookie(env.authCookieName, token, {
       ...getCookieOptions(),
@@ -156,7 +157,7 @@ export const meHandler = async (
       return;
     }
 
-    const user = await getUserById(payload.userId);
+    const user = await getUserById(payload.userId, payload.variant ?? "offline");
     response.status(200).json({ user });
   } catch (error) {
     next(error);

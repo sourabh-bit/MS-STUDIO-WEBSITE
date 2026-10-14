@@ -83,6 +83,13 @@
            font-light tracking-[0.25em] uppercase;
   }
 
+  /* Same as .heading-section from sm up; smaller with tighter tracking on
+     phones so long uppercase headings don't break into ragged lines. */
+  .heading-section-compact {
+    @apply font-serif text-[26px] leading-snug font-light tracking-[0.14em] uppercase
+           sm:text-3xl sm:tracking-[0.25em] md:text-4xl lg:text-5xl;
+  }
+
   /* Hero Display Title */
   .heading-display {
     @apply font-display text-4xl md:text-6xl lg:text-7xl 

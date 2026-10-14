@@ -1,143 +1,183 @@
-import { CalendarDays, Loader2, MonitorPlay } from "lucide-react";
+import { useRef, useState } from "react";
+import { CalendarDays, Loader2, MonitorPlay, Play, Volume2, VolumeX } from "lucide-react";
 
-import heroImage from "@/assets/classes/online-hero.png";
-import Logo from "@/assets/logo.png";
-import { MASTERCLASS_DETAILS, formatInrSymbol } from "@/lib/masterclass";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
+
+import heroBackground from "@/assets/classes/online-hero-bg.png";
+import { MASTERCLASS_DETAILS, MASTERCLASS_PREVIEW_VIDEO, formatInrSymbol } from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";
 
 const OnlineHeroBanner = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  // Flips to false if the clip fails to load (e.g. not uploaded yet), so the
+  // hero shows a placeholder instead of a broken player.
+  const [hasVideo, setHasVideo] = useState(Boolean(MASTERCLASS_PREVIEW_VIDEO.src));
+  // The clip loops on its own, muted — browsers only autoplay silent video.
+  // Visitors can switch the sound on with the button in the corner.
+  const [isMuted, setIsMuted] = useState(true);
+
+  const toggleSound = () => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+
+    if (!video.muted) {
+      video.play().catch(() => undefined);
+    }
+  };
+
   return (
-    <section className="relative flex min-h-[90vh] items-center overflow-hidden bg-warm-cream md:min-h-screen">
-      <div className="container mx-auto px-4 py-16 md:py-24">
-        <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2">
-          <div className="order-2 text-center lg:order-1 lg:text-left">
-            <span className="mb-4 inline-block font-sans text-xs tracking-[0.4em] text-dusty-rose uppercase md:mb-6 md:text-sm">
-              The Meera Sakhrani School
-            </span>
+    <section className="relative">
+      {/* Full-bleed backdrop: the page wraps this hero in a centred container,
+          so the background breaks out to the full screen width on its own. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-warm-cream">
+        {/* Floral texture at 50% over the cream, so it stays soft behind the text. */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-50"
+          style={{ backgroundImage: `url(${heroBackground})` }}
+        />
+      </div>
 
-            <h1>
-              <span className="mb-2 block font-display text-3xl font-light italic text-foreground/80 md:text-5xl lg:text-6xl">
-                How to Become a
-              </span>
+      <div className="container relative mx-auto px-5 sm:px-4 pt-6 pb-10 md:pt-10 md:pb-20 lg:pb-24">
+        <div className="mb-8 text-center md:mb-14">
+          <span className="mb-3 inline-block font-sans text-[11px] tracking-[0.3em] text-dusty-rose uppercase sm:text-xs sm:tracking-[0.4em] md:mb-4 md:text-sm">
+            The Meera Sakhrani School
+          </span>
 
-              <span className="block font-display text-5xl font-light tracking-tight text-primary uppercase md:text-7xl lg:text-8xl">
-                Successful
-              </span>
+          <h1 className="font-display text-[34px] font-light leading-tight tracking-tight text-primary sm:text-4xl md:text-6xl lg:text-7xl">
+            Online Masterclass
+          </h1>
 
-              <span className="mt-2 block font-serif text-4xl text-foreground md:text-6xl lg:text-7xl">
-                Makeup Artist
-              </span>
-            </h1>
+          <div className="mx-auto mt-4 w-24 md:mt-8 md:w-32">
+            <div className="divider-elegant" />
+          </div>
 
-            <div className="my-8 md:my-12">
-              <div className="divider-elegant mx-auto w-32 lg:mx-0" />
-            </div>
+          <p className="mt-4 font-serif text-[17px] italic text-foreground/80 md:mt-8 md:text-2xl">
+            How to Become a Successful Makeup Artist
+          </p>
+        </div>
 
-            <h2 className="mb-4 font-serif text-xl tracking-wide text-foreground md:text-2xl lg:text-3xl">
-              An Online Masterclass
-            </h2>
+        <div className="grid items-center gap-8 md:grid-cols-[3fr_2fr] md:gap-8 lg:gap-16">
+          {/* Video preview */}
+          <div className="relative mx-auto w-full max-w-3xl">
+            <div className="absolute -inset-2 border border-primary/20 sm:-inset-3 md:-inset-4" />
 
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-2 md:mb-8 lg:justify-start">
-              <span className="inline-flex items-center gap-2 rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-[11px] tracking-[0.15em] text-dusty-rose uppercase">
-                <MonitorPlay className="h-3.5 w-3.5" />
-                {MASTERCLASS_DETAILS.modeLabel}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-dusty-rose/40 bg-soft-pink/30 px-4 py-2 font-sans text-[11px] tracking-[0.15em] text-dusty-rose uppercase">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {MASTERCLASS_DETAILS.dateLabel}
-              </span>
-            </div>
+            <div className="relative aspect-video overflow-hidden border border-primary/25 bg-foreground/5 shadow-[0_20px_50px_-20px_hsl(332_14%_40%/0.35)]">
+              {hasVideo ? (
+                <>
+                  <video
+                    ref={videoRef}
+                    src={MASTERCLASS_PREVIEW_VIDEO.src}
+                    poster={MASTERCLASS_PREVIEW_VIDEO.poster || undefined}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    onError={() => setHasVideo(false)}
+                    className="h-full w-full object-cover"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
 
-            <p className="text-elegant mx-auto mb-8 max-w-md text-muted-foreground lg:mx-0 md:mb-10">
-              A 4-hour intensive live masterclass by Meera Sakhrani. Transform
-              your artistry and elevate your career from anywhere in the world.
-            </p>
-
-            <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-              <button
-                type="button"
-                onClick={onOpenCheckout}
-                disabled={isBusy}
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-primary-foreground uppercase shadow-elegant transition-all duration-300 hover:bg-dusty-rose disabled:cursor-wait disabled:opacity-80"
-              >
-                {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEnrolled ? (
-                  "You're Enrolled"
-                ) : (
-                  <>
-                    Enrol Now
-                    {/* Price hidden on the narrowest phones so the button
-                        never forces the hero wider than the screen — the
-                        sticky bar shows it there instead. */}
-                    <span className="hidden min-[400px]:inline">
-                      {" "}· {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)} + GST
-                    </span>
-                  </>
-                )}
-              </button>
-
-              <a
-                href="#enroll-online"
-                className="rounded-full border border-foreground/20 px-8 py-4 text-center font-sans text-sm tracking-[0.2em] text-foreground uppercase transition-all duration-300 hover:bg-foreground/5"
-              >
-                View Details
-              </a>
-            </div>
-
-            <div className="mt-5 space-y-2 text-center lg:text-left">
-              
-              
-              <a
-                href="https://wa.me/919818793850"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block font-sans text-xs tracking-[0.12em] text-foreground/70 uppercase transition-colors duration-300 hover:text-dusty-rose"
-              >
-                Need assistance? +91 98187 93850
-              </a>
+                  <button
+                    type="button"
+                    onClick={toggleSound}
+                    aria-label={isMuted ? "Turn sound on" : "Turn sound off"}
+                    aria-pressed={!isMuted}
+                    className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-background/60 bg-background/85 text-primary shadow-elegant transition-transform duration-300 hover:scale-105 md:bottom-4 md:right-4 md:h-11 md:w-11"
+                  >
+                    {isMuted ? <VolumeX className="h-4 w-4 md:h-5 md:w-5" /> : <Volume2 className="h-4 w-4 md:h-5 md:w-5" />}
+                  </button>
+                </>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-soft-pink/70 via-background/80 to-soft-pink/50 text-center">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/25 bg-background text-primary shadow-[0_8px_24px_-8px_hsl(332_14%_40%/0.4)] max-md:h-12 max-md:w-12 md:h-20 md:w-20">
+                    <Play className="ml-1 h-6 w-6 md:h-7 md:w-7" />
+                  </span>
+                  <p className="font-sans text-xs tracking-[0.2em] text-foreground uppercase">
+                    Class preview coming soon
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="order-1 relative lg:order-2">
-            <div className="relative mx-auto aspect-[3/4] max-w-lg lg:max-w-none">
-              <div className="absolute -inset-4 border border-dusty-rose/20" />
-              <div className="absolute -inset-8 hidden border border-dusty-rose/10 md:block" />
+          {/* Actions — order is fixed: View Details → Registration & Fees → Register Now */}
+          <div className="mx-auto w-full max-w-sm md:max-w-none lg:max-w-sm">
+            <div className="rounded-2xl border border-white/80 bg-warm-cream/70 px-4 py-5 text-center sm:p-5 shadow-[0_18px_48px_-28px_hsl(332_14%_40%/0.3)] backdrop-blur-[2px] md:p-6 lg:p-7">
+              {/* Informational badges */}
+              <div className="mb-5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 md:mb-7">
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-dusty-rose/40 bg-soft-pink/40 px-2.5 py-1.5 font-sans text-[10px] leading-none tracking-[0.08em] text-primary uppercase min-[400px]:px-3 min-[400px]:tracking-[0.1em] md:py-2 shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.14),-1px_2px_3px_rgba(0,0,0,0.07),inset_-1px_1px_0_rgba(255,255,255,0.9)]">
+                  <MonitorPlay className="h-3 w-3 shrink-0 md:h-3.5 md:w-3.5" />
+                  {MASTERCLASS_DETAILS.modeLabel}
+                </span>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-dusty-rose/40 bg-soft-pink/40 px-2.5 py-1.5 font-sans text-[10px] leading-none tracking-[0.08em] text-primary uppercase min-[400px]:px-3 min-[400px]:tracking-[0.1em] md:py-2 shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.14),-1px_2px_3px_rgba(0,0,0,0.07),inset_-1px_1px_0_rgba(255,255,255,0.9)]">
+                  <CalendarDays className="h-3 w-3 shrink-0 md:h-3.5 md:w-3.5" />
+                  {MASTERCLASS_DETAILS.dateLabel}
+                </span>
+              </div>
 
-              <div className="relative h-full overflow-hidden">
-                <img
-                  src={heroImage}
-                  alt="Meera Sakhrani - Online Masterclass"
-                  className="h-full w-full object-cover object-top"
-                />
+              <div className="flex flex-col gap-3">
+                {/* Secondary actions */}
+                <a
+                  href="#online-class-details"
+                  className="block rounded-full px-5 py-3 font-sans text-xs leading-5 tracking-[0.18em] uppercase transition-all duration-300 hover:-translate-y-0.5 hover:bg-background motion-reduce:hover:translate-y-0 md:px-3 md:py-3.5 md:tracking-[0.12em] lg:px-5 lg:text-[13px] lg:tracking-[0.18em] shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.14),-1px_2px_3px_rgba(0,0,0,0.07),inset_-1px_1px_0_rgba(255,255,255,0.9)] hover:shadow-[-5px_8px_18px_-4px_rgba(0,0,0,0.18),-1px_3px_4px_rgba(0,0,0,0.09),inset_-1px_1px_0_rgba(255,255,255,0.9)] border border-primary/35 bg-background/80 text-primary"
+                >
+                  View Details
+                </a>
 
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-start pt-10 text-center md:pt-12">
-                  <img
-                    src={Logo}
-                    alt="M Logo"
-                    className="mb-2 w-16 opacity-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] md:w-20 lg:w-24"
-                  />
+                <a
+                  href="#enroll-online"
+                  className="block rounded-full px-5 py-3 font-sans text-xs leading-5 tracking-[0.18em] uppercase transition-all duration-300 hover:-translate-y-0.5 hover:bg-background motion-reduce:hover:translate-y-0 md:px-3 md:py-3.5 md:tracking-[0.12em] lg:px-5 lg:text-[13px] lg:tracking-[0.18em] shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.14),-1px_2px_3px_rgba(0,0,0,0.07),inset_-1px_1px_0_rgba(255,255,255,0.9)] hover:shadow-[-5px_8px_18px_-4px_rgba(0,0,0,0.18),-1px_3px_4px_rgba(0,0,0,0.09),inset_-1px_1px_0_rgba(255,255,255,0.9)] border border-foreground/20 bg-background/80 text-foreground"
+                >
+                  Registration &amp; Fees
+                </a>
 
-                  <p className="mb-3 font-serif text-xs tracking-[0.35em] text-white/90 md:text-sm">
-                    THE MEERA SAKHRANI SCHOOL
+                {/* Price, tied to the registration options above it */}
+                <div className="flex items-center justify-center gap-3 py-1">
+                  <span className="h-px w-6 bg-gradient-to-r from-transparent to-dusty-rose/60" />
+                  <p className="font-serif text-xl text-foreground md:text-2xl">
+                    {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}
+                    <span className="ml-1.5 font-sans text-[11px] tracking-[0.15em] text-muted-foreground uppercase">
+                      + GST
+                    </span>
                   </p>
-
-                  <h1 className="mb-2 font-display text-3xl font-semibold tracking-wide text-white drop-shadow-lg md:text-4xl lg:text-5xl">
-                    MEERA SAKHRANI
-                  </h1>
-
-                  <p className="font-serif text-base text-white/90 drop-shadow-md md:text-lg">
-                    An Online Masterclass
-                  </p>
+                  <span className="h-px w-6 bg-gradient-to-l from-transparent to-dusty-rose/60" />
                 </div>
+
+                {/* Primary action */}
+                <button
+                  type="button"
+                  onClick={onOpenCheckout}
+                  disabled={isBusy}
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-[hsl(332_16%_50%)] px-6 py-3.5 font-sans text-[13px] leading-5 tracking-[0.2em] text-primary-foreground uppercase shadow-[-4px_6px_14px_-3px_rgba(0,0,0,0.26),-1px_2px_4px_rgba(0,0,0,0.12),inset_-1px_1px_0_rgba(255,255,255,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[-6px_9px_20px_-4px_rgba(0,0,0,0.3),-1px_3px_5px_rgba(0,0,0,0.14),inset_-1px_1px_0_rgba(255,255,255,0.3)] hover:brightness-105 active:translate-y-0 active:brightness-95 disabled:cursor-wait disabled:opacity-80 motion-reduce:hover:translate-y-0 md:py-4 md:text-sm"
+                >
+                  {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isEnrolled ? "You're Enrolled" : "Register Now"}
+                </button>
               </div>
 
-              <div className="absolute -bottom-6 -left-6 border border-border/30 bg-background px-6 py-4 shadow-elegant md:-bottom-8 md:-left-8">
-                <p className="font-display text-4xl text-dusty-rose md:text-5xl">4</p>
-                <p className="font-sans text-xs tracking-[0.2em] text-muted-foreground uppercase">
-                  Hours
-                </p>
-              </div>
+              <a
+                href={whatsappUrl(WHATSAPP_NUMBERS.school, ONLINE_CLASS_WHATSAPP_GREETING)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group mt-5 inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-sans text-[11px] text-foreground/80 min-[360px]:gap-2 min-[360px]:text-xs transition-colors duration-300 hover:text-primary"
+              >
+                <WhatsAppIcon className="h-4 w-4 shrink-0 text-[#25D366]" />
+                <span>
+                  Need assistance?{" "}
+                  <span className="font-medium text-primary underline decoration-dusty-rose/50 underline-offset-4 group-hover:decoration-primary">
+                    Chat on WhatsApp
+                  </span>
+                </span>
+              </a>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 
 import { env } from "../config/env.js";
+import type { ClassVariant } from "../db/class-databases.js";
 import { logger } from "./logger.js";
 
 const DEV_FALLBACK_SECRET = "dev-insecure-secret-change-me";
@@ -24,6 +25,9 @@ export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export type SessionTokenPayload = {
   userId: string;
+  // Which class's database the user record lives in. Sessions issued before
+  // the per-class split have none, and their users are in the offline one.
+  variant?: ClassVariant;
 };
 
 export const signSessionToken = (payload: SessionTokenPayload) =>

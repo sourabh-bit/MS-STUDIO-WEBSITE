@@ -1,6 +1,4 @@
-import mongoose, { Schema } from "mongoose";
-
-import { env } from "../config/env.js";
+import { classModel } from "../db/class-databases.js";
 import { registrationSchema } from "./Registration.js";
 
 export const ONLINE_ENROLMENT_STATUSES = [
@@ -41,9 +39,4 @@ onlineRegistrationSchema.add({
 // submissions race each other past the service-level duplicate check.
 onlineRegistrationSchema.index({ phone: 1, courseName: 1 }, { unique: true });
 
-// A separate database on the same cluster connection (no second login or
-// connection pool). useCache returns the same handle on every import.
-const onlineDb = mongoose.connection.useDb(env.mongodbOnlineDbName, { useCache: true });
-
-export const OnlineRegistration =
-  onlineDb.models.Registration || onlineDb.model("Registration", onlineRegistrationSchema, "registrations");
+export const OnlineRegistration = classModel("online", "Registration", onlineRegistrationSchema, "registrations");

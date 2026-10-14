@@ -9,7 +9,7 @@ const Classes = () => {
   const [activeTab, setActiveTab] = useState("offline");
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen overflow-x-clip bg-background">
 
       <section className="container mx-auto px-4 pt-6 md:pt-20 pb-20">
 
@@ -31,7 +31,7 @@ const Classes = () => {
             </TabsTrigger>
           </TabsList>
 
-          <p className="mb-4 text-center font-sans text-xs tracking-[0.2em] text-dusty-rose uppercase md:mb-16">
+          <p className="mb-4 text-center font-sans text-[11px] tracking-[0.12em] text-dusty-rose uppercase sm:text-xs sm:tracking-[0.2em] md:mb-16">
             {activeTab === "offline"
               ? "In-person - 7 day intensive in New Delhi"
               : "Live online - from anywhere in the world"}
