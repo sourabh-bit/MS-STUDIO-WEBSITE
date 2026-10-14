@@ -51,17 +51,22 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
               <p className="mb-2 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
                 {MASTERCLASS_DETAILS.feeLabel}
               </p>
-              <div className="mb-1 flex items-center justify-center gap-3">
-                <span className="font-display text-xl text-muted-foreground line-through decoration-dusty-rose/70 decoration-1 min-[400px]:text-2xl">
-                  {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee)} + GST
-                </span>
-                <span className="rounded-full bg-dusty-rose px-2.5 py-1 font-sans text-[10px] font-semibold tracking-[0.15em] text-white uppercase sm:text-[11px]">
-                  {ONLINE_DISCOUNT_PERCENT}% Off
-                </span>
-              </div>
+              <span className="mx-auto mb-4 inline-flex items-center gap-2 border border-dusty-rose/40 px-3 py-1 font-sans text-[10px] tracking-[0.25em] font-medium text-dusty-rose uppercase sm:text-[11px]">
+                <span className="h-1 w-1 rounded-full bg-dusty-rose" />
+                Save {ONLINE_DISCOUNT_PERCENT}%
+              </span>
               <p className="mb-2 whitespace-nowrap font-display text-4xl text-foreground min-[400px]:text-5xl md:text-6xl">
                 {formatInrSymbol(MASTERCLASS_DETAILS.baseFee)}{" "}
                 <span className="align-middle text-xl min-[400px]:text-2xl md:text-3xl">+ GST</span>
+              </p>
+              <p className="mb-3 font-sans text-xs tracking-[0.04em] text-muted-foreground sm:text-sm">
+                <span className="line-through decoration-muted-foreground/60">
+                  {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee)} + GST
+                </span>
+                <span className="mx-2 text-dusty-rose/50">|</span>
+                <span className="font-medium text-dusty-rose">
+                  You save {formatInrSymbol(MASTERCLASS_DETAILS.originalBaseFee - MASTERCLASS_DETAILS.baseFee)}
+                </span>
               </p>
               <p className="whitespace-nowrap font-sans text-xs font-semibold tracking-[0.02em] text-[#8B6D5C] sm:text-sm">
                 *{formatInrSymbol(MASTERCLASS_DETAILS.baseFee)} + 18% GST ={" "}
