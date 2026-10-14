@@ -7,7 +7,7 @@ export const MASTERCLASS_DETAILS = {
   baseFee: 15000,
   fee: 17700,
   feeLabel: "One-time Masterclass Fee",
-  summaryLabel: "4-hour live online masterclass",
+  summaryLabel: "6-hour live online masterclass",
   trustLine: "Secure payment via ICICI Bank",
   // Shown on the brochure — update once the next batch is scheduled.
   dateLabel: "4 November 2026",
