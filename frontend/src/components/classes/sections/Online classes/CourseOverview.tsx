@@ -4,7 +4,7 @@ const CourseOverview = () => {
   const highlights = [
     { label: "Effortless", description: "Learn techniques that look natural and refined" },
     { label: "Luxe Evolution", description: "Elevate your artistry to luxury standards" },
-    { label: "Fashion Forward", description: "Stay ahead with 2025-2026 trends" },
+    { label: "Fashion Forward", description: "Stay ahead with 2026-2027 trends" },
   ];
 
   return (
@@ -58,7 +58,7 @@ const CourseOverview = () => {
             <div className="divider-elegant w-16" />
             
             <p className="text-elegant text-muted-foreground leading-relaxed text-base md:text-lg">
-              You will learn Meera's signature <span className="font-display italic text-dusty-rose">Lake Como destination bridal look</span> — a modern, luminous makeup style that defines the 2025-2026 bridal trend, perfected from flawless skin to the final veil.
+              You will learn Meera's signature <span className="font-display italic text-dusty-rose">Lake Como destination bridal look</span> — a modern, luminous makeup style that defines the 2026-2027 bridal trend, perfected from flawless skin to the final veil.
             </p>
 
             <div className="space-y-4 pt-1 md:pt-4">
