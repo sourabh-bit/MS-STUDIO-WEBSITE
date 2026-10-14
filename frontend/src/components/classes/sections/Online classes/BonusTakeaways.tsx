@@ -17,7 +17,7 @@ const BONUSES = [
   },
   {
     title: "Brand Building Blueprint",
-    description: "Step-by-step insights on how Meera built her name — from positioning to personal storytelling that makes your brand memorable."
+    description: "Insights on how Meera built her name — from positioning to personal storytelling that makes your brand memorable."
   },
   {
     title: "Content Creation Mastery",
