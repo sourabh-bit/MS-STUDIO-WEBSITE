@@ -8,14 +8,14 @@ const MasterclassFlow = () => {
       description: "Meet Meera and get an overview of the masterclass and how the session will flow."
     },
     {
-      time: "12:30 PM – 1:15 PM",
-      title: "Skin Prep & Business Understanding",
-      description: "Meera's skin prep routine for a flawless base, plus the business basics every artist needs."
+      time: "12:30 PM – 3:15 PM",
+      title: "Skin Prep & Full Bridal Look",
+      description: "Meera preps the skin for a flawless base, then creates her signature 2027 bridal look live, explaining every step from base to the final veil."
     },
     {
-      time: "1:15 PM – 4:15 PM",
-      title: "Full Bridal Makeup",
-      description: "Watch Meera create a complete bridal look live, with each step explained."
+      time: "3:15 PM – 4:15 PM",
+      title: "How to Achieve Flawless Skin on Dusky Skin",
+      description: "How to prep dusky and discoloured skin and achieve a flawless, even base that looks natural, never grey or ashy."
     },
     {
       time: "4:15 PM – 5:00 PM",
