@@ -1,10 +1,20 @@
 import bridalImage from "@/assets/classes/online-bridal.webp";
 
 const CourseOverview = () => {
-  const highlights = [
-    { label: "Effortless", description: "Learn techniques that look natural and refined" },
-    { label: "Luxe Evolution", description: "Elevate your artistry to luxury standards" },
-    { label: "Fashion Forward", description: "Stay ahead with 2026-2027 trends" },
+  const highlights = [{ label: "Effortless" }, { label: "Luxe Evolution" }, { label: "Fashion Forward" }];
+
+  // The two things the masterclass teaches, in the order they're taught.
+  const lessons = [
+    {
+      title: "Meera's Signature Bridal Look for 2027",
+      description:
+        "Watch Meera create her signature bridal look for 2027 live — a modern, luminous style set to define next season's brides. Every step is explained, from skin prep and a flawless base to the eyes, lips and the final veil, so you can recreate the full look on your own brides.",
+    },
+    {
+      title: "Flawless Skin Work on Dusky & Discoloured Skin",
+      description:
+        "Dusky skin with uneven tone and discolouration needs its own approach. Meera shows how she preps it, corrects the uneven areas and matches the right shade and undertone, so the base looks even, glowing and natural, never grey, ashy or flat.",
+    },
   ];
 
   return (
@@ -16,7 +26,7 @@ const CourseOverview = () => {
             What You Will Learn
           </span>
           <h2 className="heading-section-compact text-foreground">
-            The Signature Look
+            Two Skills, One Masterclass
           </h2>
         </div>
 
@@ -41,7 +51,7 @@ const CourseOverview = () => {
             <div className="aspect-[4/5] overflow-hidden">
               <img
                 src={bridalImage}
-                alt="Lake Como destination bridal look"
+                alt="Destination bridal look"
                 className="w-full h-full object-cover object-top image-elegant"
               />
             </div>
@@ -50,31 +60,27 @@ const CourseOverview = () => {
           </div>
 
           {/* Text Content */}
-          <div className="space-y-5 md:space-y-8">
-            <h3 className="font-serif text-2xl md:text-3xl lg:text-4xl text-foreground leading-snug md:leading-relaxed">
-              Lake Como Destination Bridal Look
-            </h3>
-            
-            <div className="divider-elegant w-16" />
-            
-            <p className="text-elegant text-muted-foreground leading-relaxed text-base md:text-lg">
-              You will learn Meera's signature <span className="font-display italic text-dusty-rose">Lake Como destination bridal look</span> — a modern, luminous makeup style that defines the 2026-2027 bridal trend, perfected from flawless skin to the final veil.
-            </p>
+          <div className="space-y-8 md:space-y-10">
+            {lessons.map((lesson, index) => (
+              <div
+                key={lesson.title}
+                className={`space-y-3 md:space-y-5 ${index > 0 ? "border-t border-dusty-rose/20 pt-8 md:pt-10" : ""}`}
+              >
+                <span className="block font-sans text-[11px] tracking-[0.3em] text-dusty-rose uppercase sm:text-xs">
+                  Part {index + 1}
+                </span>
 
-            <div className="space-y-4 pt-1 md:pt-4">
-              {highlights.map((item, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  {/* Pink Dot + Ring */}
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F3D7DE] flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-[#D9A7B0]"></span>
-                  </span>
-                  <div>
-                    <p className="font-serif text-foreground">{item.label}</p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                <h3 className="font-serif text-2xl md:text-3xl lg:text-4xl text-foreground leading-snug">
+                  {lesson.title}
+                </h3>
+
+                <div className="divider-elegant w-16" />
+
+                <p className="text-elegant text-muted-foreground leading-relaxed text-base md:text-lg">
+                  {lesson.description}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
