@@ -4,9 +4,11 @@ export type RegistrationInput = {
   email: string;
   city: string;
   state: string;
+  country: string;
   instagramHandle?: string;
   experienceMonths?: number;
-  pan: string;
+  // India only — omitted for international registrations.
+  pan?: string;
   gstin?: string;
   // Only sent (and required) when a GST invoice was requested.
   billerName?: string;

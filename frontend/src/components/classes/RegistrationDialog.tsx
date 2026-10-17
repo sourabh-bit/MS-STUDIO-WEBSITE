@@ -14,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -22,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { COUNTRY_GROUPS, INDIA } from "@/lib/countries";
 import { INDIAN_STATES } from "@/lib/indian-states";
 import { formatInrSymbol } from "@/lib/masterclass";
 import { submitRegistration } from "@/lib/registration";
@@ -58,6 +62,7 @@ const RegistrationDialog = ({
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [country, setCountry] = useState(INDIA);
   const [instagramHandle, setInstagramHandle] = useState("");
   const [experienceMonths, setExperienceMonths] = useState("");
   const [pan, setPan] = useState("");
@@ -75,6 +80,7 @@ const RegistrationDialog = ({
       setEmail(user?.email ?? "");
       setCity("");
       setState("");
+      setCountry(INDIA);
       setInstagramHandle("");
       setExperienceMonths("");
       setPan("");
@@ -91,6 +97,17 @@ const RegistrationDialog = ({
   // (the backend ignores any other), so show that number locked rather
   // than an editable field that would quietly be overridden.
   const isPhoneVerified = Boolean(user?.phone);
+
+  // Indian state, PAN and GSTIN only exist for buyers in India.
+  const isIndia = country === INDIA;
+
+  const handleCountryChange = (value: string) => {
+    setCountry(value);
+    setState("");
+    if (value !== INDIA) {
+      setHasGstin(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) {
@@ -117,14 +134,14 @@ const RegistrationDialog = ({
       return;
     }
 
-    if (!state) {
+    if (isIndia && !state) {
       toast({ title: "State is mandatory", variant: "destructive" });
       return;
     }
 
     const trimmedPan = pan.trim().toUpperCase();
 
-    if (!PAN_PATTERN.test(trimmedPan)) {
+    if (isIndia && !PAN_PATTERN.test(trimmedPan)) {
       toast({ title: "Enter a valid 10-character PAN", variant: "destructive" });
       return;
     }
@@ -133,7 +150,7 @@ const RegistrationDialog = ({
     const trimmedBillerName = billerName.trim();
     const trimmedAddress = address.trim();
 
-    if (hasGstin) {
+    if (isIndia && hasGstin) {
       if (!GSTIN_PATTERN.test(trimmedGstin)) {
         toast({ title: "Enter a valid 15-character GSTIN", variant: "destructive" });
         return;
@@ -158,13 +175,14 @@ const RegistrationDialog = ({
         phone: phone.trim(),
         email: email.trim(),
         city: city.trim(),
-        state,
+        state: state.trim(),
+        country,
         instagramHandle: instagramHandle.trim() || undefined,
         experienceMonths: experienceMonths.trim() ? Number(experienceMonths) : undefined,
-        pan: trimmedPan,
-        gstin: hasGstin ? trimmedGstin : undefined,
-        billerName: hasGstin ? trimmedBillerName : undefined,
-        address: hasGstin ? trimmedAddress : undefined,
+        pan: isIndia ? trimmedPan : undefined,
+        gstin: isIndia && hasGstin ? trimmedGstin : undefined,
+        billerName: isIndia && hasGstin ? trimmedBillerName : undefined,
+        address: isIndia && hasGstin ? trimmedAddress : undefined,
         courseName,
         variant,
         amount,
@@ -257,6 +275,33 @@ const RegistrationDialog = ({
             />
           </div>
 
+          <div className="space-y-1">
+            <Label htmlFor="reg-country" className="text-xs">
+              Country <RequiredMark />
+            </Label>
+            <Select value={country} onValueChange={handleCountryChange}>
+              <SelectTrigger id="reg-country" className="h-9">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {COUNTRY_GROUPS.map((group, index) => (
+                  <SelectGroup key={group.label}>
+                    {index > 0 && <SelectSeparator />}
+                    <SelectLabel className="text-[10px] tracking-[0.15em] text-muted-foreground uppercase">
+                      {group.label}
+                    </SelectLabel>
+                    {group.countries.map((option) => (
+                      <SelectItem key={option.iso2} value={option.name}>
+                        <span className="mr-2">{option.flag}</span>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <Label htmlFor="reg-city" className="text-xs">
@@ -265,7 +310,7 @@ const RegistrationDialog = ({
               <Input
                 id="reg-city"
                 className="h-9"
-                placeholder="Mumbai"
+                placeholder={isIndia ? "Mumbai" : "Your city"}
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
               />
@@ -273,20 +318,36 @@ const RegistrationDialog = ({
 
             <div className="space-y-1">
               <Label htmlFor="reg-state" className="text-xs">
-                State <RequiredMark />
+                {isIndia ? (
+                  <>
+                    State <RequiredMark />
+                  </>
+                ) : (
+                  "State / Province"
+                )}
               </Label>
-              <Select value={state} onValueChange={setState}>
-                <SelectTrigger id="reg-state" className="h-9">
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDIAN_STATES.map((option) => (
-                    <SelectItem key={option.code} value={option.name}>
-                      {option.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isIndia ? (
+                <Select value={state} onValueChange={setState}>
+                  <SelectTrigger id="reg-state" className="h-9">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDIAN_STATES.map((option) => (
+                      <SelectItem key={option.code} value={option.name}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="reg-state"
+                  className="h-9"
+                  placeholder="Optional"
+                  value={state}
+                  onChange={(event) => setState(event.target.value)}
+                />
+              )}
             </div>
           </div>
 
@@ -318,93 +379,97 @@ const RegistrationDialog = ({
             />
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="reg-pan" className="text-xs">
-              PAN card number <RequiredMark />
-            </Label>
-            <Input
-              id="reg-pan"
-              className="h-9 uppercase"
-              placeholder="ABCDE1234F"
-              maxLength={10}
-              value={pan}
-              onChange={(event) => setPan(event.target.value.toUpperCase())}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              If you're a minor, enter your guardian's PAN instead.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2">
-            <div className="space-y-0">
-              <Label htmlFor="reg-gstin-toggle" className="text-xs">
-                Do you want a GST invoice?
-              </Label>
-              <p className="text-[11px] text-muted-foreground">Turn on for a GST invoice.</p>
-            </div>
-            <Switch id="reg-gstin-toggle" checked={hasGstin} onCheckedChange={setHasGstin} />
-          </div>
-
-          {hasGstin && (
-            <div className="space-y-2.5 rounded-lg border border-border/50 p-3">
+          {isIndia && (
+            <>
               <div className="space-y-1">
-                <Label htmlFor="reg-gstin" className="text-xs">
-                  GSTIN <RequiredMark />
+                <Label htmlFor="reg-pan" className="text-xs">
+                  PAN card number <RequiredMark />
                 </Label>
                 <Input
-                  id="reg-gstin"
+                  id="reg-pan"
                   className="h-9 uppercase"
-                  placeholder="22AAAAA0000A1Z5"
-                  value={gstin}
-                  maxLength={15}
-                  onChange={(event) => setGstin(event.target.value.toUpperCase())}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  value={pan}
+                  onChange={(event) => setPan(event.target.value.toUpperCase())}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  If you're a minor, enter your guardian's PAN instead.
+                </p>
               </div>
 
-              <div className="space-y-1">
-                <div className="relative flex items-center gap-1.5">
-                  <Label htmlFor="reg-biller-name" className="text-xs">
-                    Biller name <RequiredMark />
+              <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2">
+                <div className="space-y-0">
+                  <Label htmlFor="reg-gstin-toggle" className="text-xs">
+                    Do you want a GST invoice?
                   </Label>
-                  <button
-                    type="button"
-                    aria-label="What is biller name?"
-                    className="text-muted-foreground"
-                    onMouseEnter={() => setShowBillerInfo(true)}
-                    onMouseLeave={() => setShowBillerInfo(false)}
-                    onClick={() => setShowBillerInfo((current) => !current)}
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                  </button>
-                  {showBillerInfo && (
-                    <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md">
-                      The name your GST invoice should be issued to — this can be a company
-                      name or a different person's name, not necessarily your own.
-                    </div>
-                  )}
+                  <p className="text-[11px] text-muted-foreground">Turn on for a GST invoice.</p>
                 </div>
-                <Input
-                  id="reg-biller-name"
-                  className="h-9"
-                  placeholder="Name the invoice should be billed to"
-                  value={billerName}
-                  onChange={(event) => setBillerName(event.target.value)}
-                />
+                <Switch id="reg-gstin-toggle" checked={hasGstin} onCheckedChange={setHasGstin} />
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="reg-address" className="text-xs">
-                  Billing address <RequiredMark />
-                </Label>
-                <Textarea
-                  id="reg-address"
-                  className="min-h-[64px] text-sm"
-                  placeholder="Address for the GST invoice"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                />
-              </div>
-            </div>
+              {hasGstin && (
+                <div className="space-y-2.5 rounded-lg border border-border/50 p-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-gstin" className="text-xs">
+                      GSTIN <RequiredMark />
+                    </Label>
+                    <Input
+                      id="reg-gstin"
+                      className="h-9 uppercase"
+                      placeholder="22AAAAA0000A1Z5"
+                      value={gstin}
+                      maxLength={15}
+                      onChange={(event) => setGstin(event.target.value.toUpperCase())}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="relative flex items-center gap-1.5">
+                      <Label htmlFor="reg-biller-name" className="text-xs">
+                        Biller name <RequiredMark />
+                      </Label>
+                      <button
+                        type="button"
+                        aria-label="What is biller name?"
+                        className="text-muted-foreground"
+                        onMouseEnter={() => setShowBillerInfo(true)}
+                        onMouseLeave={() => setShowBillerInfo(false)}
+                        onClick={() => setShowBillerInfo((current) => !current)}
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                      {showBillerInfo && (
+                        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md">
+                          The name your GST invoice should be issued to — this can be a company
+                          name or a different person's name, not necessarily your own.
+                        </div>
+                      )}
+                    </div>
+                    <Input
+                      id="reg-biller-name"
+                      className="h-9"
+                      placeholder="Name the invoice should be billed to"
+                      value={billerName}
+                      onChange={(event) => setBillerName(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-address" className="text-xs">
+                      Billing address <RequiredMark />
+                    </Label>
+                    <Textarea
+                      id="reg-address"
+                      className="min-h-[64px] text-sm"
+                      placeholder="Address for the GST invoice"
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <Button className="h-10 w-full" onClick={handleSubmit} disabled={isSubmitting}>

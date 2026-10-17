@@ -27,9 +27,16 @@ export const registrationSchema = new Schema(
       required: true,
       trim: true,
     },
+    // Required (an Indian state) only for buyers in India — see
+    // registration.service.
     state: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
+    },
+    country: {
+      type: String,
+      default: "India",
       trim: true,
     },
     instagramHandle: {
@@ -41,9 +48,10 @@ export const registrationSchema = new Schema(
       type: Number,
       default: null,
     },
+    // Indian buyers only; empty for international registrations.
     pan: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
       uppercase: true,
       index: true,

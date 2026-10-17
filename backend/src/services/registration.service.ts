@@ -45,15 +45,19 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Enter your city.");
   }
 
+  // International students (US, Canada, Bangladesh, Nepal…) have no Indian
+  // state, PAN or GSTIN — those are only asked for, and required, in India.
+  const country = input.country?.trim() || "India";
+  const isIndia = country.toLowerCase() === "india";
   const state = input.state.trim();
 
-  if (!state) {
+  if (isIndia && !state) {
     throw new HttpError(400, "Select your state.");
   }
 
-  const pan = input.pan.trim().toUpperCase();
+  const pan = isIndia ? (input.pan ?? "").trim().toUpperCase() : "";
 
-  if (!isValidPan(pan)) {
+  if (isIndia && !isValidPan(pan)) {
     throw new HttpError(400, "Enter a valid 10-character PAN (e.g. ABCDE1234F).");
   }
 
@@ -66,7 +70,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Enter a valid number of months.");
   }
 
-  const gstin = input.gstin?.trim().toUpperCase() || "";
+  const gstin = isIndia ? input.gstin?.trim().toUpperCase() || "" : "";
 
   if (gstin && !isValidGstin(gstin)) {
     throw new HttpError(400, "Enter a valid 15-character GSTIN.");
@@ -100,6 +104,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     email,
     city,
     state,
+    country,
     instagramHandle,
     experienceMonths,
     pan,
@@ -160,7 +165,9 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     phone,
     email,
     city,
-    state,
+    // The sheets have no Country column — fold it into State for anyone
+    // outside India so the row still says where they're from.
+    state: isIndia ? state : [state, country].filter(Boolean).join(", "),
     billerName,
     courseName,
     variant,

@@ -94,6 +94,8 @@ const taxableAmountFromInclusive = (amountPaid: number) => amountPaid / (1 + COU
 // template's own seller state (Delhi), the safest default for a
 // predominantly India-wide but Delhi-anchored customer base.
 const FALLBACK_STATE_CODE = "07";
+// GST state code for a place of supply outside India.
+const OVERSEAS_STATE_CODE = "96";
 
 // Matches ADVANCE payments created either after paymentType existed, or
 // before it did (those documents have no paymentType field at all). The
@@ -374,7 +376,13 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
 
   const buyerName =
     (registration?.hasGstin && registration.billerName) || registration?.name || payment.customerName;
-  const buyerState = registration?.state || "";
+  // Buyers outside India: place of supply is GST code 96 ("Other
+  // Countries"), which also makes the template charge it as IGST.
+  const buyerCountry = registration?.country || "India";
+  const isOverseas = buyerCountry.toLowerCase() !== "india";
+  const buyerState = isOverseas
+    ? [registration?.state, buyerCountry].filter(Boolean).join(", ")
+    : registration?.state || "";
 
   const pdfBuffer = await renderInvoicePdf({
     invoiceNo,
@@ -383,7 +391,9 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
     address: (registration?.hasGstin && registration.address) || "",
     city: registration?.city || "",
     state: buyerState,
-    stateCode: (buyerState && getStateCode(buyerState)) || FALLBACK_STATE_CODE,
+    stateCode: isOverseas
+      ? OVERSEAS_STATE_CODE
+      : (buyerState && getStateCode(buyerState)) || FALLBACK_STATE_CODE,
     gstin: (registration?.hasGstin && registration.gstin) || "",
     pan: registration?.pan || "",
     gstRate: COURSE_GST_RATE,

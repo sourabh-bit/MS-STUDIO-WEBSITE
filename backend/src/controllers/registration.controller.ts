@@ -24,6 +24,7 @@ export const createRegistrationHandler = async (
       email,
       city,
       state,
+      country,
       instagramHandle,
       experienceMonths,
       pan,
@@ -48,7 +49,9 @@ export const createRegistrationHandler = async (
       return;
     }
 
-    if (!name || !email || !city || !state || !pan || !courseName || !amount) {
+    // State and PAN are checked in createRegistration — both only apply to
+    // buyers in India.
+    if (!name || !email || !city || !courseName || !amount) {
       response.status(400).json({ message: "Missing required fields." });
       return;
     }
@@ -73,10 +76,11 @@ export const createRegistrationHandler = async (
       phone: String(phone),
       email: String(email),
       city: String(city),
-      state: String(state),
+      state: state ? String(state) : "",
+      country: country ? String(country) : undefined,
       instagramHandle: instagramHandle ? String(instagramHandle) : undefined,
       experienceMonths: parsedExperienceMonths,
-      pan: String(pan),
+      pan: pan ? String(pan) : undefined,
       gstin: gstin ? String(gstin) : undefined,
       billerName: billerName ? String(billerName) : undefined,
       address: address ? String(address) : undefined,
