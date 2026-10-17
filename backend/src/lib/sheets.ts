@@ -110,6 +110,32 @@ export const formatPhoneForSheet = (value: string) => {
 
 const phoneCell = (value: string) => asPlainText(formatPhoneForSheet(value));
 
+// Dates in the sheet read like "16 Oct 2026, 7:03 AM", in Indian time —
+// not the raw "2026-10-16T01:33:19.674Z". Written as text so Sheets
+// doesn't re-format it by its own locale.
+const IST_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Kolkata",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+export const formatSheetDate = (value: Date | string = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === "string" ? value : "";
+  }
+
+  const parts = Object.fromEntries(IST_FORMAT.formatToParts(date).map((part) => [part.type, part.value]));
+  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} ${String(parts.dayPeriod).toUpperCase()}`;
+};
+
+const dateCell = (value?: Date | string) => asPlainText(formatSheetDate(value));
+
 // row.save() rewrites every cell in the row, Phone included, so a number
 // written as text on the first insert would be re-parsed as a number —
 // dropping its leading "+" — on every later status update. Re-mark it as
@@ -256,7 +282,7 @@ export const appendRegistrationRow = async (row: {
   try {
     const tab = await getSheet(target);
     await tab.addRow({
-      Timestamp: new Date().toISOString(),
+      Timestamp: dateCell(),
       Name: row.name,
       Phone: phoneCell(row.phone),
       Email: row.email,
@@ -324,7 +350,7 @@ export const upsertFullRegistrationRow = async (row: {
     }
 
     await tab.addRow({
-      Timestamp: row.createdAt,
+      Timestamp: dateCell(row.createdAt),
       Name: row.name,
       Phone: phoneCell(row.phone),
       Email: row.email,
@@ -341,7 +367,7 @@ export const upsertFullRegistrationRow = async (row: {
       SecondInstallmentTotal: row.secondInstallmentTotal,
       SecondInstallmentPaid: row.secondInstallmentPaid,
       SecondInstallmentRemaining: row.secondInstallmentRemaining,
-      UpdatedAt: new Date().toISOString(),
+      UpdatedAt: dateCell(),
     });
 
     return { added: true };
@@ -387,7 +413,7 @@ export const upsertPaymentStatusRow = async (input: {
         row.get("Course") === input.courseName,
     );
 
-    const updatedAt = new Date().toISOString();
+    const updatedAt = dateCell();
 
     if (match) {
       if (input.advanceMerchantTxnNo) {
@@ -452,7 +478,7 @@ const appendOnlineRegistrationRow = async (row: {
   try {
     const tab = await getSheet(target);
     await tab.addRow({
-      Timestamp: new Date().toISOString(),
+      Timestamp: dateCell(),
       Name: row.name,
       Phone: phoneCell(row.phone),
       Email: row.email,
@@ -503,7 +529,7 @@ const upsertOnlinePaymentRow = async (input: {
         row.get("Course") === input.courseName,
     );
 
-    const now = new Date().toISOString();
+    const now = dateCell();
     const isPaid = input.advanceStatusText === "PAID";
     const isThisAttemptTheSuccess = input.paymentStatus === "SUCCESS";
     const alreadyPaid = match?.get("PaymentStatus") === "PAID";
