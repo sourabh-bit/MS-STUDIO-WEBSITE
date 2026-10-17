@@ -104,8 +104,8 @@ export const formatPhoneForSheet = (value: string) => {
     : [parsePhoneNumberFromString(`+${digits}`), parsePhoneNumberFromString(digits, "IN")];
   const parsed = candidates.find((candidate) => candidate?.isValid());
 
-  // "+91 9986624699" — country code, a space, then the number.
-  return parsed ? `+${parsed.countryCallingCode} ${parsed.nationalNumber}` : `+${digits}`;
+  // "+91-9986624699" — country code, a dash, then the number.
+  return parsed ? `+${parsed.countryCallingCode}-${parsed.nationalNumber}` : `+${digits}`;
 };
 
 const phoneCell = (value: string) => asPlainText(formatPhoneForSheet(value));
