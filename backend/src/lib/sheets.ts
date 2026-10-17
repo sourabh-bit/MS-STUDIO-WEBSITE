@@ -54,12 +54,25 @@ export const SHEET_HEADERS = [
 // string silently fails to match a row that's actually correct. Detecting
 // and reversing that here means matching stays correct even for any
 // pre-existing cell still stored as a number.
-const lastTenDigits = (value: string) => {
+const phoneDigits = (value: string) => {
   const trimmed = (value || "").trim();
   const scientific = /^-?\d(?:\.\d+)?e\+?\d+$/i.test(trimmed) ? Number(trimmed) : null;
   const normalised = scientific !== null && Number.isFinite(scientific) ? scientific.toFixed(0) : trimmed;
 
-  return normalised.replace(/\D/g, "").slice(-10);
+  return normalised.replace(/\D/g, "");
+};
+
+// Payments store the national number only (e.g. "452432614" for
+// +61 452 432 614), while sheet rows hold the full number with its country
+// code — so two numbers match when one ends with the other. Comparing the
+// last 10 digits only lined up for India's 10-digit national numbers and
+// left every shorter foreign number on an orphaned row of its own.
+const isSamePhone = (left: string, right: string) => {
+  const a = phoneDigits(left);
+  const b = phoneDigits(right);
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+
+  return shorter.length >= 7 && longer.endsWith(shorter);
 };
 
 // Forces Sheets to store this as plain text instead of auto-detecting an
@@ -68,6 +81,14 @@ const lastTenDigits = (value: string) => {
 // appears in the value itself once read back. This is the actual fix, at
 // the point data is written, rather than only working around it on read.
 const asPlainText = (value: string) => (value ? `'${value}` : value);
+
+// row.save() rewrites every cell in the row, Phone included, so a number
+// written as text on the first insert would be re-parsed as a number —
+// dropping its leading "+" — on every later status update. Re-mark it as
+// text just before saving.
+const keepPhoneAsText = (row: { get: (key: string) => string; set: (key: string, value: string) => void }) => {
+  row.set("Phone", asPlainText(row.get("Phone") ?? ""));
+};
 
 // Column layout for the online-masterclass sheet. Online is a single
 // one-time payment, so there's no advance/installment ledger here — just
@@ -266,7 +287,7 @@ export const upsertFullRegistrationRow = async (row: {
     const rows = await tab.getRows();
     const alreadyExists = rows.some(
       (existing) =>
-        lastTenDigits(existing.get("Phone") ?? "") === lastTenDigits(row.phone) &&
+        isSamePhone(existing.get("Phone") ?? "", row.phone) &&
         existing.get("Course") === row.courseName,
     );
 
@@ -334,7 +355,7 @@ export const upsertPaymentStatusRow = async (input: {
     const rows = await tab.getRows();
     const match = rows.find(
       (row) =>
-        lastTenDigits(row.get("Phone") ?? "") === lastTenDigits(input.mobile) &&
+        isSamePhone(row.get("Phone") ?? "", input.mobile) &&
         row.get("Course") === input.courseName,
     );
 
@@ -352,6 +373,7 @@ export const upsertPaymentStatusRow = async (input: {
       match.set("SecondInstallmentPaid", input.secondInstallmentPaid);
       match.set("SecondInstallmentRemaining", input.secondInstallmentRemaining);
       match.set("UpdatedAt", updatedAt);
+      keepPhoneAsText(match);
       await match.save();
       return;
     }
@@ -449,7 +471,7 @@ const upsertOnlinePaymentRow = async (input: {
     const rows = await tab.getRows();
     const match = rows.find(
       (row) =>
-        lastTenDigits(row.get("Phone") ?? "") === lastTenDigits(input.mobile) &&
+        isSamePhone(row.get("Phone") ?? "", input.mobile) &&
         row.get("Course") === input.courseName,
     );
 
@@ -485,6 +507,7 @@ const upsertOnlinePaymentRow = async (input: {
 
     if (match) {
       match.assign(fields);
+      keepPhoneAsText(match);
       await match.save();
       return;
     }
