@@ -2,7 +2,7 @@ import { connectToDatabase } from "../db/connect.js";
 import { HttpError } from "../lib/http-error.js";
 import { isValidGstin } from "../lib/gstin.js";
 import { isValidPan } from "../lib/pan.js";
-import { detectContactChannel, isValidEmail, normaliseContact } from "../lib/otp.js";
+import { detectContactChannel, isIndianPhone, isValidEmail, normaliseContact } from "../lib/otp.js";
 import { appendRegistrationRow } from "../lib/sheets.js";
 import { getSecondInstallmentTotal } from "../config/installment.js";
 import { OnlineRegistration } from "../models/OnlineRegistration.js";
@@ -55,9 +55,12 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw new HttpError(400, "Select your state.");
   }
 
+  // PAN is mandatory only for someone in India on an Indian (+91) number.
+  // In India on a foreign number it's optional, but still checked if given.
+  const isPanRequired = isIndia && isIndianPhone(phone);
   const pan = isIndia ? (input.pan ?? "").trim().toUpperCase() : "";
 
-  if (isIndia && !isValidPan(pan)) {
+  if ((isPanRequired || pan) && !isValidPan(pan)) {
     throw new HttpError(400, "Enter a valid 10-character PAN (e.g. ABCDE1234F).");
   }
 

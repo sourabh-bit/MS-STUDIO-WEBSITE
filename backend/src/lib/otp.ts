@@ -41,6 +41,14 @@ const parsePhoneContact = (rawContact: string) => {
   return indiaFallback?.isValid() ? indiaFallback : null;
 };
 
+// True for an Indian (+91) mobile number — the only case where PAN is
+// required on a registration. Unparseable input counts as Indian, matching
+// parsePhoneContact's own India fallback.
+export const isIndianPhone = (rawContact: string) => {
+  const country = parsePhoneContact(rawContact)?.country;
+  return !country || country === "IN";
+};
+
 export const detectContactChannel = (rawContact: string): OtpChannel | null => {
   const contact = rawContact.trim();
 

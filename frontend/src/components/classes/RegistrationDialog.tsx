@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { COUNTRY_GROUPS, INDIA } from "@/lib/countries";
+import { COUNTRY_GROUPS, INDIA, countryFromPhone, isIndianPhone } from "@/lib/countries";
 import { INDIAN_STATES } from "@/lib/indian-states";
 import { formatInrSymbol } from "@/lib/masterclass";
 import { submitRegistration } from "@/lib/registration";
@@ -81,7 +81,9 @@ const RegistrationDialog = ({
       setEmail(user?.email ?? "");
       setCity("");
       setState("");
-      setCountry(INDIA);
+      // Start on the country of their verified number (e.g. +1 → United
+      // States); they can still change it.
+      setCountry(countryFromPhone(user?.phone)?.name ?? INDIA);
       setPostalCode("");
       setInstagramHandle("");
       setExperienceMonths("");
@@ -102,6 +104,9 @@ const RegistrationDialog = ({
 
   // Indian state, PAN and GSTIN only exist for buyers in India.
   const isIndia = country === INDIA;
+  // PAN is mandatory only in India on an Indian (+91) number; on a foreign
+  // number it's shown as optional. Mirrors registration.service.
+  const isPanRequired = isIndia && isIndianPhone(user?.phone ?? phone);
 
   const handleCountryChange = (value: string) => {
     setCountry(value);
@@ -152,7 +157,7 @@ const RegistrationDialog = ({
 
     const trimmedPan = pan.trim().toUpperCase();
 
-    if (isIndia && !PAN_PATTERN.test(trimmedPan)) {
+    if ((isPanRequired || (isIndia && trimmedPan)) && !PAN_PATTERN.test(trimmedPan)) {
       toast({ title: "Enter a valid 10-character PAN", variant: "destructive" });
       return;
     }
@@ -190,7 +195,7 @@ const RegistrationDialog = ({
         country,
         instagramHandle: instagramHandle.trim() || undefined,
         experienceMonths: experienceMonths.trim() ? Number(experienceMonths) : undefined,
-        pan: isIndia ? trimmedPan : undefined,
+        pan: isIndia && trimmedPan ? trimmedPan : undefined,
         gstin: isIndia && hasGstin ? trimmedGstin : undefined,
         billerName: isIndia && hasGstin ? trimmedBillerName : undefined,
         // GST billing address in India; residential address abroad.
@@ -436,18 +441,20 @@ const RegistrationDialog = ({
             <>
               <div className="space-y-1">
                 <Label htmlFor="reg-pan" className="text-xs">
-                  PAN card number <RequiredMark />
+                  PAN card number {isPanRequired && <RequiredMark />}
                 </Label>
                 <Input
                   id="reg-pan"
                   className="h-9 uppercase"
-                  placeholder="ABCDE1234F"
+                  placeholder={isPanRequired ? "ABCDE1234F" : "ABCDE1234F (optional)"}
                   maxLength={10}
                   value={pan}
                   onChange={(event) => setPan(event.target.value.toUpperCase())}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  If you're a minor, enter your guardian's PAN instead.
+                  {isPanRequired
+                    ? "If you're a minor, enter your guardian's PAN instead."
+                    : "Optional for international mobile numbers."}
                 </p>
               </div>
 
