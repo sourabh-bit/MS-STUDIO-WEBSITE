@@ -1,5 +1,6 @@
 import { JWT } from "google-auth-library";
 import { GoogleSpreadsheet, type GoogleSpreadsheetWorksheet } from "google-spreadsheet";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
@@ -82,12 +83,38 @@ const isSamePhone = (left: string, right: string) => {
 // the point data is written, rather than only working around it on read.
 const asPlainText = (value: string) => (value ? `'${value}` : value);
 
+// Every Phone cell is written as the full international number ("+91…",
+// "+1…"). Cells already saved as plain numbers lost their "+" (and read
+// back as "9198…" or "1571…"), and payments only carry the bare national
+// number — both come back here with their country code. A bare 10-digit
+// number with no country code is Indian.
+export const formatPhoneForSheet = (value: string) => {
+  const digits = phoneDigits(value);
+
+  if (!digits) {
+    return "";
+  }
+
+  // A bare 10-digit number (or 0 + 10 digits) is an Indian mobile — try
+  // India first for those, or e.g. "8610795569" would read as a +86
+  // (China) number. Anything longer already carries its country code.
+  const isBareIndian = digits.length === 10 || (digits.length === 11 && digits.startsWith("0"));
+  const candidates = isBareIndian
+    ? [parsePhoneNumberFromString(digits, "IN"), parsePhoneNumberFromString(`+${digits}`)]
+    : [parsePhoneNumberFromString(`+${digits}`), parsePhoneNumberFromString(digits, "IN")];
+  const parsed = candidates.find((candidate) => candidate?.isValid());
+
+  return parsed ? parsed.number : `+${digits}`;
+};
+
+const phoneCell = (value: string) => asPlainText(formatPhoneForSheet(value));
+
 // row.save() rewrites every cell in the row, Phone included, so a number
 // written as text on the first insert would be re-parsed as a number —
 // dropping its leading "+" — on every later status update. Re-mark it as
-// text just before saving.
+// text (and restore the "+country code") just before saving.
 const keepPhoneAsText = (row: { get: (key: string) => string; set: (key: string, value: string) => void }) => {
-  row.set("Phone", asPlainText(row.get("Phone") ?? ""));
+  row.set("Phone", phoneCell(row.get("Phone") ?? ""));
 };
 
 // Column layout for the online-masterclass sheet. Online is a single
@@ -230,7 +257,7 @@ export const appendRegistrationRow = async (row: {
     await tab.addRow({
       Timestamp: new Date().toISOString(),
       Name: row.name,
-      Phone: asPlainText(row.phone),
+      Phone: phoneCell(row.phone),
       Email: row.email,
       City: row.city,
       State: row.state,
@@ -298,7 +325,7 @@ export const upsertFullRegistrationRow = async (row: {
     await tab.addRow({
       Timestamp: row.createdAt,
       Name: row.name,
-      Phone: asPlainText(row.phone),
+      Phone: phoneCell(row.phone),
       Email: row.email,
       City: row.city,
       State: row.state || "",
@@ -383,7 +410,7 @@ export const upsertPaymentStatusRow = async (input: {
     // Add a partial row rather than silently dropping the update.
     await tab.addRow({
       Timestamp: updatedAt,
-      Phone: asPlainText(input.mobile),
+      Phone: phoneCell(input.mobile),
       Course: input.courseName,
       MerchantTxnNo: input.advanceMerchantTxnNo || "",
       AdvanceAmount: input.advanceAmount ?? "",
@@ -426,7 +453,7 @@ const appendOnlineRegistrationRow = async (row: {
     await tab.addRow({
       Timestamp: new Date().toISOString(),
       Name: row.name,
-      Phone: asPlainText(row.phone),
+      Phone: phoneCell(row.phone),
       Email: row.email,
       City: row.city,
       State: row.state,
@@ -517,7 +544,7 @@ const upsertOnlinePaymentRow = async (input: {
     // dropping it, so nothing paid is ever missing from the sheet.
     await tab.addRow({
       Timestamp: now,
-      Phone: asPlainText(input.mobile),
+      Phone: phoneCell(input.mobile),
       Course: input.courseName,
       ...fields,
     });
