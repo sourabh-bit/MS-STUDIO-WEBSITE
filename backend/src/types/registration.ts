@@ -16,7 +16,9 @@ export type CreateRegistrationInput = {
   // Only meaningful (and required) when gstin is present — who the GST
   // invoice should actually be billed to, and where it should be sent.
   billerName?: string;
+  // Also the residential address (required) for buyers outside India.
   address?: string;
+  postalCode?: string;
   courseName: string;
   variant: RegistrationVariant;
   amount: number;

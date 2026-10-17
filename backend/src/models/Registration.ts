@@ -39,6 +39,12 @@ export const registrationSchema = new Schema(
       default: "India",
       trim: true,
     },
+    // International registrations only.
+    postalCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     instagramHandle: {
       type: String,
       default: "",

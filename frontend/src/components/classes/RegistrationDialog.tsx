@@ -63,6 +63,7 @@ const RegistrationDialog = ({
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [country, setCountry] = useState(INDIA);
+  const [postalCode, setPostalCode] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [experienceMonths, setExperienceMonths] = useState("");
   const [pan, setPan] = useState("");
@@ -81,6 +82,7 @@ const RegistrationDialog = ({
       setCity("");
       setState("");
       setCountry(INDIA);
+      setPostalCode("");
       setInstagramHandle("");
       setExperienceMonths("");
       setPan("");
@@ -104,6 +106,10 @@ const RegistrationDialog = ({
   const handleCountryChange = (value: string) => {
     setCountry(value);
     setState("");
+    // `address` is the GST billing address in India and the residential
+    // address abroad — don't carry one over into the other.
+    setAddress("");
+    setPostalCode("");
     if (value !== INDIA) {
       setHasGstin(false);
     }
@@ -126,6 +132,11 @@ const RegistrationDialog = ({
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       toast({ title: "Enter a valid email address", variant: "destructive" });
+      return;
+    }
+
+    if (!isIndia && !address.trim()) {
+      toast({ title: "Address is mandatory", variant: "destructive" });
       return;
     }
 
@@ -182,7 +193,9 @@ const RegistrationDialog = ({
         pan: isIndia ? trimmedPan : undefined,
         gstin: isIndia && hasGstin ? trimmedGstin : undefined,
         billerName: isIndia && hasGstin ? trimmedBillerName : undefined,
-        address: isIndia && hasGstin ? trimmedAddress : undefined,
+        // GST billing address in India; residential address abroad.
+        address: !isIndia || hasGstin ? trimmedAddress : undefined,
+        postalCode: !isIndia ? postalCode.trim() || undefined : undefined,
         courseName,
         variant,
         amount,
@@ -302,31 +315,25 @@ const RegistrationDialog = ({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="space-y-1">
-              <Label htmlFor="reg-city" className="text-xs">
-                City <RequiredMark />
-              </Label>
-              <Input
-                id="reg-city"
-                className="h-9"
-                placeholder={isIndia ? "Mumbai" : "Your city"}
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-              />
-            </div>
+          {isIndia ? (
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label htmlFor="reg-city" className="text-xs">
+                  City <RequiredMark />
+                </Label>
+                <Input
+                  id="reg-city"
+                  className="h-9"
+                  placeholder="Mumbai"
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                />
+              </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="reg-state" className="text-xs">
-                {isIndia ? (
-                  <>
-                    State <RequiredMark />
-                  </>
-                ) : (
-                  "State / Province"
-                )}
-              </Label>
-              {isIndia ? (
+              <div className="space-y-1">
+                <Label htmlFor="reg-state" className="text-xs">
+                  State <RequiredMark />
+                </Label>
                 <Select value={state} onValueChange={setState}>
                   <SelectTrigger id="reg-state" className="h-9">
                     <SelectValue placeholder="Select state" />
@@ -339,17 +346,63 @@ const RegistrationDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="reg-address-intl" className="text-xs">
+                  Full Address / Street Address <RequiredMark />
+                </Label>
+                <Textarea
+                  id="reg-address-intl"
+                  className="min-h-[64px] text-sm"
+                  placeholder="House/Flat No., Street, Area, Apartment, etc."
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="reg-city" className="text-xs">
+                  City / Town <RequiredMark />
+                </Label>
+                <Input
+                  id="reg-city"
+                  className="h-9"
+                  placeholder="Enter city or town"
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="reg-state" className="text-xs">
+                  State / Province / Region (if applicable)
+                </Label>
                 <Input
                   id="reg-state"
                   className="h-9"
-                  placeholder="Optional"
+                  placeholder="e.g. California, Ontario, England"
                   value={state}
                   onChange={(event) => setState(event.target.value)}
                 />
-              )}
-            </div>
-          </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="reg-postal" className="text-xs">
+                  Postal Code / ZIP Code
+                </Label>
+                <Input
+                  id="reg-postal"
+                  className="h-9"
+                  placeholder="Enter postal code, if applicable"
+                  value={postalCode}
+                  onChange={(event) => setPostalCode(event.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="reg-instagram" className="text-xs">

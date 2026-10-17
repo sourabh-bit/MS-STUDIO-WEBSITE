@@ -388,7 +388,9 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
     invoiceNo,
     invoiceDate: new Date().toISOString(),
     name: buyerName,
-    address: (registration?.hasGstin && registration.address) || "",
+    address: isOverseas
+      ? [registration?.address, registration?.postalCode].filter(Boolean).join(", ")
+      : (registration?.hasGstin && registration.address) || "",
     city: registration?.city || "",
     state: buyerState,
     stateCode: isOverseas

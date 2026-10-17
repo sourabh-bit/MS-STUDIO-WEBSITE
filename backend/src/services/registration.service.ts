@@ -81,7 +81,13 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
   // they're required together with a GSTIN rather than each optional on
   // their own.
   const billerName = input.billerName?.trim() || "";
+  // Outside India this is the (required) residential address instead.
   const address = input.address?.trim() || "";
+  const postalCode = isIndia ? "" : input.postalCode?.trim() || "";
+
+  if (!isIndia && !address) {
+    throw new HttpError(400, "Enter your full address.");
+  }
 
   if (gstin && !billerName) {
     throw new HttpError(400, "Enter the name the GST invoice should be billed to.");
@@ -105,6 +111,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     city,
     state,
     country,
+    postalCode,
     instagramHandle,
     experienceMonths,
     pan,
@@ -177,7 +184,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     secondInstallmentTotal: getSecondInstallmentTotal(courseName),
     instagramHandle,
     experienceMonths,
-    billingAddress: address,
+    billingAddress: [address, postalCode].filter(Boolean).join(", "),
   });
 
   return { id: String(registration._id) };
