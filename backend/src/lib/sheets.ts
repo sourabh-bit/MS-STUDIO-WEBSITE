@@ -4,6 +4,7 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { isTestPhone } from "./test-phones.js";
 
 // Must match the sheet's actual header row (row 1) exactly:
 // Timestamp | Name | Phone | Email | City | State | Course | Variant | PAN
@@ -274,6 +275,11 @@ export const appendRegistrationRow = async (row: {
   experienceMonths?: number | null;
   billingAddress?: string;
 }) => {
+  // Team test numbers never reach the sheets (see lib/test-phones.ts).
+  if (isTestPhone(row.phone)) {
+    return;
+  }
+
   if (row.variant === "online") {
     await appendOnlineRegistrationRow(row);
     return;
@@ -336,6 +342,10 @@ export const upsertFullRegistrationRow = async (row: {
   secondInstallmentPaid: number;
   secondInstallmentRemaining: number;
 }): Promise<{ added: boolean; reason?: string }> => {
+  if (isTestPhone(row.phone)) {
+    return { added: false, reason: "Test phone number — not written to the sheet." };
+  }
+
   const target = offlineTarget();
 
   if (!isConfigured(target)) {
@@ -399,6 +409,10 @@ export const upsertPaymentStatusRow = async (input: {
   secondInstallmentPaid: number;
   secondInstallmentRemaining: number;
 }) => {
+  if (isTestPhone(input.mobile)) {
+    return;
+  }
+
   if (input.variant === "online") {
     await upsertOnlinePaymentRow(input);
     return;

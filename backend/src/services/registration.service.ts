@@ -4,6 +4,7 @@ import { isValidGstin } from "../lib/gstin.js";
 import { isValidPan } from "../lib/pan.js";
 import { detectContactChannel, isIndianPhone, isValidEmail, normaliseContact } from "../lib/otp.js";
 import { appendRegistrationRow } from "../lib/sheets.js";
+import { isTestPhone } from "../lib/test-phones.js";
 import { getSecondInstallmentTotal } from "../config/installment.js";
 import { OnlineRegistration } from "../models/OnlineRegistration.js";
 import { Registration } from "../models/Registration.js";
@@ -204,6 +205,11 @@ export const hasRegistered = async (
   await connectToDatabase();
 
   if (detectContactChannel(phone) !== "phone") {
+    return false;
+  }
+
+  // Team test numbers always get the registration form (lib/test-phones.ts).
+  if (isTestPhone(phone)) {
     return false;
   }
 

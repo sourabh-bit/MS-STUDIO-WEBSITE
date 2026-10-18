@@ -10,6 +10,7 @@ import { logger } from "../lib/logger.js";
 import { HttpError } from "../lib/http-error.js";
 import { sendInvoiceEmail } from "../lib/mailer.js";
 import { upsertPaymentStatusRow } from "../lib/sheets.js";
+import { isTestPhone } from "../lib/test-phones.js";
 import { nextInvoiceNumber, renderInvoicePdf } from "./invoice.service.js";
 import { CLASS_VARIANTS, toClassVariant, type ClassVariant } from "../db/class-databases.js";
 import { paymentModelFor, type PaymentDocument } from "../models/Payment.js";
@@ -134,7 +135,9 @@ export const getPaymentSummary = async (
 
   const Payment = paymentModelFor(variant);
 
-  const advancePayment = await Payment.findOne({
+  // Team test numbers are never "enrolled", so the whole enrol → pay flow
+  // can be run again and again (see lib/test-phones.ts).
+  const advancePayment = isTestPhone(mobile) ? null : await Payment.findOne({
     mobile,
     courseName,
     variant,
@@ -363,7 +366,11 @@ export const issueInvoiceForPayment = async (payment: PaymentDocument, ledger: P
     })
     .sort({ createdAt: -1 });
 
-  const invoiceNo = await nextInvoiceNumber();
+  // Test numbers get a throwaway invoice number so the real MSB-B2C series
+  // never has gaps from test payments.
+  const invoiceNo = isTestPhone(payment.mobile)
+    ? `TEST-${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}`
+    : await nextInvoiceNumber();
 
   // The online masterclass is paid in one go, so its single payment is the
   // full course fee, never an "advance".
@@ -838,7 +845,7 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
       ...ADVANCE_TYPE_FILTER,
     });
 
-    if (existingAdvance) {
+    if (existingAdvance && !isTestPhone(input.mobile)) {
       throw new HttpError(
         409,
         input.variant === "online"
