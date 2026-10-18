@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { BadgeCheck, Info, Loader2, Lock } from "lucide-react";
+import { getCountryCallingCode, isValidPhoneNumber, type CountryCode } from "libphonenumber-js";
+
+import CountryCodeSelect from "@/components/auth/CountryCodeSelect";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Dialog,
@@ -25,7 +29,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { COUNTRY_GROUPS, INDIA, countryFromPhone, isIndianPhone } from "@/lib/countries";
+import {
+  COUNTRY_GROUPS,
+  DEFAULT_COUNTRY,
+  INDIA,
+  countryFromPhone,
+  isIndianPhone,
+} from "@/lib/countries";
 import { INDIAN_STATES } from "@/lib/indian-states";
 import { formatInrSymbol } from "@/lib/masterclass";
 import { submitRegistration } from "@/lib/registration";
@@ -64,6 +74,10 @@ const RegistrationDialog = ({
   const [state, setState] = useState("");
   const [country, setCountry] = useState(INDIA);
   const [postalCode, setPostalCode] = useState("");
+  // WhatsApp defaults to the verified mobile; untick to enter another one.
+  const [isWhatsappSame, setIsWhatsappSame] = useState(true);
+  const [whatsappCountry, setWhatsappCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
+  const [whatsappLocal, setWhatsappLocal] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [experienceMonths, setExperienceMonths] = useState("");
   const [pan, setPan] = useState("");
@@ -85,6 +99,9 @@ const RegistrationDialog = ({
       // States); they can still change it.
       setCountry(countryFromPhone(user?.phone)?.name ?? INDIA);
       setPostalCode("");
+      setIsWhatsappSame(true);
+      setWhatsappCountry(countryFromPhone(user?.phone)?.iso2 ?? DEFAULT_COUNTRY);
+      setWhatsappLocal("");
       setInstagramHandle("");
       setExperienceMonths("");
       setPan("");
@@ -132,6 +149,11 @@ const RegistrationDialog = ({
 
     if (phone.replace(/\D/g, "").length < 10) {
       toast({ title: "Mobile number is mandatory", variant: "destructive" });
+      return;
+    }
+
+    if (!isWhatsappSame && !isValidPhoneNumber(whatsappLocal, whatsappCountry)) {
+      toast({ title: "Enter a valid WhatsApp number", variant: "destructive" });
       return;
     }
 
@@ -189,6 +211,9 @@ const RegistrationDialog = ({
       await submitRegistration({
         name: name.trim(),
         phone: phone.trim(),
+        whatsappNumber: isWhatsappSame
+          ? phone.trim()
+          : `+${getCountryCallingCode(whatsappCountry)}${whatsappLocal.replace(/\D/g, "")}`,
         email: email.trim(),
         city: city.trim(),
         state: state.trim(),
@@ -277,6 +302,48 @@ const RegistrationDialog = ({
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="reg-whatsapp" className="text-xs">
+                WhatsApp number <RequiredMark />
+              </Label>
+              <label
+                htmlFor="reg-whatsapp-same"
+                className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground"
+              >
+                <Checkbox
+                  id="reg-whatsapp-same"
+                  className="h-3.5 w-3.5"
+                  checked={isWhatsappSame}
+                  onCheckedChange={(checked) => setIsWhatsappSame(checked === true)}
+                />
+                Same as mobile number
+              </label>
+            </div>
+            {isWhatsappSame ? (
+              <Input
+                id="reg-whatsapp"
+                className="h-9 bg-muted/40 text-foreground/80"
+                value={phone}
+                readOnly
+                aria-readonly
+              />
+            ) : (
+              <div className="flex gap-2">
+                <CountryCodeSelect value={whatsappCountry} onChange={setWhatsappCountry} />
+                <Input
+                  id="reg-whatsapp"
+                  className="h-9 flex-1"
+                  type="tel"
+                  placeholder="98765 43210"
+                  value={whatsappLocal}
+                  onChange={(event) => setWhatsappLocal(event.target.value)}
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">

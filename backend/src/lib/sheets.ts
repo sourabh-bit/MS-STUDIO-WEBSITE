@@ -7,7 +7,7 @@ import { logger } from "./logger.js";
 import { isTestPhone } from "./test-phones.js";
 
 // Must match the sheet's actual header row (row 1) exactly:
-// Timestamp | Name | Phone | Email | City | State | Course | Variant | PAN
+// Timestamp | Name | Phone | WhatsApp | Email | City | State | Course | Variant | PAN
 // | GSTIN | BillingName | MerchantTxnNo | AdvanceAmount |
 // AdvancePaymentStatus | SecondInstallmentTotal | SecondInstallmentPaid |
 // SecondInstallmentRemaining | UpdatedAt
@@ -22,6 +22,7 @@ export const SHEET_HEADERS = [
   "Timestamp",
   "Name",
   "Phone",
+  "WhatsApp",
   "Email",
   "City",
   "State",
@@ -160,6 +161,7 @@ export const ONLINE_SHEET_HEADERS = [
   "Timestamp",
   "Name",
   "Phone",
+  "WhatsApp",
   "Email",
   "City",
   "State",
@@ -258,6 +260,7 @@ const getSheet = (target: SheetTarget) => {
 export const appendRegistrationRow = async (row: {
   name: string;
   phone: string;
+  whatsappNumber?: string;
   email: string;
   city: string;
   state: string;
@@ -297,6 +300,7 @@ export const appendRegistrationRow = async (row: {
       Timestamp: dateCell(),
       Name: row.name,
       Phone: phoneCell(row.phone),
+      WhatsApp: phoneCell(row.whatsappNumber || row.phone),
       Email: row.email,
       City: row.city,
       State: row.state,
@@ -477,6 +481,7 @@ export const upsertPaymentStatusRow = async (input: {
 const appendOnlineRegistrationRow = async (row: {
   name: string;
   phone: string;
+  whatsappNumber?: string;
   email: string;
   city: string;
   state: string;
@@ -501,6 +506,7 @@ const appendOnlineRegistrationRow = async (row: {
       Timestamp: dateCell(),
       Name: row.name,
       Phone: phoneCell(row.phone),
+      WhatsApp: phoneCell(row.whatsappNumber || row.phone),
       Email: row.email,
       City: row.city,
       State: row.state,

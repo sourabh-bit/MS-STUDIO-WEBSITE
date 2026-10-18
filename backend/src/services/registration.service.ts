@@ -32,6 +32,15 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
   }
 
   const phone = normaliseContact(input.phone, "phone");
+
+  // Optional — falls back to the verified mobile.
+  const rawWhatsapp = input.whatsappNumber?.trim() || "";
+
+  if (rawWhatsapp && detectContactChannel(rawWhatsapp) !== "phone") {
+    throw new HttpError(400, "Enter a valid WhatsApp number.");
+  }
+
+  const whatsappNumber = rawWhatsapp ? normaliseContact(rawWhatsapp, "phone") : phone;
   const email = input.email.trim().toLowerCase();
 
   if (!isValidEmail(email)) {
@@ -111,6 +120,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
   const details = {
     name,
     phone,
+    whatsappNumber,
     email,
     city,
     state,
@@ -174,6 +184,7 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
   await appendRegistrationRow({
     name,
     phone,
+    whatsappNumber,
     email,
     city,
     // The sheets have no Country column — fold it into State for anyone

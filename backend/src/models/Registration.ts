@@ -15,6 +15,12 @@ export const registrationSchema = new Schema(
       trim: true,
       index: true,
     },
+    // E.164; the verified mobile unless the student gave a different one.
+    whatsappNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     email: {
       type: String,
       required: true,

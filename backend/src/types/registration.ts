@@ -3,6 +3,8 @@ export type RegistrationVariant = "online" | "offline";
 export type CreateRegistrationInput = {
   name: string;
   phone: string;
+  // Defaults to `phone` when not given.
+  whatsappNumber?: string;
   email: string;
   city: string;
   // Free text outside India (province / region); an Indian state name inside.

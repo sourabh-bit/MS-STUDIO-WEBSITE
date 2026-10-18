@@ -1,6 +1,8 @@
 export type RegistrationInput = {
   name: string;
   phone: string;
+  // Same as `phone` unless the student entered a different WhatsApp number.
+  whatsappNumber?: string;
   email: string;
   city: string;
   state: string;

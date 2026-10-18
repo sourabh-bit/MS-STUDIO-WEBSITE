@@ -21,6 +21,7 @@ export const createRegistrationHandler = async (
 
     const {
       name,
+      whatsappNumber,
       email,
       city,
       state,
@@ -75,6 +76,7 @@ export const createRegistrationHandler = async (
     const result = await createRegistration({
       name: String(name),
       phone: String(phone),
+      whatsappNumber: whatsappNumber ? String(whatsappNumber) : undefined,
       email: String(email),
       city: String(city),
       state: state ? String(state) : "",
