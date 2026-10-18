@@ -99,6 +99,9 @@ app.get("/api/health", async (_request, response) => {
     backend: "ok",
     status: "ok",
     mongodb: connection.readyState === 1 ? "connected" : "disconnected",
+    // Which commit is live (Render sets RENDER_GIT_COMMIT) — tells a
+    // finished deploy apart from one still building.
+    build: (process.env.RENDER_GIT_COMMIT || "local").slice(0, 7),
   });
 });
 

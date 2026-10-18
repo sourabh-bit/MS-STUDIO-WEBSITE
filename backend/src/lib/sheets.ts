@@ -144,12 +144,33 @@ export const formatSheetDate = (value: Date | string = new Date()) => {
 
 const dateCell = (value?: Date | string) => asPlainText(formatSheetDate(value));
 
-// row.save() rewrites every cell in the row, Phone included, so a number
-// written as text on the first insert would be re-parsed as a number —
-// dropping its leading "+" — on every later status update. Re-mark it as
-// text (and restore the "+country code") just before saving.
-const keepPhoneAsText = (row: { get: (key: string) => string; set: (key: string, value: string) => void }) => {
-  row.set("Phone", phoneCell(row.get("Phone") ?? ""));
+// row.save() rewrites every cell in the row from its displayed text, as if
+// typed in. Without a leading apostrophe, Sheets turns "+1-2015517116" into
+// the formula 1−2015517116 and "18 Oct 2026, 1:09 PM" into a date number.
+// Re-mark the phone and date cells as text just before saving.
+const PHONE_COLUMNS = ["Phone", "WhatsApp"];
+const DATE_COLUMNS = ["Timestamp", "UpdatedAt", "PaidAt"];
+
+const keepTextCells = (row: {
+  get: (key: string) => string;
+  set: (key: string, value: string) => void;
+  toObject: () => Record<string, unknown>;
+}) => {
+  const columns = Object.keys(row.toObject());
+
+  for (const column of PHONE_COLUMNS.filter((name) => columns.includes(name))) {
+    const value = row.get(column) ?? "";
+    if (value) {
+      row.set(column, phoneCell(value));
+    }
+  }
+
+  for (const column of DATE_COLUMNS.filter((name) => columns.includes(name))) {
+    const value = row.get(column) ?? "";
+    if (value) {
+      row.set(column, asPlainText(value));
+    }
+  }
 };
 
 // Column layout for the online-masterclass sheet. Online is a single
@@ -237,7 +258,17 @@ const loadSheet = async (target: SheetTarget) => {
   throw new Error(`Sheet tab "${target.tabName}" not found in spreadsheet ${target.sheetId}.`);
 };
 
-const getSheet = (target: SheetTarget) => {
+// The worksheet is cached, but its header row is re-read on every use: rows
+// are laid out by header position, so a column added or moved in the sheet
+// (e.g. WhatsApp after Phone) would otherwise shift every value written by
+// an already-running server into the wrong column.
+const getSheet = async (target: SheetTarget) => {
+  const tab = await getCachedSheet(target);
+  await tab.loadHeaderRow();
+  return tab;
+};
+
+const getCachedSheet = (target: SheetTarget) => {
   const key = `${target.sheetId}::${target.tabName}`;
   let promise = sheetPromises.get(key);
 
@@ -451,7 +482,7 @@ export const upsertPaymentStatusRow = async (input: {
       match.set("SecondInstallmentPaid", input.secondInstallmentPaid);
       match.set("SecondInstallmentRemaining", input.secondInstallmentRemaining);
       match.set("UpdatedAt", updatedAt);
-      keepPhoneAsText(match);
+      keepTextCells(match);
       await match.save();
       return;
     }
@@ -587,7 +618,7 @@ const upsertOnlinePaymentRow = async (input: {
 
     if (match) {
       match.assign(fields);
-      keepPhoneAsText(match);
+      keepTextCells(match);
       await match.save();
       return;
     }
