@@ -113,14 +113,19 @@ const phoneCell = (value: string) => asPlainText(formatPhoneForSheet(value));
 // Dates in the sheet read like "16 Oct 2026, 7:03 AM", in Indian time —
 // not the raw "2026-10-16T01:33:19.674Z". Written as text so Sheets
 // doesn't re-format it by its own locale.
+// Fixed three-letter months — en-GB writes September as "Sept".
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 const IST_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
   day: "numeric",
-  month: "short",
+  month: "numeric",
   year: "numeric",
   hour: "numeric",
   minute: "2-digit",
-  hour12: true,
+  // h12 = 12, 1, 2 … 11. (en-GB's default 12-hour cycle is 0–11, which
+  // printed "0:47 PM" for 12:47 PM.)
+  hourCycle: "h12",
 });
 
 export const formatSheetDate = (value: Date | string = new Date()) => {
@@ -131,7 +136,8 @@ export const formatSheetDate = (value: Date | string = new Date()) => {
   }
 
   const parts = Object.fromEntries(IST_FORMAT.formatToParts(date).map((part) => [part.type, part.value]));
-  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} ${String(parts.dayPeriod).toUpperCase()}`;
+  const month = MONTHS[Number(parts.month) - 1];
+  return `${Number(parts.day)} ${month} ${parts.year}, ${Number(parts.hour)}:${parts.minute} ${String(parts.dayPeriod).toUpperCase()}`;
 };
 
 const dateCell = (value?: Date | string) => asPlainText(formatSheetDate(value));
