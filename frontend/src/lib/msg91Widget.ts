@@ -126,9 +126,11 @@ const withTimeout = <T,>(promise: Promise<T>) =>
     );
   });
 
-// fullMobile must already include the country's dial code (e.g. "919876543210"
-// for India, "254712345678" for Kenya) — digits only, no leading "+".
-export const sendWidgetOtp = async (fullMobile: string) => {
+// `identifier` is either a mobile number with the country's dial code (e.g.
+// "919876543210" for India, "254712345678" for Kenya — digits only, no
+// leading "+"), or an email address. Email needs the widget's contact point
+// set to "Both" in the MSG91 dashboard.
+export const sendWidgetOtp = async (identifier: string) => {
   await withTimeout(initMsg91Widget());
 
   return withTimeout(new Promise<void>((resolve, reject) => {
@@ -138,7 +140,7 @@ export const sendWidgetOtp = async (fullMobile: string) => {
     }
 
     window.sendOtp(
-      fullMobile,
+      identifier,
       () => resolve(),
       (error) => reject(new Error(extractMessage(error, "Unable to send the code. Please try again."))),
     );

@@ -94,7 +94,7 @@ export const verifyWidgetHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { accessToken, name, email, variant } = request.body as Record<string, unknown>;
+    const { accessToken, name, email, mobile, variant } = request.body as Record<string, unknown>;
 
     if (!accessToken || typeof accessToken !== "string") {
       response.status(400).json({ message: "Missing OTP verification token." });
@@ -106,7 +106,13 @@ export const verifyWidgetHandler = async (
       return;
     }
 
-    const { token, user } = await verifyWidgetLogin(accessToken, name, email, toClassVariant(variant));
+    const { token, user } = await verifyWidgetLogin(
+      accessToken,
+      name,
+      email,
+      toClassVariant(variant),
+      typeof mobile === "string" ? mobile : "",
+    );
 
     response.cookie(env.authCookieName, token, {
       ...getCookieOptions(),

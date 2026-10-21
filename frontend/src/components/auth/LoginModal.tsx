@@ -27,6 +27,11 @@ import CountryCodeSelect from "@/components/auth/CountryCodeSelect";
 
 type Step = "details" | "otp";
 
+// Where the login code went. SMS is the normal route and the only one for
+// Indian numbers; students abroad fall back to email when their SMS can't
+// be sent (e.g. MSG91 has no international route for that country).
+type CodeChannel = "sms" | "email";
+
 const LoginModal = () => {
   const { isModalOpen, loginVariant, closeLoginModal, handleAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -47,6 +52,8 @@ const LoginModal = () => {
   const [isDevMode, setIsDevMode] = useState(false);
   const [devCode, setDevCode] = useState("");
   const [sentMobileE164, setSentMobileE164] = useState("");
+  const [codeChannel, setCodeChannel] = useState<CodeChannel>("sms");
+  const [sentEmail, setSentEmail] = useState("");
 
   useEffect(() => {
     fetchOtpDevMode().then(setIsDevMode);
@@ -70,6 +77,8 @@ const LoginModal = () => {
       setCode("");
       setSentMobileDisplay("");
       setSentMobileE164("");
+      setCodeChannel("sms");
+      setSentEmail("");
       setDevCode("");
       setResendCooldown(0);
       if (resendTimerRef.current) {
@@ -96,6 +105,18 @@ const LoginModal = () => {
     }, 1000);
   };
 
+  // Indian numbers must verify by SMS — the code proves they own the phone,
+  // which is what every registration and payment is keyed on.
+  const canUseEmailCode = country !== "IN";
+
+  const sendCodeByEmail = async () => {
+    const trimmedEmail = email.trim();
+    await sendWidgetOtp(trimmedEmail);
+    setCodeChannel("email");
+    setSentEmail(trimmedEmail);
+    return trimmedEmail;
+  };
+
   const handleSendCode = async () => {
     if (name.trim().length < 2) {
       toast({ title: "Enter your full name", variant: "destructive" });
@@ -116,6 +137,9 @@ const LoginModal = () => {
     try {
       const fullMobile = `${getCountryCallingCode(country)}${mobile.replace(/\D/g, "")}`;
       const formattedMobile = parsePhoneNumberFromString(`+${fullMobile}`)?.formatInternational() ?? `+${fullMobile}`;
+      setSentMobileE164(`+${fullMobile}`);
+      let channel: CodeChannel = "sms";
+
       if (isDevMode) {
         const result = await requestOtp({
           name: name.trim(),
@@ -124,18 +148,31 @@ const LoginModal = () => {
           variant: loginVariant,
         });
         setDevCode(result.devCode ?? "");
-        setSentMobileE164(`+${fullMobile}`);
+        setCodeChannel("sms");
       } else {
-        await sendWidgetOtp(fullMobile);
+        try {
+          await sendWidgetOtp(fullMobile);
+          setCodeChannel("sms");
+        } catch (smsError) {
+          if (!canUseEmailCode) {
+            throw smsError;
+          }
+          // The SMS couldn't go out to this country — email the code instead
+          // so the student isn't stuck at the first step.
+          await sendCodeByEmail();
+          channel = "email";
+        }
       }
       setStep("otp");
       setSentMobileDisplay(formattedMobile);
       startResendCooldown();
       toast({
-        title: isDevMode ? "Dev code generated" : "Code sent via SMS",
+        title: isDevMode ? "Dev code generated" : channel === "email" ? "Code sent to your email" : "Code sent via SMS",
         description: isDevMode
           ? "No SMS was sent — the code is shown in the popup."
-          : `We texted a 6-digit code to ${formattedMobile}.`,
+          : channel === "email"
+            ? `We couldn't text ${formattedMobile}, so we emailed a 6-digit code to ${email.trim()}.`
+            : `We texted a 6-digit code to ${formattedMobile}.`,
       });
     } catch (error) {
       toast({
@@ -162,6 +199,7 @@ const LoginModal = () => {
             accessToken: await verifyWidgetOtp(code),
             name: name.trim(),
             email: email.trim(),
+            mobile: sentMobileE164,
             variant: loginVariant,
           });
       handleAuthenticated(user);
@@ -189,14 +227,35 @@ const LoginModal = () => {
         });
         setDevCode(result.devCode ?? "");
         setCode("");
+      } else if (codeChannel === "email") {
+        await sendCodeByEmail();
       } else {
         await retryWidgetOtp();
       }
+      setCode("");
       startResendCooldown();
       toast({ title: "Code resent" });
     } catch (error) {
       toast({
         title: "Couldn't resend the code",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSwitchToEmail = async () => {
+    setIsSubmitting(true);
+    try {
+      const sentTo = await sendCodeByEmail();
+      setCode("");
+      startResendCooldown();
+      toast({ title: "Code sent to your email", description: `We emailed a 6-digit code to ${sentTo}.` });
+    } catch (error) {
+      toast({
+        title: "Couldn't email the code",
         description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
@@ -225,7 +284,7 @@ const LoginModal = () => {
           <DialogDescription className="text-center">
             {step === "details"
               ? "Share your details so we can confirm your booking and send you a login code."
-              : `We sent a 6-digit code to ${sentMobileDisplay}.`}
+              : `We sent a 6-digit code to ${codeChannel === "email" ? sentEmail : sentMobileDisplay}.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -349,6 +408,20 @@ const LoginModal = () => {
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
               </button>
             </div>
+
+            {!isDevMode && canUseEmailCode && codeChannel === "sms" && (
+              <p className="text-center text-xs text-muted-foreground">
+                Didn't get the SMS?{" "}
+                <button
+                  type="button"
+                  className="underline underline-offset-2 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                  onClick={handleSwitchToEmail}
+                  disabled={isSubmitting}
+                >
+                  Send the code to my email instead
+                </button>
+              </p>
+            )}
           </div>
         )}
       </DialogContent>

@@ -15,7 +15,7 @@ import {
 } from "../lib/otp.js";
 import { isSmsConfigured, sendOtpSms } from "../lib/sms.js";
 import { verifyMsg91WidgetToken } from "../lib/msg91-widget.js";
-import type { ClassVariant } from "../db/class-databases.js";
+import { CLASS_VARIANTS, type ClassVariant } from "../db/class-databases.js";
 import { otpChallengeModelFor } from "../models/OtpChallenge.js";
 import { userModelFor, type UserDocument } from "../models/User.js";
 import { env } from "../config/env.js";
@@ -199,16 +199,49 @@ export const verifyOtp = async (rawMobile: string, rawCode: string, variant: Cla
   return { token, user: toPublicUser(user) };
 };
 
+// Students abroad whose SMS can't be delivered get their code by email
+// instead, so the token then proves the email, not the phone. That route is
+// closed to Indian numbers (they always verify by SMS), and it can never
+// take over an account: if the typed number already belongs to someone
+// with a different email, the email code is refused.
+const resolveEmailVerifiedMobile = async (rawMobile: string, email: string) => {
+  if (detectContactChannel(rawMobile) !== "phone") {
+    throw new HttpError(400, "Enter a valid mobile number.");
+  }
+
+  const mobile = normaliseContact(rawMobile, "phone");
+
+  if (mobile.startsWith("+91")) {
+    throw new HttpError(400, "Indian numbers must verify with the code sent by SMS.");
+  }
+
+  for (const classVariant of CLASS_VARIANTS) {
+    const existing = await userModelFor(classVariant).findOne({ phone: mobile });
+
+    if (existing?.email && existing.email !== email) {
+      throw new HttpError(
+        409,
+        "This mobile number is already registered with a different email. Use that email, or contact us on WhatsApp.",
+      );
+    }
+  }
+
+  return mobile;
+};
+
 // MSG91 OTP Widget login: the OTP itself was already sent and verified
 // entirely client-side by the widget. This only trusts the resulting
 // access token after confirming it server-side with MSG91 — the verified
-// mobile number that comes back from that check is the identity, never
-// whatever the client claims in the request body.
+// identity that comes back from that check is what counts, never whatever
+// the client claims in the request body. Normally that's the mobile number;
+// for a code sent by email it's the email, and the typed mobile is then
+// accepted only under the rules in resolveEmailVerifiedMobile.
 export const verifyWidgetLogin = async (
   accessToken: string,
   rawName: string,
   rawEmail: string,
   variant: ClassVariant,
+  rawMobile = "",
 ) => {
   await connectToDatabase();
 
@@ -224,12 +257,21 @@ export const verifyWidgetLogin = async (
   }
 
   const verification = await verifyMsg91WidgetToken(accessToken);
+  const verifiedChannel = verification.verified ? detectContactChannel(verification.mobile) : null;
 
-  if (!verification.verified || detectContactChannel(verification.mobile) !== "phone") {
+  let mobile: string;
+
+  if (verifiedChannel === "phone") {
+    mobile = normaliseContact(verification.mobile, "phone");
+  } else if (verifiedChannel === "email" && normaliseContact(verification.mobile, "email") === email) {
+    mobile = await resolveEmailVerifiedMobile(rawMobile, email);
+  } else {
+    logger.warn("MSG91 widget token did not verify a usable identity.", {
+      verified: verification.verified,
+      identityType: verifiedChannel ?? "unrecognised",
+    });
     throw new HttpError(400, "OTP verification failed. Please try again.");
   }
-
-  const mobile = normaliseContact(verification.mobile, "phone");
 
   const user = await userModelFor(variant).findOneAndUpdate(
     { phone: mobile },

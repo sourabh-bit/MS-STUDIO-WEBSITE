@@ -66,6 +66,10 @@ export const verifyWidgetLogin = async (payload: {
   accessToken: string;
   name: string;
   email: string;
+  // The typed mobile number in E.164 ("+9779807022233"). Only used when the
+  // code was verified by email, since the token then proves the email, not
+  // the phone.
+  mobile: string;
   variant: ClassVariant;
 }) => {
   try {
