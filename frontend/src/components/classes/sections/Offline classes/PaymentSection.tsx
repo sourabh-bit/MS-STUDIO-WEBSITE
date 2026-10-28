@@ -1,4 +1,4 @@
-﻿import { CreditCard, Landmark } from "lucide-react";
+import { CreditCard, Landmark } from "lucide-react";
 
 import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
@@ -33,17 +33,14 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
             <p className="font-sans text-xs tracking-[0.3em] uppercase text-muted-foreground mb-2">
               {OFFLINE_MASTERCLASS_DETAILS.totalFeeLabel}
             </p>
-            <p className="font-display text-4xl sm:text-5xl md:text-6xl text-foreground mb-2 whitespace-nowrap">
-              {OFFLINE_MASTERCLASS_DETAILS.totalFeeRange}{" "}
-              <span className="text-xl sm:text-2xl md:text-3xl align-middle">
-                {OFFLINE_MASTERCLASS_DETAILS.totalFeeGst}
-              </span>
+            <p className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground mb-2">
+              To Be Announced
             </p>
             <p className="font-sans text-sm text-muted-foreground mb-4">
               For the entire 7-day course
             </p>
             <p className="font-sans text-sm text-dusty-rose">
-              ₹{new Intl.NumberFormat("en-IN").format(OFFLINE_MASTERCLASS_DETAILS.fee)} payable now as advance
+              Fee details for the new batch will be shared soon
             </p>
           </div>
 
@@ -54,14 +51,11 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
             <p className="font-sans text-xs tracking-[0.3em] uppercase text-muted-foreground mb-2">
               {OFFLINE_MASTERCLASS_DETAILS.feeLabel}
             </p>
-            <p className="font-display text-4xl sm:text-5xl md:text-6xl text-dusty-rose mb-2 whitespace-nowrap">
-              ₹{new Intl.NumberFormat("en-IN").format(OFFLINE_MASTERCLASS_DETAILS.fee)}
+            <p className="font-display text-3xl sm:text-4xl md:text-5xl text-dusty-rose mb-2">
+              To Be Announced
             </p>
             <p className="font-sans text-sm text-muted-foreground mb-1">
               To secure your seat
-            </p>
-            <p className="whitespace-nowrap font-sans text-[10px] sm:text-sm font-semibold tracking-[0.02em] text-[#8B6D5C]">
-              *₹{new Intl.NumberFormat("en-IN").format(Math.round(OFFLINE_MASTERCLASS_DETAILS.fee / 1.18))} + GST = ₹{new Intl.NumberFormat("en-IN").format(OFFLINE_MASTERCLASS_DETAILS.fee)}
             </p>
             <div className="mt-8 pt-6 border-t border-dusty-rose/20">
               <button

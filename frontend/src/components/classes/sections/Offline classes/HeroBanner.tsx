@@ -101,8 +101,9 @@ const HeroBanner = () => {
               <a
                 href="#enroll"
                 className="
-                  px-8 py-4 
-                  border border-foreground/20 
+                  px-8 py-4
+                  text-center
+                  border border-foreground/20
                   text-foreground font-sans 
                   text-sm tracking-[0.2em] uppercase
                   hover:bg-foreground/5 
@@ -110,7 +111,7 @@ const HeroBanner = () => {
                   rounded-full
                 "
               >
-                View Details
+                Register for New Batch
               </a>
             </div>
           </div>

@@ -12,7 +12,7 @@ import AddedBenefits from "./sections/Offline classes/AddedBenefits.tsx";
 import VenueSection from "./sections/Offline classes/VenueSection.tsx";
 import TimingSection from "./sections/Offline classes/TimingSection.tsx";
 import PaymentSection from "./sections/Offline classes/PaymentSection.tsx";
-import SecondInstallmentSection from "./sections/Offline classes/SecondInstallmentSection.tsx";
+// import SecondInstallmentSection from "./sections/Offline classes/SecondInstallmentSection.tsx";
 import PortfolioSection from "./sections/Offline classes/PortfolioSection.tsx";
 import StickyPaymentBar from "./sections/Offline classes/StickyPaymentBar.tsx";
 import RegistrationDialog from "./RegistrationDialog";
@@ -121,7 +121,7 @@ const OfflineClasses = () => {
             <div className="flex items-center justify-center gap-2.5">
               <Calendar className="h-5 w-5 shrink-0 text-dusty-rose" />
               <span className="font-serif text-lg font-semibold text-foreground md:text-xl">
-                18 – 24 Sept 2026
+                Dates To Be Announced
               </span>
             </div>
             <div className="mx-auto my-3 h-px w-16 bg-dusty-rose/30" />
@@ -142,7 +142,8 @@ const OfflineClasses = () => {
         <VenueSection />
         <TimingSection />
         <PaymentSection onOpenCheckout={openCheckout} />
-        <SecondInstallmentSection onNeedsRegistration={handleNeedsRegistration} />
+        {/* Hidden until the next batch's dates and fees are announced */}
+        {/* <SecondInstallmentSection onNeedsRegistration={handleNeedsRegistration} /> */}
         <PortfolioSection />
       </div>
       <StickyPaymentBar onOpenCheckout={openCheckout} />

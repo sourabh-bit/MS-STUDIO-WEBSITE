@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { OFFLINE_MASTERCLASS_DETAILS, formatInr } from "@/lib/masterclass";
+import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 import { cn } from "@/lib/utils";
 
 type StickyPaymentBarProps = {
@@ -35,11 +35,11 @@ const StickyPaymentBar = ({ onOpenCheckout }: StickyPaymentBarProps) => {
       <div className="border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-display text-2xl text-foreground">
-              {formatInr(OFFLINE_MASTERCLASS_DETAILS.fee)}
+            <p className="font-display text-lg leading-tight text-foreground whitespace-nowrap">
+              New Batch Soon
             </p>
-            <p className="font-sans text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
-              {OFFLINE_MASTERCLASS_DETAILS.feeLabel}
+            <p className="whitespace-nowrap font-sans text-[9px] tracking-[0.18em] uppercase text-muted-foreground">
+              Get notified first
             </p>
           </div>
 
@@ -51,7 +51,7 @@ const StickyPaymentBar = ({ onOpenCheckout }: StickyPaymentBarProps) => {
             data-payment-trigger="sticky-bar"
             className="shrink-0 rounded-full bg-primary px-6 py-3 font-sans text-xs tracking-[0.2em] text-primary-foreground uppercase transition-all duration-300 hover:bg-dusty-rose"
           >
-            Pay Now
+            Fill Form
           </button>
         </div>
       </div>
