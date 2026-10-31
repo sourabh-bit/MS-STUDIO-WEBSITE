@@ -37,6 +37,10 @@ type CodeChannel = "sms" | "email";
 // two-letter code here if students there report never getting the SMS.
 const EMAIL_FIRST_COUNTRIES: CountryCode[] = ["PK", "NP", "BD"];
 
+// An SMS can be "sent" yet never arrive, and MSG91 doesn't tell us. If no
+// code has been typed this long after the SMS went out, email one too.
+const AUTO_EMAIL_AFTER_MS = 45 * 1000;
+
 const LoginModal = () => {
   const { isModalOpen, loginVariant, closeLoginModal, handleAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -59,10 +63,30 @@ const LoginModal = () => {
   const [sentMobileE164, setSentMobileE164] = useState("");
   const [codeChannel, setCodeChannel] = useState<CodeChannel>("sms");
   const [sentEmail, setSentEmail] = useState("");
+  // When the current SMS (MSG91 widget) went out, or null if none did. Its
+  // code keeps working even after we also email one, in case it arrives late.
+  const [smsSentAt, setSmsSentAt] = useState<number | null>(null);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  const autoEmailRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     fetchOtpDevMode().then(setIsDevMode);
   }, []);
+
+  useEffect(() => {
+    if (step !== "otp" || codeChannel !== "sms" || smsSentAt === null) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (!codeRef.current) {
+        autoEmailRef.current();
+      }
+    }, AUTO_EMAIL_AFTER_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [step, codeChannel, smsSentAt]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -84,6 +108,7 @@ const LoginModal = () => {
       setSentMobileE164("");
       setCodeChannel("sms");
       setSentEmail("");
+      setSmsSentAt(null);
       setDevCode("");
       setResendCooldown(0);
       if (resendTimerRef.current) {
@@ -150,6 +175,7 @@ const LoginModal = () => {
       const fullMobile = `${getCountryCallingCode(country)}${mobile.replace(/\D/g, "")}`;
       const formattedMobile = parsePhoneNumberFromString(`+${fullMobile}`)?.formatInternational() ?? `+${fullMobile}`;
       setSentMobileE164(`+${fullMobile}`);
+      setSmsSentAt(null);
       let channel: CodeChannel = "sms";
       let smsFailed = false;
 
@@ -169,6 +195,7 @@ const LoginModal = () => {
         try {
           await sendWidgetOtp(fullMobile);
           setCodeChannel("sms");
+          setSmsSentAt(Date.now());
         } catch {
           // The SMS couldn't go out to this number — email the code instead
           // so the student isn't stuck at the first step.
@@ -207,17 +234,43 @@ const LoginModal = () => {
       return;
     }
 
+    const verifySmsCode = async () =>
+      verifyWidgetLogin({
+        accessToken: await verifyWidgetOtp(code),
+        name: name.trim(),
+        email: email.trim(),
+        mobile: sentMobileE164,
+        variant: loginVariant,
+      });
+
+    const verifyCode = async () => {
+      if (isDevMode) {
+        return verifyOtp(sentMobileE164, code, loginVariant);
+      }
+
+      if (codeChannel === "sms") {
+        return verifySmsCode();
+      }
+
+      try {
+        return await verifyOtp(sentMobileE164, code, loginVariant);
+      } catch (emailError) {
+        // Not the emailed code — but a late-arriving SMS code still counts.
+        if (smsSentAt === null) {
+          throw emailError;
+        }
+
+        try {
+          return await verifySmsCode();
+        } catch {
+          throw emailError;
+        }
+      }
+    };
+
     setIsSubmitting(true);
     try {
-      const { user } = isDevMode || codeChannel === "email"
-        ? await verifyOtp(sentMobileE164, code, loginVariant)
-        : await verifyWidgetLogin({
-            accessToken: await verifyWidgetOtp(code),
-            name: name.trim(),
-            email: email.trim(),
-            mobile: sentMobileE164,
-            variant: loginVariant,
-          });
+      const { user } = await verifyCode();
       handleAuthenticated(user);
       toast({ title: user.name ? `Welcome, ${user.name}` : "Welcome" });
     } catch (error) {
@@ -247,6 +300,7 @@ const LoginModal = () => {
         await sendCodeByEmail(sentMobileE164);
       } else {
         await retryWidgetOtp();
+        setSmsSentAt(Date.now());
       }
       setCode("");
       startResendCooldown();
@@ -275,6 +329,24 @@ const LoginModal = () => {
         description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fired by the timer above when the SMS seems not to have arrived. A
+  // failure stays quiet — the "send to my email" link is still there.
+  autoEmailRef.current = async () => {
+    setIsSubmitting(true);
+    try {
+      const sentTo = await sendCodeByEmail(sentMobileE164);
+      startResendCooldown();
+      toast({
+        title: "We've also emailed you a code",
+        description: `No SMS yet? Check ${sentTo} — the code from the SMS or the email will both work.`,
+      });
+    } catch {
+      // Leave it to the student to try the email link themselves.
     } finally {
       setIsSubmitting(false);
     }
