@@ -28,7 +28,7 @@ export const requestOtpHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, mobile, email, variant } = request.body as Record<string, unknown>;
+    const { name, mobile, email, variant, channel } = request.body as Record<string, unknown>;
 
     if (
       !name ||
@@ -44,7 +44,13 @@ export const requestOtpHandler = async (
       return;
     }
 
-    const result = await requestOtp({ name, mobile, email, variant: toClassVariant(variant) });
+    const result = await requestOtp({
+      name,
+      mobile,
+      email,
+      variant: toClassVariant(variant),
+      channel: channel === "email" ? "email" : "phone",
+    });
     response.status(200).json({
       sent: true,
       expiresInSeconds: result.expiresInSeconds,

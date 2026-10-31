@@ -32,6 +32,11 @@ type Step = "details" | "otp";
 // be sent (e.g. MSG91 has no international route for that country).
 type CodeChannel = "sms" | "email";
 
+// Countries where MSG91 SMS doesn't reach people at all — they skip the SMS
+// attempt and get the code by email straight away. Add a country's
+// two-letter code here if students there report never getting the SMS.
+const EMAIL_FIRST_COUNTRIES: CountryCode[] = ["PK", "NP", "BD"];
+
 const LoginModal = () => {
   const { isModalOpen, loginVariant, closeLoginModal, handleAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -109,9 +114,18 @@ const LoginModal = () => {
   // which is what every registration and payment is keyed on.
   const canUseEmailCode = country !== "IN";
 
-  const sendCodeByEmail = async () => {
+  // Our backend generates the code and emails it through MSG91 Email, then
+  // checks it itself — so verifying goes through verifyOtp, not the widget.
+  const sendCodeByEmail = async (mobileE164: string) => {
     const trimmedEmail = email.trim();
-    await sendWidgetOtp(trimmedEmail);
+    const result = await requestOtp({
+      name: name.trim(),
+      mobile: mobileE164,
+      email: trimmedEmail,
+      variant: loginVariant,
+      channel: "email",
+    });
+    setDevCode(result.devCode ?? "");
     setCodeChannel("email");
     setSentEmail(trimmedEmail);
     return trimmedEmail;
@@ -139,6 +153,7 @@ const LoginModal = () => {
       const formattedMobile = parsePhoneNumberFromString(`+${fullMobile}`)?.formatInternational() ?? `+${fullMobile}`;
       setSentMobileE164(`+${fullMobile}`);
       let channel: CodeChannel = "sms";
+      let smsFailed = false;
 
       if (isDevMode) {
         const result = await requestOtp({
@@ -149,6 +164,9 @@ const LoginModal = () => {
         });
         setDevCode(result.devCode ?? "");
         setCodeChannel("sms");
+      } else if (EMAIL_FIRST_COUNTRIES.includes(country)) {
+        await sendCodeByEmail(`+${fullMobile}`);
+        channel = "email";
       } else {
         try {
           await sendWidgetOtp(fullMobile);
@@ -159,8 +177,9 @@ const LoginModal = () => {
           }
           // The SMS couldn't go out to this country — email the code instead
           // so the student isn't stuck at the first step.
-          await sendCodeByEmail();
+          await sendCodeByEmail(`+${fullMobile}`);
           channel = "email";
+          smsFailed = true;
         }
       }
       setStep("otp");
@@ -170,9 +189,11 @@ const LoginModal = () => {
         title: isDevMode ? "Dev code generated" : channel === "email" ? "Code sent to your email" : "Code sent via SMS",
         description: isDevMode
           ? "No SMS was sent — the code is shown in the popup."
-          : channel === "email"
+          : smsFailed
             ? `We couldn't text ${formattedMobile}, so we emailed a 6-digit code to ${email.trim()}.`
-            : `We texted a 6-digit code to ${formattedMobile}.`,
+            : channel === "email"
+              ? `We emailed a 6-digit code to ${email.trim()}.`
+              : `We texted a 6-digit code to ${formattedMobile}.`,
       });
     } catch (error) {
       toast({
@@ -193,7 +214,7 @@ const LoginModal = () => {
 
     setIsSubmitting(true);
     try {
-      const { user } = isDevMode
+      const { user } = isDevMode || codeChannel === "email"
         ? await verifyOtp(sentMobileE164, code, loginVariant)
         : await verifyWidgetLogin({
             accessToken: await verifyWidgetOtp(code),
@@ -228,7 +249,7 @@ const LoginModal = () => {
         setDevCode(result.devCode ?? "");
         setCode("");
       } else if (codeChannel === "email") {
-        await sendCodeByEmail();
+        await sendCodeByEmail(sentMobileE164);
       } else {
         await retryWidgetOtp();
       }
@@ -249,7 +270,7 @@ const LoginModal = () => {
   const handleSwitchToEmail = async () => {
     setIsSubmitting(true);
     try {
-      const sentTo = await sendCodeByEmail();
+      const sentTo = await sendCodeByEmail(sentMobileE164);
       setCode("");
       startResendCooldown();
       toast({ title: "Code sent to your email", description: `We emailed a 6-digit code to ${sentTo}.` });

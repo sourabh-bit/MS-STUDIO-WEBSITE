@@ -12,8 +12,10 @@ import {
   isValidEmail,
   normaliseContact,
   verifyOtpCode,
+  type OtpChannel,
 } from "../lib/otp.js";
 import { isSmsConfigured, sendOtpSms } from "../lib/sms.js";
+import { isMsg91EmailConfigured, sendOtpEmailViaMsg91 } from "../lib/msg91-email.js";
 import { verifyMsg91WidgetToken } from "../lib/msg91-widget.js";
 import { CLASS_VARIANTS, type ClassVariant } from "../db/class-databases.js";
 import { otpChallengeModelFor } from "../models/OtpChallenge.js";
@@ -29,6 +31,9 @@ export type RequestOtpInput = {
   // The class the person is logging in for — their OTP challenge and user
   // record are kept in that class's own database.
   variant: ClassVariant;
+  // "email" sends the code to the email address instead of by SMS — only
+  // for non-Indian numbers (see resolveEmailVerifiedMobile).
+  channel?: OtpChannel;
 };
 
 const toPublicUser = (user: UserDocument) => ({
@@ -53,7 +58,7 @@ export const requestOtp = async (input: RequestOtpInput) => {
 
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
-  const mobile = normaliseMobileOrThrow(input.mobile);
+  const channel = input.channel ?? "phone";
 
   if (name.length < 2) {
     throw new HttpError(400, "Enter your full name.");
@@ -62,6 +67,11 @@ export const requestOtp = async (input: RequestOtpInput) => {
   if (!isValidEmail(email)) {
     throw new HttpError(400, "Enter a valid email address.");
   }
+
+  const mobile =
+    channel === "email"
+      ? await resolveEmailVerifiedMobile(input.mobile, email)
+      : normaliseMobileOrThrow(input.mobile);
 
   const OtpChallenge = otpChallengeModelFor(input.variant);
 
@@ -101,7 +111,7 @@ export const requestOtp = async (input: RequestOtpInput) => {
 
   await OtpChallenge.create({
     contact: mobile,
-    channel: "phone",
+    channel,
     name,
     email,
     codeHash,
@@ -109,18 +119,24 @@ export const requestOtp = async (input: RequestOtpInput) => {
     expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
   });
 
-  const smsConfigured = isSmsConfigured();
+  const deliveryConfigured = channel === "email" ? isMsg91EmailConfigured() : isSmsConfigured();
 
   if (env.otpDevMode) {
-    logger.warn("[OTP DEV MODE] Not sending SMS — code returned to the browser instead.", {
+    logger.warn("[OTP DEV MODE] Not sending the code — returned to the browser instead.", {
       mobile,
+      channel,
       code,
     });
-  } else if (smsConfigured) {
-    await sendOtpSms(mobile, code);
+  } else if (deliveryConfigured) {
+    if (channel === "email") {
+      await sendOtpEmailViaMsg91(email, name, code);
+    } else {
+      await sendOtpSms(mobile, code);
+    }
   } else {
     logger.warn("MSG91 is not configured — logging OTP instead of sending it.", {
       mobile,
+      channel,
       code,
     });
   }
@@ -128,7 +144,7 @@ export const requestOtp = async (input: RequestOtpInput) => {
   return {
     mobile,
     expiresInSeconds: OTP_TTL_SECONDS,
-    devCode: env.otpDevMode || (env.nodeEnv !== "production" && !smsConfigured) ? code : undefined,
+    devCode: env.otpDevMode || (env.nodeEnv !== "production" && !deliveryConfigured) ? code : undefined,
   };
 };
 
@@ -178,6 +194,12 @@ export const verifyOtp = async (rawMobile: string, rawCode: string, variant: Cla
     );
   }
 
+  // An emailed code proves the email, not the phone — check again that the
+  // number hasn't been claimed by a different email since it was sent.
+  if (challenge.channel === "email") {
+    await resolveEmailVerifiedMobile(mobile, challenge.email);
+  }
+
   challenge.consumedAt = new Date();
   await challenge.save();
 
@@ -200,7 +222,7 @@ export const verifyOtp = async (rawMobile: string, rawCode: string, variant: Cla
 };
 
 // Students abroad whose SMS can't be delivered get their code by email
-// instead, so the token then proves the email, not the phone. That route is
+// instead, so the code then proves the email, not the phone. That route is
 // closed to Indian numbers (they always verify by SMS), and it can never
 // take over an account: if the typed number already belongs to someone
 // with a different email, the email code is refused.

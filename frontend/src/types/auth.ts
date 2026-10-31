@@ -14,6 +14,9 @@ export type RequestOtpPayload = {
   mobile: string;
   email: string;
   variant: ClassVariant;
+  // "email" sends the code to the email address instead of by SMS — the
+  // backend only allows it for non-Indian numbers.
+  channel?: "phone" | "email";
 };
 
 export type RequestOtpResponse = {

@@ -66,6 +66,13 @@ export const env = {
   msg91AuthKey: readOptional("MSG91_AUTH_KEY"),
   msg91OtpTemplateId: readOptional("MSG91_OTP_TEMPLATE_ID"),
   msg91Sender: readOptional("MSG91_SENDER") || "MEERAS",
+  // MSG91 Email: login codes for students abroad whose SMS can't be
+  // delivered (see auth.service requestOtp). The domain must be verified
+  // in MSG91, and the template must use the {{name}} and {{otp}} variables.
+  msg91EmailTemplateId: readOptional("MSG91_EMAIL_TEMPLATE_ID"),
+  msg91EmailDomain: readOptional("MSG91_EMAIL_DOMAIN"),
+  // Defaults to no-reply@<MSG91_EMAIL_DOMAIN>.
+  msg91EmailFrom: readOptional("MSG91_EMAIL_FROM"),
   // OTP Widget's tokenAuth — deliberately NOT a VITE_ variable. It's
   // served to the frontend at runtime via /api/auth/widget/config instead
   // of being baked into the built JS bundle at compile time.
