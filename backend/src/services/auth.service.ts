@@ -31,8 +31,8 @@ export type RequestOtpInput = {
   // The class the person is logging in for — their OTP challenge and user
   // record are kept in that class's own database.
   variant: ClassVariant;
-  // "email" sends the code to the email address instead of by SMS — only
-  // for non-Indian numbers (see resolveEmailVerifiedMobile).
+  // "email" sends the code to the email address instead of by SMS (see
+  // resolveEmailVerifiedMobile).
   channel?: OtpChannel;
 };
 
@@ -221,21 +221,16 @@ export const verifyOtp = async (rawMobile: string, rawCode: string, variant: Cla
   return { token, user: toPublicUser(user) };
 };
 
-// Students abroad whose SMS can't be delivered get their code by email
-// instead, so the code then proves the email, not the phone. That route is
-// closed to Indian numbers (they always verify by SMS), and it can never
-// take over an account: if the typed number already belongs to someone
-// with a different email, the email code is refused.
+// Students whose SMS doesn't arrive can get their code by email instead, so
+// the code then proves the email, not the phone. It can never take over an
+// account: if the typed number already belongs to someone with a different
+// email, the email code is refused.
 const resolveEmailVerifiedMobile = async (rawMobile: string, email: string) => {
   if (detectContactChannel(rawMobile) !== "phone") {
     throw new HttpError(400, "Enter a valid mobile number.");
   }
 
   const mobile = normaliseContact(rawMobile, "phone");
-
-  if (mobile.startsWith("+91")) {
-    throw new HttpError(400, "Indian numbers must verify with the code sent by SMS.");
-  }
 
   for (const classVariant of CLASS_VARIANTS) {
     const existing = await userModelFor(classVariant).findOne({ phone: mobile });

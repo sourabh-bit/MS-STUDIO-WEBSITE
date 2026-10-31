@@ -27,9 +27,9 @@ import CountryCodeSelect from "@/components/auth/CountryCodeSelect";
 
 type Step = "details" | "otp";
 
-// Where the login code went. SMS is the normal route and the only one for
-// Indian numbers; students abroad fall back to email when their SMS can't
-// be sent (e.g. MSG91 has no international route for that country).
+// Where the login code went. SMS is the normal route; email takes over
+// automatically when the SMS can't be sent (e.g. MSG91 has no route to
+// that country), or whenever the student asks for it.
 type CodeChannel = "sms" | "email";
 
 // Countries where MSG91 SMS doesn't reach people at all — they skip the SMS
@@ -110,10 +110,6 @@ const LoginModal = () => {
     }, 1000);
   };
 
-  // Indian numbers must verify by SMS — the code proves they own the phone,
-  // which is what every registration and payment is keyed on.
-  const canUseEmailCode = country !== "IN";
-
   // Our backend generates the code and emails it through MSG91 Email, then
   // checks it itself — so verifying goes through verifyOtp, not the widget.
   const sendCodeByEmail = async (mobileE164: string) => {
@@ -131,7 +127,9 @@ const LoginModal = () => {
     return trimmedEmail;
   };
 
-  const handleSendCode = async () => {
+  // viaEmail: the student chose "Get the code on email instead" rather than
+  // waiting for an SMS.
+  const handleSendCode = async (viaEmail = false) => {
     if (name.trim().length < 2) {
       toast({ title: "Enter your full name", variant: "destructive" });
       return;
@@ -155,7 +153,10 @@ const LoginModal = () => {
       let channel: CodeChannel = "sms";
       let smsFailed = false;
 
-      if (isDevMode) {
+      if (viaEmail || (!isDevMode && EMAIL_FIRST_COUNTRIES.includes(country))) {
+        await sendCodeByEmail(`+${fullMobile}`);
+        channel = "email";
+      } else if (isDevMode) {
         const result = await requestOtp({
           name: name.trim(),
           mobile: `+${fullMobile}`,
@@ -164,18 +165,12 @@ const LoginModal = () => {
         });
         setDevCode(result.devCode ?? "");
         setCodeChannel("sms");
-      } else if (EMAIL_FIRST_COUNTRIES.includes(country)) {
-        await sendCodeByEmail(`+${fullMobile}`);
-        channel = "email";
       } else {
         try {
           await sendWidgetOtp(fullMobile);
           setCodeChannel("sms");
-        } catch (smsError) {
-          if (!canUseEmailCode) {
-            throw smsError;
-          }
-          // The SMS couldn't go out to this country — email the code instead
+        } catch {
+          // The SMS couldn't go out to this number — email the code instead
           // so the student isn't stuck at the first step.
           await sendCodeByEmail(`+${fullMobile}`);
           channel = "email";
@@ -361,12 +356,24 @@ const LoginModal = () => {
 
             <Button
               className="w-full"
-              onClick={handleSendCode}
+              onClick={() => handleSendCode()}
               disabled={isSubmitting}
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Send code
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Not getting SMS on this number?{" "}
+              <button
+                type="button"
+                className="underline underline-offset-2 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                onClick={() => handleSendCode(true)}
+                disabled={isSubmitting}
+              >
+                Get the code on email instead
+              </button>
+            </p>
           </div>
         ) : (
           <div className="space-y-4 pt-2">
@@ -430,7 +437,7 @@ const LoginModal = () => {
               </button>
             </div>
 
-            {!isDevMode && canUseEmailCode && codeChannel === "sms" && (
+            {codeChannel === "sms" && (
               <p className="text-center text-xs text-muted-foreground">
                 Didn't get the SMS?{" "}
                 <button
