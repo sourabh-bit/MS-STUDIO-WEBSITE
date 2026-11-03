@@ -6,7 +6,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { connectToDatabase } from "./db/connect.js";
 import { logger } from "./lib/logger.js";
-import { startReconciliationScheduler } from "./lib/reconcile.js";
+import { startReconciliationScheduler, startSheetSyncScheduler } from "./lib/reconcile.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
@@ -127,6 +127,7 @@ app.listen(env.port, () => {
     logger.warn("OTP DEV MODE IS ON — login codes are shown in the browser and no SMS is sent. Never enable this on the live site.");
   }
   startReconciliationScheduler();
+  startSheetSyncScheduler();
   backfillPaymentTypes().catch((error) => {
     logger.error("Failed to backfill legacy payment types.", {
       message: error instanceof Error ? error.message : "unknown error",

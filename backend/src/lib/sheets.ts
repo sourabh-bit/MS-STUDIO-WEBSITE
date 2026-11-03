@@ -1,5 +1,5 @@
 import { JWT } from "google-auth-library";
-import { GoogleSpreadsheet, type GoogleSpreadsheetWorksheet } from "google-spreadsheet";
+import { GoogleSpreadsheet, type GoogleSpreadsheetRow, type GoogleSpreadsheetWorksheet } from "google-spreadsheet";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { env } from "../config/env.js";
@@ -286,6 +286,50 @@ const getCachedSheet = (target: SheetTarget) => {
   return promise;
 };
 
+// Real incident: a student paid, yet both her registration row and her
+// payment update failed to reach the sheet — each call logged one error and
+// gave up, and nobody noticed. Every write now retries with backoff, and
+// writes to one spreadsheet run one at a time, so a live update and the
+// periodic sync (see services/sheet-sync.service.ts) never read the rows,
+// both decide one is missing and both add it.
+const SHEET_RETRY_DELAYS_MS = [2000, 5000, 15000, 30000];
+
+const sheetQueues = new Map<string, Promise<unknown>>();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const runSheetTask = <T>(target: SheetTarget, label: string, task: () => Promise<T>): Promise<T> => {
+  const run = async () => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await task();
+      } catch (error) {
+        // A stale cached worksheet (tab renamed, auth expired) would fail
+        // every retry the same way — load it fresh next time.
+        sheetPromises.delete(`${target.sheetId}::${target.tabName}`);
+
+        if (attempt >= SHEET_RETRY_DELAYS_MS.length) {
+          throw error;
+        }
+
+        logger.warn(`${label} failed — retrying.`, {
+          attempt: attempt + 1,
+          message: error instanceof Error ? error.message : "unknown error",
+        });
+        await sleep(SHEET_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+  };
+
+  const previous = sheetQueues.get(target.sheetId) ?? Promise.resolve();
+  const result = previous.then(run, run);
+  sheetQueues.set(target.sheetId, result.catch(() => undefined));
+  return result;
+};
+
+const findRow = (rows: GoogleSpreadsheetRow[], phone: string, courseName: string) =>
+  rows.find((row) => isSamePhone(row.get("Phone") ?? "", phone) && row.get("Course") === courseName);
+
 // Never lets a Sheets outage or misconfiguration break registration/payment
 // processing — every call here is best-effort and swallows its own errors.
 export const appendRegistrationRow = async (row: {
@@ -326,27 +370,36 @@ export const appendRegistrationRow = async (row: {
   }
 
   try {
-    const tab = await getSheet(target);
-    await tab.addRow({
-      Timestamp: dateCell(),
-      Name: row.name,
-      Phone: phoneCell(row.phone),
-      WhatsApp: phoneCell(row.whatsappNumber || row.phone),
-      Email: row.email,
-      City: row.city,
-      State: row.state,
-      Course: row.courseName,
-      Variant: row.variant,
-      PAN: row.pan,
-      GSTIN: row.gstin,
-      BillingName: row.billerName || row.name,
-      MerchantTxnNo: "",
-      AdvanceAmount: row.advanceAmount,
-      AdvancePaymentStatus: "UNPAID",
-      SecondInstallmentTotal: row.secondInstallmentTotal,
-      SecondInstallmentPaid: 0,
-      SecondInstallmentRemaining: row.secondInstallmentTotal,
-      UpdatedAt: "",
+    await runSheetTask(target, "Appending registration row", async () => {
+      const tab = await getSheet(target);
+
+      // A retry after a timed-out attempt that actually went through must
+      // not add the same person twice.
+      if (findRow(await tab.getRows(), row.phone, row.courseName)) {
+        return;
+      }
+
+      await tab.addRow({
+        Timestamp: dateCell(),
+        Name: row.name,
+        Phone: phoneCell(row.phone),
+        WhatsApp: phoneCell(row.whatsappNumber || row.phone),
+        Email: row.email,
+        City: row.city,
+        State: row.state,
+        Course: row.courseName,
+        Variant: row.variant,
+        PAN: row.pan,
+        GSTIN: row.gstin,
+        BillingName: row.billerName || row.name,
+        MerchantTxnNo: "",
+        AdvanceAmount: row.advanceAmount,
+        AdvancePaymentStatus: "UNPAID",
+        SecondInstallmentTotal: row.secondInstallmentTotal,
+        SecondInstallmentPaid: 0,
+        SecondInstallmentRemaining: row.secondInstallmentTotal,
+        UpdatedAt: "",
+      });
     });
   } catch (error) {
     logger.error("Failed to append registration row to Google Sheets.", {
@@ -362,6 +415,7 @@ export const upsertFullRegistrationRow = async (row: {
   createdAt: string;
   name: string;
   phone: string;
+  whatsappNumber?: string;
   email: string;
   city: string;
   state?: string;
@@ -388,40 +442,37 @@ export const upsertFullRegistrationRow = async (row: {
   }
 
   try {
-    const tab = await getSheet(target);
-    const rows = await tab.getRows();
-    const alreadyExists = rows.some(
-      (existing) =>
-        isSamePhone(existing.get("Phone") ?? "", row.phone) &&
-        existing.get("Course") === row.courseName,
-    );
+    return await runSheetTask(target, "Backfilling registration row", async () => {
+      const tab = await getSheet(target);
 
-    if (alreadyExists) {
-      return { added: false, reason: "Row already exists for this phone/course." };
-    }
+      if (findRow(await tab.getRows(), row.phone, row.courseName)) {
+        return { added: false, reason: "Row already exists for this phone/course." };
+      }
 
-    await tab.addRow({
-      Timestamp: dateCell(row.createdAt),
-      Name: row.name,
-      Phone: phoneCell(row.phone),
-      Email: row.email,
-      City: row.city,
-      State: row.state || "",
-      Course: row.courseName,
-      Variant: row.variant,
-      PAN: row.pan,
-      GSTIN: row.gstin,
-      BillingName: row.billerName || row.name,
-      MerchantTxnNo: row.advanceMerchantTxnNo,
-      AdvanceAmount: row.advanceAmount,
-      AdvancePaymentStatus: row.advanceStatusText,
-      SecondInstallmentTotal: row.secondInstallmentTotal,
-      SecondInstallmentPaid: row.secondInstallmentPaid,
-      SecondInstallmentRemaining: row.secondInstallmentRemaining,
-      UpdatedAt: dateCell(),
+      await tab.addRow({
+        Timestamp: dateCell(row.createdAt),
+        Name: row.name,
+        Phone: phoneCell(row.phone),
+        WhatsApp: phoneCell(row.whatsappNumber || row.phone),
+        Email: row.email,
+        City: row.city,
+        State: row.state || "",
+        Course: row.courseName,
+        Variant: row.variant,
+        PAN: row.pan,
+        GSTIN: row.gstin,
+        BillingName: row.billerName || row.name,
+        MerchantTxnNo: row.advanceMerchantTxnNo,
+        AdvanceAmount: row.advanceAmount,
+        AdvancePaymentStatus: row.advanceStatusText,
+        SecondInstallmentTotal: row.secondInstallmentTotal,
+        SecondInstallmentPaid: row.secondInstallmentPaid,
+        SecondInstallmentRemaining: row.secondInstallmentRemaining,
+        UpdatedAt: dateCell(),
+      });
+
+      return { added: true };
     });
-
-    return { added: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     logger.error("Failed to backfill registration row to Google Sheets.", { message });
@@ -460,47 +511,45 @@ export const upsertPaymentStatusRow = async (input: {
   }
 
   try {
-    const tab = await getSheet(target);
-    const rows = await tab.getRows();
-    const match = rows.find(
-      (row) =>
-        isSamePhone(row.get("Phone") ?? "", input.mobile) &&
-        row.get("Course") === input.courseName,
-    );
+    await runSheetTask(target, "Updating payment status row", async () => {
+      const tab = await getSheet(target);
+      const match = findRow(await tab.getRows(), input.mobile, input.courseName);
 
-    const updatedAt = dateCell();
+      const updatedAt = dateCell();
 
-    if (match) {
-      if (input.advanceMerchantTxnNo) {
-        match.set("MerchantTxnNo", input.advanceMerchantTxnNo);
+      if (match) {
+        if (input.advanceMerchantTxnNo) {
+          match.set("MerchantTxnNo", input.advanceMerchantTxnNo);
+        }
+        if (input.advanceAmount !== undefined) {
+          match.set("AdvanceAmount", input.advanceAmount);
+        }
+        match.set("AdvancePaymentStatus", input.advanceStatusText);
+        match.set("SecondInstallmentTotal", input.secondInstallmentTotal);
+        match.set("SecondInstallmentPaid", input.secondInstallmentPaid);
+        match.set("SecondInstallmentRemaining", input.secondInstallmentRemaining);
+        match.set("UpdatedAt", updatedAt);
+        keepTextCells(match);
+        await match.save();
+        return;
       }
-      if (input.advanceAmount !== undefined) {
-        match.set("AdvanceAmount", input.advanceAmount);
-      }
-      match.set("AdvancePaymentStatus", input.advanceStatusText);
-      match.set("SecondInstallmentTotal", input.secondInstallmentTotal);
-      match.set("SecondInstallmentPaid", input.secondInstallmentPaid);
-      match.set("SecondInstallmentRemaining", input.secondInstallmentRemaining);
-      match.set("UpdatedAt", updatedAt);
-      keepTextCells(match);
-      await match.save();
-      return;
-    }
 
-    // No registration row found for this phone/course (edge case — a
-    // payment update arrived before/without a matching registration row).
-    // Add a partial row rather than silently dropping the update.
-    await tab.addRow({
-      Timestamp: updatedAt,
-      Phone: phoneCell(input.mobile),
-      Course: input.courseName,
-      MerchantTxnNo: input.advanceMerchantTxnNo || "",
-      AdvanceAmount: input.advanceAmount ?? "",
-      AdvancePaymentStatus: input.advanceStatusText,
-      SecondInstallmentTotal: input.secondInstallmentTotal,
-      SecondInstallmentPaid: input.secondInstallmentPaid,
-      SecondInstallmentRemaining: input.secondInstallmentRemaining,
-      UpdatedAt: updatedAt,
+      // No registration row found for this phone/course (edge case — a
+      // payment update arrived before/without a matching registration row).
+      // Add a partial row rather than silently dropping the update; the
+      // periodic sync fills in the rest of the details.
+      await tab.addRow({
+        Timestamp: updatedAt,
+        Phone: phoneCell(input.mobile),
+        Course: input.courseName,
+        MerchantTxnNo: input.advanceMerchantTxnNo || "",
+        AdvanceAmount: input.advanceAmount ?? "",
+        AdvancePaymentStatus: input.advanceStatusText,
+        SecondInstallmentTotal: input.secondInstallmentTotal,
+        SecondInstallmentPaid: input.secondInstallmentPaid,
+        SecondInstallmentRemaining: input.secondInstallmentRemaining,
+        UpdatedAt: updatedAt,
+      });
     });
   } catch (error) {
     logger.error("Failed to update payment status in Google Sheets.", {
@@ -508,6 +557,53 @@ export const upsertPaymentStatusRow = async (input: {
     });
   }
 };
+
+// One online student as the sheet shows them — what a live registration
+// writes and what the periodic sync rebuilds from the database.
+export type OnlineSheetEntry = {
+  createdAt: Date | string;
+  name: string;
+  phone: string;
+  whatsappNumber?: string;
+  email: string;
+  city: string;
+  state: string;
+  instagramHandle?: string;
+  experienceMonths?: number | null;
+  courseName: string;
+  pan: string;
+  gstin: string;
+  billerName: string;
+  billingAddress?: string;
+  advanceAmount: number;
+  paymentStatus: string;
+  merchantTxnNo?: string;
+  bankTxnId?: string;
+  paidAt?: Date | string | null;
+};
+
+const onlineRowValues = (entry: OnlineSheetEntry) => ({
+  Timestamp: dateCell(entry.createdAt),
+  Name: entry.name,
+  Phone: phoneCell(entry.phone),
+  WhatsApp: phoneCell(entry.whatsappNumber || entry.phone),
+  Email: entry.email,
+  City: entry.city,
+  State: entry.state,
+  Instagram: entry.instagramHandle || "",
+  ExperienceMonths: entry.experienceMonths ?? "",
+  Course: entry.courseName,
+  PAN: entry.pan,
+  GSTIN: entry.gstin,
+  BillingName: entry.billerName || entry.name,
+  BillingAddress: entry.billingAddress || "",
+  Amount: entry.advanceAmount,
+  PaymentStatus: entry.paymentStatus,
+  MerchantTxnNo: entry.merchantTxnNo || "",
+  BankTxnID: entry.bankTxnId || "",
+  PaidAt: entry.paidAt ? dateCell(entry.paidAt) : "",
+  UpdatedAt: entry.paymentStatus === "REGISTERED" ? "" : dateCell(),
+});
 
 const appendOnlineRegistrationRow = async (row: {
   name: string;
@@ -532,28 +628,16 @@ const appendOnlineRegistrationRow = async (row: {
   }
 
   try {
-    const tab = await getSheet(target);
-    await tab.addRow({
-      Timestamp: dateCell(),
-      Name: row.name,
-      Phone: phoneCell(row.phone),
-      WhatsApp: phoneCell(row.whatsappNumber || row.phone),
-      Email: row.email,
-      City: row.city,
-      State: row.state,
-      Instagram: row.instagramHandle || "",
-      ExperienceMonths: row.experienceMonths ?? "",
-      Course: row.courseName,
-      PAN: row.pan,
-      GSTIN: row.gstin,
-      BillingName: row.billerName || row.name,
-      BillingAddress: row.billingAddress || "",
-      Amount: row.advanceAmount,
-      PaymentStatus: "REGISTERED",
-      MerchantTxnNo: "",
-      BankTxnID: "",
-      PaidAt: "",
-      UpdatedAt: "",
+    await runSheetTask(target, "Appending online registration row", async () => {
+      const tab = await getSheet(target);
+
+      // A retry after a timed-out attempt that actually went through must
+      // not add the same person twice.
+      if (findRow(await tab.getRows(), row.phone, row.courseName)) {
+        return;
+      }
+
+      await tab.addRow(onlineRowValues({ ...row, createdAt: new Date(), paymentStatus: "REGISTERED" }));
     });
   } catch (error) {
     logger.error("Failed to append online registration row to Google Sheets.", {
@@ -578,59 +662,56 @@ const upsertOnlinePaymentRow = async (input: {
   }
 
   try {
-    const tab = await getSheet(target);
-    const rows = await tab.getRows();
-    const match = rows.find(
-      (row) =>
-        isSamePhone(row.get("Phone") ?? "", input.mobile) &&
-        row.get("Course") === input.courseName,
-    );
+    await runSheetTask(target, "Updating online payment status row", async () => {
+      const tab = await getSheet(target);
+      const match = findRow(await tab.getRows(), input.mobile, input.courseName);
 
-    const now = dateCell();
-    const isPaid = input.advanceStatusText === "PAID";
-    const isThisAttemptTheSuccess = input.paymentStatus === "SUCCESS";
-    const alreadyPaid = match?.get("PaymentStatus") === "PAID";
+      const now = dateCell();
+      const isPaid = input.advanceStatusText === "PAID";
+      const isThisAttemptTheSuccess = input.paymentStatus === "SUCCESS";
+      const alreadyPaid = match?.get("PaymentStatus") === "PAID";
 
-    // A later abandoned/failed retry must never overwrite the row of the
-    // attempt that actually paid — once a row says PAID, only the paying
-    // transaction itself may touch it again.
-    if (alreadyPaid && !isThisAttemptTheSuccess) {
-      return;
-    }
+      // A later abandoned/failed retry must never overwrite the row of the
+      // attempt that actually paid — once a row says PAID, only the paying
+      // transaction itself may touch it again.
+      if (alreadyPaid && !isThisAttemptTheSuccess) {
+        return;
+      }
 
-    const fields: Record<string, string | number> = {
-      PaymentStatus: isPaid ? "PAID" : input.paymentStatus,
-      UpdatedAt: now,
-    };
+      const fields: Record<string, string | number> = {
+        PaymentStatus: isPaid ? "PAID" : input.paymentStatus,
+        UpdatedAt: now,
+      };
 
-    if (input.advanceMerchantTxnNo) {
-      fields.MerchantTxnNo = input.advanceMerchantTxnNo;
-      fields.BankTxnID = input.txnID || "";
-    }
+      if (input.advanceMerchantTxnNo) {
+        fields.MerchantTxnNo = input.advanceMerchantTxnNo;
+        fields.BankTxnID = input.txnID || "";
+      }
 
-    if (input.advanceAmount !== undefined) {
-      fields.Amount = input.advanceAmount;
-    }
+      if (input.advanceAmount !== undefined) {
+        fields.Amount = input.advanceAmount;
+      }
 
-    if (isThisAttemptTheSuccess) {
-      fields.PaidAt = now;
-    }
+      if (isThisAttemptTheSuccess) {
+        fields.PaidAt = now;
+      }
 
-    if (match) {
-      match.assign(fields);
-      keepTextCells(match);
-      await match.save();
-      return;
-    }
+      if (match) {
+        match.assign(fields);
+        keepTextCells(match);
+        await match.save();
+        return;
+      }
 
-    // Payment arrived without a registration row (shouldn't happen — the
-    // registration form is required first). Keep the update rather than
-    // dropping it, so nothing paid is ever missing from the sheet.
-    await tab.addRow({
-      Timestamp: now,
-      Phone: phoneCell(input.mobile),
-      Course: input.courseName,
-      ...fields,
+      // Payment arrived without a registration row (shouldn't happen — the
+      // registration form is required first). Keep the update rather than
+      // dropping it, so nothing paid is ever missing from the sheet.
+      await tab.addRow({
+        Timestamp: now,
+        Phone: phoneCell(input.mobile),
+        Course: input.courseName,
+        ...fields,
+      });
     });
   } catch (error) {
     logger.error("Failed to update online payment status in Google Sheets.", {
@@ -638,3 +719,148 @@ const upsertOnlinePaymentRow = async (input: {
     });
   }
 };
+
+// ---------------------------------------------------------------------------
+// Periodic sync (online sheet — the class currently running): the database
+// is the source of truth, the sheet a copy the team works from.
+// services/sheet-sync.service.ts hands every student to syncOnlineSheet,
+// which adds whoever is missing and corrects where their payment
+// stands — so a write that failed, or a row deleted by mistake, is back
+// within one sweep. Rows are never deleted, and only the payment columns
+// (plus the details of a half-filled row) are ever overwritten, so the
+// team's own notes and edits stay put.
+
+export type SheetSyncResult = { added: string[]; updated: string[] };
+
+// Reads formatSheetDate's own "3 Nov 2026, 2:49 PM" (Indian time) back.
+const parseSheetDate = (value: string) => {
+  const match = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4}), (\d{1,2}):(\d{2}) (AM|PM)$/i.exec(value.trim().replace(/^'/, ""));
+  const month = match ? MONTHS.findIndex((name) => name.toLowerCase() === match[2].toLowerCase()) : -1;
+
+  if (!match || month < 0) {
+    return null;
+  }
+
+  const hour = (Number(match[4]) % 12) + (match[6].toUpperCase() === "PM" ? 12 : 0);
+  return Date.UTC(Number(match[3]), month, Number(match[1]), hour, Number(match[5])) - 330 * 60 * 1000;
+};
+
+// Each cohort gets a fresh (or renamed) tab, while the database keeps every
+// past student — so only those who registered since the tab's first row
+// belong on it. A day's slack still catches the cohort's own first row
+// going missing. An empty tab is left alone: there is nothing yet to say
+// which cohort it is for.
+const COHORT_SLACK_MS = 24 * 60 * 60 * 1000;
+
+const cohortStart = (rows: GoogleSpreadsheetRow[]) => {
+  const times = rows
+    .map((row) => parseSheetDate(row.get("Timestamp") ?? ""))
+    .filter((time): time is number => time !== null);
+
+  return times.length > 0 ? Math.min(...times) - COHORT_SLACK_MS : null;
+};
+
+const studentLabel = (name: string, phone: string) => `${name || "(no name)"} ${formatPhoneForSheet(phone)}`;
+
+const numberOf = (value: unknown) => Number(String(value ?? "").replace(/[^\d.]/g, "") || 0);
+
+const pick = (values: Record<string, string | number>, columns: string[]) =>
+  Object.fromEntries(columns.map((column) => [column, values[column]]));
+
+type SheetValues = Record<string, string | number>;
+
+const syncTab = async <T extends { createdAt: Date | string; name: string; phone: string; courseName: string }>(
+  target: SheetTarget,
+  label: string,
+  entries: T[],
+  newRow: (entry: T) => SheetValues,
+  changesFor: (row: GoogleSpreadsheetRow, entry: T) => SheetValues,
+  dryRun: boolean,
+): Promise<SheetSyncResult | null> => {
+  if (!isConfigured(target)) {
+    return null;
+  }
+
+  return runSheetTask(target, `Syncing ${label}`, async () => {
+    const tab = await getSheet(target);
+    const rows = await tab.getRows();
+    const since = cohortStart(rows);
+    const result: SheetSyncResult = { added: [], updated: [] };
+
+    if (since === null) {
+      logger.warn(`Skipped syncing ${label} — the tab has no rows yet to tell which cohort it is for.`, {
+        tabName: target.tabName,
+      });
+      return result;
+    }
+
+    for (const entry of entries) {
+      if (isTestPhone(entry.phone) || new Date(entry.createdAt).getTime() < since) {
+        continue;
+      }
+
+      const row = findRow(rows, entry.phone, entry.courseName);
+
+      if (!row) {
+        result.added.push(studentLabel(entry.name, entry.phone));
+
+        if (!dryRun) {
+          rows.push(await tab.addRow(newRow(entry)));
+        }
+        continue;
+      }
+
+      const changes = changesFor(row, entry);
+
+      if (Object.keys(changes).length === 0) {
+        continue;
+      }
+
+      result.updated.push(`${studentLabel(entry.name, entry.phone)}: ${Object.keys(changes).join(", ")}`);
+
+      if (!dryRun) {
+        row.assign({ ...changes, UpdatedAt: dateCell() });
+        keepTextCells(row);
+        await row.save();
+      }
+    }
+
+    return result;
+  });
+};
+
+const ONLINE_DETAIL_COLUMNS = [
+  "Timestamp", "Name", "WhatsApp", "Email", "City", "State", "Instagram",
+  "ExperienceMonths", "PAN", "GSTIN", "BillingName", "BillingAddress",
+];
+
+export const syncOnlineSheet = (entries: OnlineSheetEntry[], dryRun = false) =>
+  syncTab(onlineTarget(), "the online sheet", entries, onlineRowValues, (row, entry) => {
+    // A row with no name was added by a payment update that found no
+    // registration row — fill in who it is.
+    const changes: SheetValues = row.get("Name") ? {} : pick(onlineRowValues(entry), ONLINE_DETAIL_COLUMNS);
+
+    if ((row.get("PaymentStatus") ?? "") !== entry.paymentStatus) {
+      changes.PaymentStatus = entry.paymentStatus;
+    }
+
+    if (entry.merchantTxnNo && (row.get("MerchantTxnNo") ?? "") !== entry.merchantTxnNo) {
+      changes.MerchantTxnNo = entry.merchantTxnNo;
+    }
+
+    if (entry.paymentStatus === "PAID") {
+      if (entry.bankTxnId && (row.get("BankTxnID") ?? "") !== entry.bankTxnId) {
+        changes.BankTxnID = entry.bankTxnId;
+      }
+
+      if (entry.paidAt && !row.get("PaidAt")) {
+        changes.PaidAt = dateCell(entry.paidAt);
+      }
+
+      if (numberOf(row.get("Amount")) !== entry.advanceAmount) {
+        changes.Amount = entry.advanceAmount;
+      }
+    }
+
+    return changes;
+  }, dryRun);

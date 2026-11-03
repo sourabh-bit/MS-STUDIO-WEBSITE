@@ -125,4 +125,12 @@ export const env = {
   // in a completely separate file instead.
   googleSheetsOnlineSheetId: readOptional("GOOGLE_SHEETS_ONLINE_SHEET_ID") || readOptional("GOOGLE_SHEET_ID"),
   googleSheetsOnlineTabName: readOptional("GOOGLE_SHEETS_ONLINE_TAB_NAME") || "Online_Masterclass",
+  // How often the sheets are checked against the database and anything
+  // missing or out of date is fixed (see services/sheet-sync.service.ts).
+  // On by default only on the live site — a staging or local server may
+  // point at a different database than the sheet it writes to. "0" turns
+  // it off; any other value turns it on at that interval.
+  sheetSyncIntervalMs: Number(
+    readOptional("SHEET_SYNC_INTERVAL_MS") || (appEnv === "production" ? 10 * 60 * 1000 : 0),
+  ),
 };

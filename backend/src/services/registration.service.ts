@@ -180,8 +180,10 @@ export const createRegistration = async (input: CreateRegistrationInput) => {
     throw error;
   }
 
-  // Best-effort — never let a Sheets outage block a registration.
-  await appendRegistrationRow({
+  // Not awaited — never let a Sheets outage (or its retries) hold up a
+  // registration. It never throws, and the periodic sheet sync catches
+  // anything it still misses.
+  void appendRegistrationRow({
     name,
     phone,
     whatsappNumber,

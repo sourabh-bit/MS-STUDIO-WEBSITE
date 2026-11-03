@@ -574,13 +574,20 @@ const applyStatus = async (
     const advanceStatusText =
       ledger.advance.status === "PAID" ? "PAID" : updatedPaymentType === "ADVANCE" ? status : "UNPAID";
 
-    await upsertPaymentStatusRow({
+    // Not awaited: with its retries a failing sheet write can take a
+    // minute, and the student shouldn't wait on it. It never throws.
+    void upsertPaymentStatusRow({
       mobile: updated.mobile,
       courseName: updated.courseName,
       variant: updated.variant === "online" ? "online" : "offline",
       paymentStatus: status,
       txnID: updated.txnID || "",
-      advanceMerchantTxnNo: updatedPaymentType === "ADVANCE" ? updated.merchantTxnNo : undefined,
+      // Once the advance is paid, a later abandoned retry must not replace
+      // the paying transaction's number on the sheet.
+      advanceMerchantTxnNo:
+        updatedPaymentType === "ADVANCE" && (status === "SUCCESS" || ledger.advance.status !== "PAID")
+          ? updated.merchantTxnNo
+          : undefined,
       advanceAmount: ledger.advance.status === "PAID" ? ledger.advance.amount : undefined,
       advanceStatusText,
       secondInstallmentTotal: ledger.secondInstallment.totalAmount,
