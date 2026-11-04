@@ -15,12 +15,14 @@ type RegistrationClosedDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseLabel?: string;
+  whatsappNumber?: string;
 };
 
 const RegistrationClosedDialog = ({
   open,
   onOpenChange,
   courseLabel = "Offline Masterclass",
+  whatsappNumber = WHATSAPP_NUMBERS.school,
 }: RegistrationClosedDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-md">
@@ -47,7 +49,7 @@ const RegistrationClosedDialog = ({
           Want to be the first to know?
         </p>
         <a
-          href={whatsappUrl(WHATSAPP_NUMBERS.school)}
+          href={whatsappUrl(whatsappNumber)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 inline-flex items-center justify-center gap-2 font-serif text-lg text-foreground transition-colors duration-300 hover:text-dusty-rose"

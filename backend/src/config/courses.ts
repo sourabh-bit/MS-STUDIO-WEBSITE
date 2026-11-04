@@ -18,6 +18,16 @@ export const COURSE_ADVANCE_FEES: Record<string, number> = {
   "Meera Sakhrani Offline Masterclass": readAmount("OFFLINE_MASTERCLASS_ADVANCE", 100000),
 };
 
+// Manual on/off switch for the online masterclass, mirroring
+// IS_ONLINE_REGISTRATION_OPEN in frontend/src/lib/masterclass.ts. While
+// false the server refuses new online registrations and online payments,
+// so a stale tab or a direct checkout link can't get around the closed
+// page. Students who already paid are unaffected.
+export const IS_ONLINE_REGISTRATION_OPEN = false;
+
+export const ONLINE_REGISTRATION_CLOSED_MESSAGE =
+  "Registrations for the online masterclass are closed right now. Please check back for the next batch.";
+
 export const getCourseAdvanceFee = (courseName: string) => COURSE_ADVANCE_FEES[courseName];
 
 // Session details printed in the online masterclass's payment confirmation

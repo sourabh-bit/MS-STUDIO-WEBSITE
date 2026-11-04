@@ -30,7 +30,7 @@ export const MASTERCLASS_PREVIEW_VIDEO = {
 // Manual on/off switch for new online-masterclass registrations. While
 // false, every enrol button opens the "registrations closed" dialog
 // instead of the sign-up flow.
-export const IS_ONLINE_REGISTRATION_OPEN = true;
+export const IS_ONLINE_REGISTRATION_OPEN = false;
 
 // Price before 18% GST, for "₹X + GST" breakdowns. Every course fee is
 // charged GST-inclusive, and the invoice backs the tax out the same way.

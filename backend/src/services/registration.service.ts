@@ -5,6 +5,7 @@ import { isValidPan } from "../lib/pan.js";
 import { detectContactChannel, isIndianPhone, isValidEmail, normaliseContact } from "../lib/otp.js";
 import { appendRegistrationRow } from "../lib/sheets.js";
 import { isTestPhone } from "../lib/test-phones.js";
+import { IS_ONLINE_REGISTRATION_OPEN, ONLINE_REGISTRATION_CLOSED_MESSAGE } from "../config/courses.js";
 import { getSecondInstallmentTotal } from "../config/installment.js";
 import { OnlineRegistration } from "../models/OnlineRegistration.js";
 import { Registration } from "../models/Registration.js";
@@ -19,6 +20,10 @@ const isDuplicateKeyError = (error: unknown) =>
   Boolean(error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === 11000);
 
 export const createRegistration = async (input: CreateRegistrationInput) => {
+  if (input.variant === "online" && !IS_ONLINE_REGISTRATION_OPEN && !isTestPhone(input.phone)) {
+    throw new HttpError(403, ONLINE_REGISTRATION_CLOSED_MESSAGE);
+  }
+
   await connectToDatabase();
 
   const name = input.name.trim();

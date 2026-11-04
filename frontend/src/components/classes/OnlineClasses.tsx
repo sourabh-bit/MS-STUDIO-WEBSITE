@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/context/AuthContext";
 import { checkRegistration } from "@/lib/registration";
+import { WHATSAPP_NUMBERS } from "@/lib/contact";
 import { getPaymentSummary } from "@/lib/payment";
 import { IS_ONLINE_REGISTRATION_OPEN, MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
@@ -99,6 +100,18 @@ const OnlineClasses = () => {
           return;
         }
 
+        // Registered but never paid: once registrations close they can't
+        // pay either. Only students who already paid still get through, to
+        // the checkout page's "You're enrolled" view.
+        if (!IS_ONLINE_REGISTRATION_OPEN) {
+          const summary = await getPaymentSummary(MASTERCLASS_DETAILS.courseName, "online").catch(() => null);
+
+          if (summary?.advance.status !== "PAID") {
+            setIsRegistrationClosedOpen(true);
+            return;
+          }
+        }
+
         goToCheckout();
       } finally {
         checkInFlightRef.current = false;
@@ -146,6 +159,7 @@ const OnlineClasses = () => {
         open={isRegistrationClosedOpen}
         onOpenChange={setIsRegistrationClosedOpen}
         courseLabel="Online Masterclass"
+        whatsappNumber={WHATSAPP_NUMBERS.onlineClass}
       />
     </>
   );

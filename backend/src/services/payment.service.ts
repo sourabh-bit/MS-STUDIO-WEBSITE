@@ -2,7 +2,12 @@ import axios, { AxiosError } from "axios";
 import crypto from "node:crypto";
 
 import { env } from "../config/env.js";
-import { getCourseAdvanceFee, ONLINE_CLASS_DETAILS } from "../config/courses.js";
+import {
+  getCourseAdvanceFee,
+  IS_ONLINE_REGISTRATION_OPEN,
+  ONLINE_CLASS_DETAILS,
+  ONLINE_REGISTRATION_CLOSED_MESSAGE,
+} from "../config/courses.js";
 import { getSecondInstallmentTotal, SECOND_INSTALLMENT_MIN_AMOUNT } from "../config/installment.js";
 import { connectToDatabase } from "../db/connect.js";
 import { getStateCode } from "../lib/indian-states.js";
@@ -859,6 +864,10 @@ export const initiatePayment = async (input: InitiatePaymentInput & { userId: st
           ? "You're already enrolled in this masterclass — no further payment is needed."
           : "Advance payment has already been completed.",
       );
+    }
+
+    if (input.variant === "online" && !IS_ONLINE_REGISTRATION_OPEN && !isTestPhone(input.mobile)) {
+      throw new HttpError(403, ONLINE_REGISTRATION_CLOSED_MESSAGE);
     }
 
     // The price is decided here, never by the request body — see
