@@ -119,7 +119,7 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
               For queries and booking assistance
             </p>
             <a
-              href={whatsappUrl(WHATSAPP_NUMBERS.school, ONLINE_CLASS_WHATSAPP_GREETING)}
+              href={whatsappUrl(WHATSAPP_NUMBERS.onlineClass, ONLINE_CLASS_WHATSAPP_GREETING)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-[44px] items-center gap-2.5 rounded-full border border-[#25D366]/40 bg-background px-5 py-2.5 font-sans text-xs tracking-[0.15em] text-foreground uppercase shadow-[-3px_5px_12px_-3px_rgba(0,0,0,0.12)] transition-all duration-300 hover:border-[#25D366]/70 hover:text-primary"

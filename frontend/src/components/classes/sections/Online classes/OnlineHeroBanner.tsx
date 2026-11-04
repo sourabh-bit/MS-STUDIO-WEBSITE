@@ -153,7 +153,7 @@ const OnlineHeroBanner = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps
               </div>
 
               <a
-                href={whatsappUrl(WHATSAPP_NUMBERS.school, ONLINE_CLASS_WHATSAPP_GREETING)}
+                href={whatsappUrl(WHATSAPP_NUMBERS.onlineClass, ONLINE_CLASS_WHATSAPP_GREETING)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group mt-5 inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-sans text-[11px] text-foreground/80 min-[360px]:gap-2 min-[360px]:text-xs transition-colors duration-300 hover:text-primary"

@@ -1,8 +1,10 @@
 // WhatsApp numbers used across the site, in wa.me format (country code, no
 // "+" or spaces). `school` is the MS Art School line for class enquiries;
+// `onlineClass` is the line for the online masterclass;
 // `booking` is the makeup-appointment line.
 export const WHATSAPP_NUMBERS = {
   school: "919818793850",
+  onlineClass: "919584337006",
   booking: "918448229694",
 } as const;
 

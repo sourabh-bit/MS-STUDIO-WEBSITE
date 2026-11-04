@@ -29,5 +29,5 @@ export const ONLINE_CLASS_DETAILS = {
   timeLabel: "12:00 PM – 6:00 PM IST",
   modeLabel: "Online (Live)",
   joiningNote: "Your link to join the live session will be shared with you before the class begins.",
-  supportWhatsApp: "919818793850",
+  supportWhatsApp: "919584337006",
 } as const;
