@@ -13,8 +13,8 @@ export const MASTERCLASS_DETAILS = {
   summaryLabel: "6-hour live online masterclass",
   trustLine: "Secure payment via ICICI Bank",
   // Shown on the brochure — update once the next batch is scheduled.
-  dateLabel: "4 November 2026",
-  timeLabel: "12:00 PM – 6:00 PM IST",
+  dateLabel: "To be announced",
+  timeLabel: "To be announced",
   modeLabel: "Online (Live)",
 } as const;
 
