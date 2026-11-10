@@ -1,6 +1,14 @@
 import { connectToDatabase } from "../db/connect.js";
 import { logger } from "../lib/logger.js";
-import { syncOnlineSheet, type OnlineSheetEntry } from "../lib/sheets.js";
+import { CLASS_VARIANTS } from "../db/class-databases.js";
+import {
+  syncInterestSheet,
+  syncOnlineSheet,
+  type InterestSheetEntry,
+  type OnlineSheetEntry,
+  type SheetSyncResult,
+} from "../lib/sheets.js";
+import { interestModelFor } from "../models/Interest.js";
 import { OnlineRegistration } from "../models/OnlineRegistration.js";
 
 // Rebuilds every online student's sheet row from the database and hands
@@ -71,17 +79,34 @@ const onlineEntries = async (): Promise<OnlineSheetEntry[]> => {
   });
 };
 
+const report = (label: string, result: SheetSyncResult | null, dryRun: boolean) => {
+  if (result && (result.added.length > 0 || result.updated.length > 0)) {
+    logger.warn(`${dryRun ? "[dry run] Would fix" : "Fixed"} ${label}: rows it was missing or had out of date.`, result);
+  }
+};
+
 export const syncSheetsWithDatabase = async ({ dryRun = false } = {}) => {
   await connectToDatabase();
 
-  const result = await syncOnlineSheet(await onlineEntries(), dryRun);
+  const online = await syncOnlineSheet(await onlineEntries(), dryRun);
+  report("the online sheet", online, dryRun);
 
-  if (result && (result.added.length > 0 || result.updated.length > 0)) {
-    logger.warn(
-      `${dryRun ? "[dry run] Would fix" : "Fixed"} the online sheet: rows it was missing or had out of date.`,
-      result,
-    );
+  // "Register Interest" sign-ups, one tab per class. One failing must not
+  // stop the other.
+  const interests: Partial<Record<string, SheetSyncResult | null>> = {};
+
+  for (const variant of CLASS_VARIANTS) {
+    try {
+      const entries = await interestModelFor(variant).find({}).sort({ createdAt: 1 }).lean<InterestSheetEntry[]>();
+      interests[variant] = await syncInterestSheet(variant, entries, dryRun);
+      report(`the ${variant} interest sheet`, interests[variant] ?? null, dryRun);
+    } catch (error) {
+      logger.error(`Syncing the ${variant} interest sheet failed.`, {
+        message: error instanceof Error ? error.message : "unknown error",
+      });
+      interests[variant] = null;
+    }
   }
 
-  return result;
+  return { online, interests };
 };

@@ -408,12 +408,40 @@ export const appendRegistrationRow = async (row: {
   }
 };
 
-// "Register Interest" sign-ups go to their own tab in each class's
-// spreadsheet, created on first write, so they never mix with the
+// "Register Interest" sign-ups go to a tab per class ("2027 Offline
+// Interest", "2027 Online Interest" — see env.ts), side by side in one
+// spreadsheet and created on first write, so they never mix with the
 // registration and payment rows the team confirms payments from.
-export const INTEREST_TAB_NAME = "Interested";
-
 export const INTEREST_SHEET_HEADERS = ["Timestamp", "Name", "WhatsApp", "Email", "Course", "UpdatedAt"];
+
+const interestTarget = (variant: string): SheetTarget => ({
+  sheetId: env.googleSheetsInterestSheetId,
+  tabName: variant === "online" ? env.googleSheetsOnlineInterestTabName : env.googleSheetsOfflineInterestTabName,
+  createWithHeaders: INTEREST_SHEET_HEADERS,
+});
+
+const findInterestRow = (rows: GoogleSpreadsheetRow[], whatsappNumber: string, courseName: string) =>
+  rows.find(
+    (sheetRow) =>
+      isSamePhone(sheetRow.get("WhatsApp") ?? "", whatsappNumber) && sheetRow.get("Course") === courseName,
+  );
+
+export type InterestSheetEntry = {
+  createdAt: Date | string;
+  name: string;
+  whatsappNumber: string;
+  email: string;
+  courseName: string;
+};
+
+const interestRowValues = (entry: InterestSheetEntry) => ({
+  Timestamp: dateCell(entry.createdAt),
+  Name: entry.name,
+  WhatsApp: phoneCell(entry.whatsappNumber),
+  Email: entry.email,
+  Course: entry.courseName,
+  UpdatedAt: "",
+});
 
 export const appendInterestRow = async (row: {
   name: string;
@@ -426,11 +454,7 @@ export const appendInterestRow = async (row: {
     return;
   }
 
-  const target: SheetTarget = {
-    sheetId: row.variant === "online" ? env.googleSheetsOnlineSheetId : env.googleSheetId,
-    tabName: INTEREST_TAB_NAME,
-    createWithHeaders: INTEREST_SHEET_HEADERS,
-  };
+  const target = interestTarget(row.variant);
 
   if (!isConfigured(target)) {
     return;
@@ -439,11 +463,7 @@ export const appendInterestRow = async (row: {
   try {
     await runSheetTask(target, "Appending interest row", async () => {
       const tab = await getSheet(target);
-      const existing = (await tab.getRows()).find(
-        (sheetRow) =>
-          isSamePhone(sheetRow.get("WhatsApp") ?? "", row.whatsappNumber) &&
-          sheetRow.get("Course") === row.courseName,
-      );
+      const existing = findInterestRow(await tab.getRows(), row.whatsappNumber, row.courseName);
 
       // Signing up again just refreshes the name and email on their row.
       if (existing) {
@@ -453,14 +473,7 @@ export const appendInterestRow = async (row: {
         return;
       }
 
-      await tab.addRow({
-        Timestamp: dateCell(),
-        Name: row.name,
-        WhatsApp: phoneCell(row.whatsappNumber),
-        Email: row.email,
-        Course: row.courseName,
-        UpdatedAt: "",
-      });
+      await tab.addRow(interestRowValues({ ...row, createdAt: new Date() }));
     });
   } catch (error) {
     logger.error("Failed to append interest row to Google Sheets.", {
@@ -925,3 +938,42 @@ export const syncOnlineSheet = (entries: OnlineSheetEntry[], dryRun = false) =>
 
     return changes;
   }, dryRun);
+
+// A brand-new interest tab (a new season, or the first sign-up's own write
+// failed) has no rows to date it by, so it only takes sign-ups this recent.
+const NEW_INTEREST_TAB_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Adds every "Register Interest" sign-up missing from that class's interest
+// tab. Existing rows are never changed or deleted.
+export const syncInterestSheet = async (variant: string, entries: InterestSheetEntry[], dryRun = false) => {
+  const target = interestTarget(variant);
+
+  if (!isConfigured(target)) {
+    return null;
+  }
+
+  return runSheetTask(target, `Syncing the ${variant} interest sheet`, async () => {
+    const tab = await getSheet(target);
+    const rows = await tab.getRows();
+    const since = cohortStart(rows) ?? Date.now() - NEW_INTEREST_TAB_WINDOW_MS;
+    const result: SheetSyncResult = { added: [], updated: [] };
+
+    for (const entry of entries) {
+      if (
+        isTestPhone(entry.whatsappNumber) ||
+        new Date(entry.createdAt).getTime() < since ||
+        findInterestRow(rows, entry.whatsappNumber, entry.courseName)
+      ) {
+        continue;
+      }
+
+      result.added.push(studentLabel(entry.name, entry.whatsappNumber));
+
+      if (!dryRun) {
+        rows.push(await tab.addRow(interestRowValues(entry)));
+      }
+    }
+
+    return result;
+  });
+};

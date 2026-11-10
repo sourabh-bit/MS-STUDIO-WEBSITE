@@ -45,6 +45,8 @@ export const registerInterest = async (input: RegisterInterestInput) => {
     { upsert: true, setDefaultsOnInsert: true },
   );
 
-  // Best-effort, like every other sheet write — never fails the request.
-  await appendInterestRow({ name, whatsappNumber, email, courseName, variant: input.variant });
+  // Not awaited, like every other sheet write: it never throws, and with
+  // its retries it can take a minute. The periodic sheet sync adds anyone
+  // it still misses.
+  void appendInterestRow({ name, whatsappNumber, email, courseName, variant: input.variant });
 };

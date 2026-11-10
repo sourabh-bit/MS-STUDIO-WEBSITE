@@ -125,6 +125,18 @@ export const env = {
   // in a completely separate file instead.
   googleSheetsOnlineSheetId: readOptional("GOOGLE_SHEETS_ONLINE_SHEET_ID") || readOptional("GOOGLE_SHEET_ID"),
   googleSheetsOnlineTabName: readOptional("GOOGLE_SHEETS_ONLINE_TAB_NAME") || "Online_Masterclass",
+  // "Register Interest" sign-ups get a tab per class, side by side in one
+  // spreadsheet (the online one the team works from, unless set), created
+  // on first write. Rename per season (e.g. "2028 Offline Interest") to
+  // start a fresh list; the old tab stays as it is.
+  googleSheetsInterestSheetId:
+    readOptional("GOOGLE_SHEETS_INTEREST_SHEET_ID") ||
+    readOptional("GOOGLE_SHEETS_ONLINE_SHEET_ID") ||
+    readOptional("GOOGLE_SHEET_ID"),
+  googleSheetsOfflineInterestTabName:
+    readOptional("GOOGLE_SHEETS_OFFLINE_INTEREST_TAB_NAME") || "2027 Offline Interest",
+  googleSheetsOnlineInterestTabName:
+    readOptional("GOOGLE_SHEETS_ONLINE_INTEREST_TAB_NAME") || "2027 Online Interest",
   // How often the sheets are checked against the database and anything
   // missing or out of date is fixed (see services/sheet-sync.service.ts).
   // On by default only on the live site — a staging or local server may
