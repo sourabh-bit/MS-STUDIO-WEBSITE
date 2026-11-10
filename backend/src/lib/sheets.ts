@@ -408,6 +408,67 @@ export const appendRegistrationRow = async (row: {
   }
 };
 
+// "Register Interest" sign-ups go to their own tab in each class's
+// spreadsheet, created on first write, so they never mix with the
+// registration and payment rows the team confirms payments from.
+export const INTEREST_TAB_NAME = "Interested";
+
+export const INTEREST_SHEET_HEADERS = ["Timestamp", "Name", "WhatsApp", "Email", "Course", "UpdatedAt"];
+
+export const appendInterestRow = async (row: {
+  name: string;
+  whatsappNumber: string;
+  email: string;
+  courseName: string;
+  variant: string;
+}) => {
+  if (isTestPhone(row.whatsappNumber)) {
+    return;
+  }
+
+  const target: SheetTarget = {
+    sheetId: row.variant === "online" ? env.googleSheetsOnlineSheetId : env.googleSheetId,
+    tabName: INTEREST_TAB_NAME,
+    createWithHeaders: INTEREST_SHEET_HEADERS,
+  };
+
+  if (!isConfigured(target)) {
+    return;
+  }
+
+  try {
+    await runSheetTask(target, "Appending interest row", async () => {
+      const tab = await getSheet(target);
+      const existing = (await tab.getRows()).find(
+        (sheetRow) =>
+          isSamePhone(sheetRow.get("WhatsApp") ?? "", row.whatsappNumber) &&
+          sheetRow.get("Course") === row.courseName,
+      );
+
+      // Signing up again just refreshes the name and email on their row.
+      if (existing) {
+        existing.assign({ Name: row.name, Email: row.email, UpdatedAt: dateCell() });
+        keepTextCells(existing);
+        await existing.save();
+        return;
+      }
+
+      await tab.addRow({
+        Timestamp: dateCell(),
+        Name: row.name,
+        WhatsApp: phoneCell(row.whatsappNumber),
+        Email: row.email,
+        Course: row.courseName,
+        UpdatedAt: "",
+      });
+    });
+  } catch (error) {
+    logger.error("Failed to append interest row to Google Sheets.", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  }
+};
+
 // One-time backfill/resync helper (see scripts/backfill-sheet.ts and
 // scripts/resync-sheet.ts) — inserts a fully-populated row for a
 // pre-existing registration, computed with whatever status it already has.

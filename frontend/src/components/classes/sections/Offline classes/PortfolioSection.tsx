@@ -4,7 +4,13 @@ import portfolio3 from "@/assets/classes/portfolio3.jpg";
 import portfolio4 from "@/assets/classes/portfolio4.jpg";
 import { Camera, Video, Sparkles, Users } from "lucide-react";
 
-const PortfolioSection = () => {
+import { IS_OFFLINE_REGISTRATION_OPEN } from "@/lib/masterclass";
+
+type PortfolioSectionProps = {
+  onShowInterest: () => void;
+};
+
+const PortfolioSection = ({ onShowInterest }: PortfolioSectionProps) => {
   const portfolioImages = [portfolioImage, portfolio2, portfolio3];
 
   const features = [
@@ -98,12 +104,22 @@ const PortfolioSection = () => {
 
         {/* CTA */}
         <div className="text-center mt-14 md:mt-10">
-          <a
-            href="#enroll"
-            className="inline-block px-10 py-4 bg-primary text-primary-foreground font-sans text-sm tracking-[0.2em] uppercase hover:bg-dusty-rose transition-all duration-300"
-          >
-            Enroll Now
-          </a>
+          {IS_OFFLINE_REGISTRATION_OPEN ? (
+            <a
+              href="#enroll"
+              className="inline-block px-10 py-4 bg-primary text-primary-foreground font-sans text-sm tracking-[0.2em] uppercase hover:bg-dusty-rose transition-all duration-300"
+            >
+              Enroll Now
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={onShowInterest}
+              className="inline-block px-10 py-4 bg-primary text-primary-foreground font-sans text-sm tracking-[0.2em] uppercase hover:bg-dusty-rose transition-all duration-300"
+            >
+              Show Interest
+            </button>
+          )}
           <p className="mt-4 font-sans text-sm text-muted-foreground">
             Limited seats available
           </p>

@@ -3,13 +3,27 @@ import { CalendarDays, Clock, Loader2, Lock, Monitor } from "lucide-react";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { ONLINE_CLASS_WHATSAPP_GREETING, WHATSAPP_NUMBERS, whatsappUrl } from "@/lib/contact";
 
-import { MASTERCLASS_DETAILS, ONLINE_DISCOUNT_PERCENT, formatInrSymbol } from "@/lib/masterclass";
+import { INTEREST_UPDATES_LINE } from "@/components/classes/RegistrationClosedDialog";
+import {
+  IS_ONLINE_REGISTRATION_OPEN,
+  MASTERCLASS_DETAILS,
+  ONLINE_DISCOUNT_PERCENT,
+  formatInrSymbol,
+} from "@/lib/masterclass";
 
 import type { OnlineCtaProps } from "./types";
 
 const STEPS = ["Verify mobile", "Your details", "Secure payment"];
 
-const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaProps) => {
+type OnlinePaymentSectionProps = OnlineCtaProps & {
+  onRegisterInterest: () => void;
+};
+
+const OnlinePaymentSection = ({ onOpenCheckout, onRegisterInterest, isEnrolled, isBusy }: OnlinePaymentSectionProps) => {
+  // While registrations are closed the fee isn't shown — only a way to
+  // register interest. Students who already paid still see their status.
+  const showInterestOnly = !IS_ONLINE_REGISTRATION_OPEN && !isEnrolled;
+
   const classDetails = [
     { icon: CalendarDays, label: "Date", value: MASTERCLASS_DETAILS.dateLabel },
     { icon: Clock, label: "Time", value: MASTERCLASS_DETAILS.timeLabel },
@@ -46,7 +60,23 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
 
         <div className="mx-auto mb-6 max-w-md md:mb-12">
           <div className="overflow-hidden border border-dusty-rose/30 bg-background shadow-elegant">
-            {/* Price + enrol */}
+            {showInterestOnly ? (
+              <div className="flex flex-col justify-center bg-primary/5 px-5 py-8 text-center sm:p-8 md:p-10">
+                <p className="mb-3 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
+                  Next Batch
+                </p>
+                <p className="mb-3 font-display text-3xl text-foreground min-[400px]:text-4xl">Coming Soon</p>
+                <p className="mx-auto max-w-xs font-sans text-sm text-muted-foreground">{INTEREST_UPDATES_LINE}</p>
+                <button
+                  type="button"
+                  onClick={onRegisterInterest}
+                  className="mt-6 inline-flex w-full items-center justify-center whitespace-nowrap min-h-[48px] rounded-full border border-primary/10 bg-primary px-6 py-3.5 font-sans text-[13px] tracking-[0.2em] text-primary-foreground uppercase shadow-[-4px_6px_14px_-3px_rgba(0,0,0,0.22),-1px_2px_4px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-dusty-rose active:brightness-95 md:py-4 md:text-sm"
+                >
+                  Register Your Interest
+                </button>
+              </div>
+            ) : (
+            /* Price + enrol */
             <div className="flex flex-col justify-center bg-primary/5 px-5 py-6 text-center sm:p-8 md:p-10">
               <p className="mb-4 font-sans text-xs tracking-[0.3em] text-muted-foreground uppercase">
                 {MASTERCLASS_DETAILS.feeLabel}
@@ -110,6 +140,7 @@ const OnlinePaymentSection = ({ onOpenCheckout, isEnrolled, isBusy }: OnlineCtaP
                 </p>
               </div>
             </div>
+            )}
           </div>
         </div>
 

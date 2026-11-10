@@ -23,6 +23,7 @@ const OnlineClasses = () => {
   const { user, requireAuth } = useAuth();
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isRegistrationClosedOpen, setIsRegistrationClosedOpen] = useState(false);
+  const [closedDialogStart, setClosedDialogStart] = useState<"closed" | "interest">("closed");
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   // Guards against a double tap firing two checks (and two dialogs) before
@@ -54,6 +55,17 @@ const OnlineClasses = () => {
     };
   }, [user]);
 
+  const showRegistrationClosed = () => {
+    setClosedDialogStart("closed");
+    setIsRegistrationClosedOpen(true);
+  };
+
+  // The pricing section's "Register Your Interest" goes straight to the form.
+  const showInterestForm = () => {
+    setClosedDialogStart("interest");
+    setIsRegistrationClosedOpen(true);
+  };
+
   const goToCheckout = () => {
     const params = new URLSearchParams({
       variant: "online",
@@ -75,7 +87,7 @@ const OnlineClasses = () => {
     // Checked before requireAuth, deliberately — no reason to make someone
     // log in first just to be told registrations are closed.
     if (!IS_ONLINE_REGISTRATION_OPEN && !isEnrolled) {
-      setIsRegistrationClosedOpen(true);
+      showRegistrationClosed();
       return;
     }
 
@@ -92,7 +104,7 @@ const OnlineClasses = () => {
 
         if (!alreadyRegistered) {
           if (!IS_ONLINE_REGISTRATION_OPEN) {
-            setIsRegistrationClosedOpen(true);
+            showRegistrationClosed();
             return;
           }
 
@@ -107,7 +119,7 @@ const OnlineClasses = () => {
           const summary = await getPaymentSummary(MASTERCLASS_DETAILS.courseName, "online").catch(() => null);
 
           if (summary?.advance.status !== "PAID") {
-            setIsRegistrationClosedOpen(true);
+            showRegistrationClosed();
             return;
           }
         }
@@ -142,7 +154,7 @@ const OnlineClasses = () => {
         <MasterclassFlow />
         <OnlineGallery />
         <WhoShouldAttend />
-        <OnlinePaymentSection {...ctaProps} />
+        <OnlinePaymentSection {...ctaProps} onRegisterInterest={showInterestForm} />
       </div>
       <StickyPaymentBar {...ctaProps} />
 
@@ -160,6 +172,9 @@ const OnlineClasses = () => {
         onOpenChange={setIsRegistrationClosedOpen}
         courseLabel="Online Masterclass"
         whatsappNumber={WHATSAPP_NUMBERS.onlineClass}
+        courseName={MASTERCLASS_DETAILS.courseName}
+        variant="online"
+        startOn={closedDialogStart}
       />
     </>
   );

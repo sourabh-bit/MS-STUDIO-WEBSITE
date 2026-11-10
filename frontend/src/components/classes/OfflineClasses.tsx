@@ -26,6 +26,18 @@ const OfflineClasses = () => {
   const { requireAuth } = useAuth();
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isRegistrationClosedOpen, setIsRegistrationClosedOpen] = useState(false);
+  const [closedDialogStart, setClosedDialogStart] = useState<"closed" | "interest">("closed");
+
+  const showRegistrationClosed = () => {
+    setClosedDialogStart("closed");
+    setIsRegistrationClosedOpen(true);
+  };
+
+  // "Show Interest" / "Fill Form" buttons go straight to the interest form.
+  const showInterestForm = () => {
+    setClosedDialogStart("interest");
+    setIsRegistrationClosedOpen(true);
+  };
 
   const goToCheckout = () => {
     const params = new URLSearchParams({
@@ -61,7 +73,7 @@ const OfflineClasses = () => {
     // Checked before requireAuth, deliberately — no reason to make someone
     // log in first just to be told registrations are closed.
     if (!IS_OFFLINE_REGISTRATION_OPEN) {
-      setIsRegistrationClosedOpen(true);
+      showRegistrationClosed();
       return;
     }
 
@@ -95,7 +107,7 @@ const OfflineClasses = () => {
   // than letting this one path slip a new sign-up through regardless.
   const handleNeedsRegistration = () => {
     if (!IS_OFFLINE_REGISTRATION_OPEN) {
-      setIsRegistrationClosedOpen(true);
+      showRegistrationClosed();
       return;
     }
 
@@ -144,9 +156,9 @@ const OfflineClasses = () => {
         <PaymentSection onOpenCheckout={openCheckout} />
         {/* Hidden until the next batch's dates and fees are announced */}
         {/* <SecondInstallmentSection onNeedsRegistration={handleNeedsRegistration} /> */}
-        <PortfolioSection />
+        <PortfolioSection onShowInterest={showInterestForm} />
       </div>
-      <StickyPaymentBar onOpenCheckout={openCheckout} />
+      <StickyPaymentBar onOpenCheckout={IS_OFFLINE_REGISTRATION_OPEN ? openCheckout : showInterestForm} />
 
       <RegistrationDialog
         open={isRegistrationOpen}
@@ -160,6 +172,9 @@ const OfflineClasses = () => {
       <RegistrationClosedDialog
         open={isRegistrationClosedOpen}
         onOpenChange={setIsRegistrationClosedOpen}
+        courseName={OFFLINE_MASTERCLASS_DETAILS.courseName}
+        variant="offline"
+        startOn={closedDialogStart}
       />
     </>
   );

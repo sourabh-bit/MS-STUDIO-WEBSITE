@@ -9,6 +9,7 @@ import { logger } from "./lib/logger.js";
 import { startReconciliationScheduler, startSheetSyncScheduler } from "./lib/reconcile.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { paymentCallbackRouter, paymentRouter } from "./routes/payment.routes.js";
+import { interestRouter } from "./routes/interest.routes.js";
 import { registrationRouter } from "./routes/registration.routes.js";
 import { backfillPaymentTypes } from "./services/payment.service.js";
 
@@ -107,6 +108,7 @@ app.get("/api/health", async (_request, response) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/registrations", registrationRouter);
+app.use("/api/interests", interestRouter);
 
 app.use(
   (error: unknown, _request: Request, response: Response, _next: NextFunction) => {

@@ -1,6 +1,6 @@
 import { CreditCard, Landmark } from "lucide-react";
 
-import { OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
+import { IS_OFFLINE_REGISTRATION_OPEN, OFFLINE_MASTERCLASS_DETAILS } from "@/lib/masterclass";
 
 type PaymentSectionProps = {
   onOpenCheckout: () => void;
@@ -58,17 +58,20 @@ const PaymentSection = ({ onOpenCheckout }: PaymentSectionProps) => {
               To secure your seat
             </p>
             <div className="mt-8 pt-6 border-t border-dusty-rose/20">
-              <button
-                type="button"
-                onClick={onOpenCheckout}
-                data-course={OFFLINE_MASTERCLASS_DETAILS.courseName}
-                data-price={String(OFFLINE_MASTERCLASS_DETAILS.fee)}
-                data-payment-trigger="section"
-                className="w-full sm:w-auto whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground transition-all duration-300 hover:bg-dusty-rose"
-              >
-                Pay Securely
-              </button>
-              <p className="mt-4 font-sans text-sm text-muted-foreground">
+              {/* No pay button while registrations are closed. */}
+              {IS_OFFLINE_REGISTRATION_OPEN && (
+                <button
+                  type="button"
+                  onClick={onOpenCheckout}
+                  data-course={OFFLINE_MASTERCLASS_DETAILS.courseName}
+                  data-price={String(OFFLINE_MASTERCLASS_DETAILS.fee)}
+                  data-payment-trigger="section"
+                  className="mb-4 w-full sm:w-auto whitespace-nowrap rounded-full border border-primary/10 bg-primary px-8 py-4 font-sans text-sm tracking-[0.2em] uppercase text-primary-foreground transition-all duration-300 hover:bg-dusty-rose"
+                >
+                  Pay Securely
+                </button>
+              )}
+              <p className="font-sans text-sm text-muted-foreground">
                 Instant confirmation {"\u2022"} Limited seats available
               </p>
 
